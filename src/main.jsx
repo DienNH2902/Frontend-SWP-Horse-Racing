@@ -1,9 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import GoldenHoofLogin from "./pages/Login";
+import { BrowserRouter } from "react-router-dom";
+import AppRoutes from "./routes/AppRoutes";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <GoldenHoofLogin />
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   </React.StrictMode>
 );

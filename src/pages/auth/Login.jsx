@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
 const features = [
   ["trophy", "Live Races", "Real-time updates and results"],
@@ -575,7 +576,7 @@ export default function GoldenHoofLogin() {
                 </label>
                 <div className="gh-input-box">
                   <Icon name="mail" />
-                  <input id="email" type="email" placeholder="Enter your email" autoComplete="email" />
+                  <input id="email" type="email" placeholder="goldenhoof@example.com" autoComplete="email" />
                 </div>
               </div>
 
@@ -634,9 +635,9 @@ export default function GoldenHoofLogin() {
 
             <p className="gh-signup">
               Don't have an account?{" "}
-              <a className="gh-link" href="#sign-up">
+              <Link className="gh-link" to="/register">
                 Sign up
-              </a>
+              </Link>
             </p>
           </div>
         </aside>
