@@ -1,6 +1,12 @@
-import { Button, DatePicker, Form, Input, InputNumber, Radio, Select } from "antd";
+import { Button, DatePicker, Form, Input, InputNumber, message, Radio, Select } from "antd";
 import "antd/dist/reset.css";
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  registerHorseOwner,
+  registerJockey,
+  registerSpectator,
+} from "../../../api/services/auth.service";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -101,25 +107,53 @@ function Icon({ name, size = 24 }) {
 
 export default function RegisterForm() {
   const [form] = Form.useForm();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const role = Form.useWatch("role", form) || "Spectator";
 
-  function handleFinish(values) {
+  async function handleFinish(values) {
     const payload = {
       ...values,
-      dateOfBirth: values.dateOfBirth?.format("YYYY-MM-DD"),
+      dateOfBirth: values.dateOfBirth?.format("DD-MM-YYYY"),
     };
 
-    if (values.role !== "HorseOwner") {
+    if (values.role === "Spectator") {
+      payload.role = "Spectator";
       delete payload.stableName;
       delete payload.stableAddress;
-    }
-
-    if (values.role !== "Jockey") {
       delete payload.height;
       delete payload.weight;
     }
 
-    console.log("Register payload", payload);
+    if (values.role === "HorseOwner") {
+      payload.role = "Horse Owner";
+      delete payload.height;
+      delete payload.weight;
+    }
+
+    if (values.role === "Jockey") {
+      payload.role = "Jockey";
+      delete payload.stableName;
+      delete payload.stableAddress;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      if (values.role === "HorseOwner") {
+        await registerHorseOwner(payload);
+      } else if (values.role === "Jockey") {
+        await registerJockey(payload);
+      } else {
+        await registerSpectator(payload);
+      }
+
+      message.success("Register successful");
+      form.resetFields();
+    } catch (error) {
+      message.error(error?.message || "Register failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -322,6 +356,8 @@ export default function RegisterForm() {
         .gr-input,
         .gr-input-number,
         .gr-select .ant-select-selector,
+        .gr-select.ant-select .ant-select-selector,
+        .gr-select.ant-select-outlined:not(.ant-select-customize-input) .ant-select-selector,
         .gr-date {
           height: clamp(38px, 5.2vh, 46px) !important;
           border: 1px solid rgba(222, 255, 249, 0.24) !important;
@@ -357,6 +393,42 @@ export default function RegisterForm() {
         .gr-date .ant-picker-suffix,
         .gr-date .ant-picker-clear {
           color: rgba(244, 255, 251, 0.65);
+        }
+
+        .gr-select .ant-select-selection-placeholder {
+          color: rgba(244, 255, 251, 0.55) !important;
+        }
+
+        .gr-select.ant-select-focused .ant-select-selector,
+        .gr-select.ant-select-open .ant-select-selector,
+        .gr-select:hover .ant-select-selector {
+          border-color: rgba(94, 248, 216, 0.56) !important;
+          background: rgba(255, 255, 255, 0.06) !important;
+        }
+
+        .gr-select .ant-select-selection-search-input {
+          color: #f4fffb !important;
+        }
+
+        .gr-select-dropdown {
+          border: 1px solid rgba(94, 248, 216, 0.24);
+          background: #07342f;
+          box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+        }
+
+        .gr-select-dropdown .ant-select-item {
+          color: rgba(244, 255, 251, 0.82);
+          border-radius: 7px;
+        }
+
+        .gr-select-dropdown .ant-select-item-option-active {
+          color: #fff !important;
+          background: rgba(95, 248, 216, 0.16) !important;
+        }
+
+        .gr-select-dropdown .ant-select-item-option-selected {
+          color: #062724;
+          background: #5ef8d8;
         }
 
         .gr-input-number,
@@ -536,6 +608,7 @@ export default function RegisterForm() {
           .gr-input,
           .gr-input-number,
           .gr-select .ant-select-selector,
+          .gr-select.ant-select .ant-select-selector,
           .gr-date {
             height: 36px !important;
           }
@@ -630,7 +703,7 @@ export default function RegisterForm() {
                 name="dateOfBirth"
                 rules={[{ required: true, message: "Date of birth is required" }]}
               >
-                <DatePicker className="gr-date" format="YYYY-MM-DD" placeholder="YYYY-MM-DD" suffixIcon={<Icon name="calendar" size={19} />} />
+                <DatePicker className="gr-date" format="DD-MM-YYYY" placeholder="DD-MM-YYYY" suffixIcon={<Icon name="calendar" size={19} />} />
               </Form.Item>
 
               <Form.Item
@@ -650,11 +723,12 @@ export default function RegisterForm() {
               >
                 <Select
                   className="gr-select"
+                  popupClassName="gr-select-dropdown"
                   placeholder="Select gender"
                   options={[
-                    { value: "Male", label: "Male" },
-                    { value: "Female", label: "Female" },
-                    { value: "Other", label: "Other" },
+                    { value: 1, label: "Male" },
+                    { value: 0, label: "Female" },
+                    { value: 2, label: "Other" },
                   ]}
                 />
               </Form.Item>
@@ -718,7 +792,7 @@ export default function RegisterForm() {
             </div>
 
             <div className="gr-form-actions">
-              <Button block className="gr-submit" htmlType="submit">
+              <Button block className="gr-submit" htmlType="submit" loading={isSubmitting}>
                 <div className="gr-submit-content">
                   <div>Register as {role}</div>
                   <Icon name="arrow" />

@@ -1,4 +1,4 @@
-import { apiRequest } from "../client";
+import { apiClient } from "../client";
 import { AUTH_ENDPOINTS } from "../endpoints/auth.endpoint";
 
 function pickFirstValue(source, keys) {
@@ -34,17 +34,31 @@ function normalizeLoginResponse(response) {
 }
 
 export async function login(credentials) {
-  const response = await apiRequest(AUTH_ENDPOINTS.LOGIN, {
-    method: "POST",
-    body: credentials,
-  });
+  const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN, credentials);
 
-  return normalizeLoginResponse(response);
+  return normalizeLoginResponse(response.data);
 }
 
 export async function getProfile() {
-  return apiRequest(AUTH_ENDPOINTS.PROFILE, {
+  const response = await apiClient.get(AUTH_ENDPOINTS.PROFILE, {
     includeAuth: true,
     includeRefreshToken: true,
   });
+
+  return response.data;
+}
+
+export async function registerSpectator(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_SPECTATOR, payload);
+  return response.data;
+}
+
+export async function registerHorseOwner(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_HORSE_OWNER, payload);
+  return response.data;
+}
+
+export async function registerJockey(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_JOCKEY, payload);
+  return response.data;
 }

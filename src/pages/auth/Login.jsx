@@ -1,8 +1,5 @@
-import React, { useState } from "react";
-import { message } from "antd";
-import { Link } from "react-router-dom";
-import { login } from "../../api/services/auth.service";
-import { saveAuthSession } from "../../utils/storage";
+import React from "react";
+import LoginForm from "./components/LoginForm";
 
 const features = [
   ["trophy", "Live Races", "Real-time updates and results"],
@@ -26,33 +23,6 @@ function Icon({ name, size = 24 }) {
   };
 
   const paths = {
-    mail: (
-      <>
-        <rect x="3" y="5" width="18" height="14" rx="2" />
-        <path d="m3 7 9 6 9-6" />
-      </>
-    ),
-    lock: (
-      <>
-        <rect x="5" y="10" width="14" height="10" rx="2" />
-        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-        <path d="M12 14v2" />
-      </>
-    ),
-    eye: (
-      <>
-        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-        <circle cx="12" cy="12" r="3" />
-        <path d="M4 20 20 4" />
-      </>
-    ),
-    arrow: (
-      <>
-        <path d="M5 12h14" />
-        <path d="m13 5 7 7-7 7" />
-      </>
-    ),
-    check: <path d="m5 12 4 4L19 6" />,
     logo: (
       <>
         <path d="M7 20c0-7 3-10 8-12l2-4 1 6c2 2 3 4 3 7v3" />
@@ -103,46 +73,7 @@ function Icon({ name, size = 24 }) {
   return <svg {...common}>{paths[name]}</svg>;
 }
 
-function GoogleLogo() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09Z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z" />
-      <path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.12-1.43.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.77.42 3.45 1.18 4.94l3.66-2.84Z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1A11 11 0 0 0 2.18 7.06L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38Z" />
-    </svg>
-  );
-}
-
 export default function GoldenHoofLogin() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [remember, setRemember] = useState(true);
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  async function handleLogin(event) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      const authSession = await login({ email, password });
-
-      saveAuthSession(authSession, remember);
-      message.success("Login successful");
-    } catch (loginError) {
-      const errorMessage =
-        loginError?.message || "Login failed. Please try again.";
-
-      setError(errorMessage);
-      message.error(errorMessage);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   return (
     <main className="gh-page">
       <style>{`
@@ -246,50 +177,48 @@ export default function GoldenHoofLogin() {
           line-height: 1.55;
         }
 
-        .gh-field {
+        .gh-ant-form .ant-form-item {
           margin-bottom: clamp(10px, 1.55vh, 18px);
         }
 
-        .gh-label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 15px;
-          font-weight: 800;
-          color: #fff;
+        .gh-ant-form .ant-form-item-label {
+          padding-bottom: 8px;
         }
 
-        .gh-input-box {
+        .gh-ant-form .ant-form-item-label > label {
+          height: auto;
+          color: #fff;
+          font-size: 15px;
+          font-weight: 800;
+        }
+
+        .gh-ant-form .ant-form-item-label > label::after {
+          display: none;
+        }
+
+        .gh-ant-input {
           height: clamp(44px, 6vh, 56px);
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 0 18px;
           border: 1px solid rgba(222, 255, 249, 0.24);
           border-radius: 9px;
-          color: rgba(244, 255, 251, 0.68);
+          color: #f4fffb;
           background: rgba(255, 255, 255, 0.05);
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
         }
 
-        .gh-input-box input {
-          width: 100%;
-          height: 100%;
-          min-width: 0;
-          border: 0;
-          outline: 0;
-          background: transparent;
-          color: #f4fffb;
-          font-size: clamp(15px, 1vw, 17px);
+        .gh-ant-input input,
+        .gh-ant-input .ant-input {
+          color: #f4fffb !important;
+          background: transparent !important;
         }
 
-        .gh-icon-btn {
-          display: grid;
-          place-items: center;
-          padding: 0;
-          border: 0;
-          color: rgba(244, 255, 251, 0.72);
-          background: transparent;
-          cursor: pointer;
+        .gh-ant-input input::placeholder,
+        .gh-ant-input .ant-input::placeholder {
+          color: rgba(244, 255, 251, 0.6) !important;
+        }
+
+        .gh-ant-input .ant-input-prefix,
+        .gh-ant-input .ant-input-password-icon {
+          color: rgba(244, 255, 251, 0.7);
         }
 
         .gh-options {
@@ -301,34 +230,17 @@ export default function GoldenHoofLogin() {
           font-size: 15px;
         }
 
-        .gh-check {
-          display: flex;
-          align-items: center;
-          gap: 12px;
+        .gh-ant-checkbox {
           color: #fff;
-          cursor: pointer;
-          user-select: none;
         }
 
-        .gh-check input {
-          position: absolute;
-          opacity: 0;
-          pointer-events: none;
-        }
-
-        .gh-fake-check {
-          width: 22px;
-          height: 22px;
-          flex: 0 0 22px;
-          display: grid;
-          place-items: center;
-          border: 2px solid #5ef8d8;
-          border-radius: 5px;
-          color: #062724;
+        .gh-ant-checkbox .ant-checkbox-inner {
+          border-color: #5ef8d8;
           background: transparent;
         }
 
-        .gh-check input:checked + .gh-fake-check {
+        .gh-ant-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+          border-color: #5ef8d8;
           background: #5ef8d8;
         }
 
@@ -357,6 +269,10 @@ export default function GoldenHoofLogin() {
           box-shadow: 0 16px 42px rgba(95, 244, 213, 0.18);
           font-size: 17px;
           font-weight: 900;
+        }
+
+        .gh-login-btn > span {
+          width: 100%;
         }
 
         .gh-login-btn:disabled {
@@ -398,17 +314,6 @@ export default function GoldenHoofLogin() {
           text-align: center;
           color: rgba(244, 255, 251, 0.78);
           font-size: 15px;
-        }
-
-        .gh-error {
-          margin: 0 0 12px;
-          padding: 10px 12px;
-          border: 1px solid rgba(255, 112, 112, 0.32);
-          border-radius: 9px;
-          color: #ffd6d6;
-          background: rgba(255, 112, 112, 0.1);
-          font-size: 14px;
-          line-height: 1.35;
         }
 
         .gh-hero {
@@ -577,10 +482,10 @@ export default function GoldenHoofLogin() {
           .gh-subtitle {
             display: none;
           }
-          .gh-field {
+          .gh-ant-form .ant-form-item {
             margin-bottom: 10px;
           }
-          .gh-input-box,
+          .gh-ant-input,
           .gh-login-btn,
           .gh-google-btn {
             height: 44px;
@@ -613,89 +518,7 @@ export default function GoldenHoofLogin() {
               horse racing.
             </p>
 
-            <form onSubmit={handleLogin}>
-              {error ? <p className="gh-error">{error}</p> : null}
-
-              <div className="gh-field">
-                <label className="gh-label" htmlFor="email">
-                  Email Address
-                </label>
-                <div className="gh-input-box">
-                  <Icon name="mail" />
-                  <input
-                    id="email"
-                    autoComplete="email"
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="goldenhoof@example.com"
-                    required
-                    type="email"
-                    value={email}
-                  />
-                </div>
-              </div>
-
-              <div className="gh-field">
-                <label className="gh-label" htmlFor="password">
-                  Password
-                </label>
-                <div className="gh-input-box">
-                  <Icon name="lock" />
-                  <input
-                    id="password"
-                    autoComplete="current-password"
-                    onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Enter your password"
-                    required
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                  />
-                  <button
-                    className="gh-icon-btn"
-                    type="button"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    onClick={() => setShowPassword((value) => !value)}
-                  >
-                    <Icon name="eye" size={22} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="gh-options">
-                <label className="gh-check">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(event) => setRemember(event.target.checked)}
-                  />
-                  <span className="gh-fake-check">
-                    {remember ? <Icon name="check" size={16} /> : null}
-                  </span>
-                  <span>Remember me</span>
-                </label>
-                <a className="gh-link" href="#forgot-password">
-                  Forgot password?
-                </a>
-              </div>
-
-              <button className="gh-login-btn" disabled={isSubmitting} type="submit">
-                <span>{isSubmitting ? "Logging in..." : "Log In"}</span>
-                <Icon name="arrow" />
-              </button>
-
-              <div className="gh-divider">or</div>
-
-              <button className="gh-google-btn" type="button">
-                <GoogleLogo />
-                <span>Continue with Google</span>
-              </button>
-            </form>
-
-            <p className="gh-signup">
-              Don't have an account?{" "}
-              <Link className="gh-link" to="/register">
-                Sign up
-              </Link>
-            </p>
+            <LoginForm />
           </div>
         </aside>
 
