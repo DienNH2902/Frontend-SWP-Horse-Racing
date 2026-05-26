@@ -358,6 +358,8 @@ export default function RegisterForm() {
         .gr-select .ant-select-selector,
         .gr-select.ant-select .ant-select-selector,
         .gr-select.ant-select-outlined:not(.ant-select-customize-input) .ant-select-selector,
+        .gr-field-grid .ant-select .ant-select-selector,
+        .gr-field-grid .ant-select-outlined:not(.ant-select-customize-input) .ant-select-selector,
         .gr-date {
           height: clamp(38px, 5.2vh, 46px) !important;
           border: 1px solid rgba(222, 255, 249, 0.24) !important;
@@ -365,6 +367,14 @@ export default function RegisterForm() {
           color: #f4fffb !important;
           background: rgba(255, 255, 255, 0.05) !important;
           box-shadow: none !important;
+        }
+
+        .gr-select.ant-select,
+        .gr-select.ant-select-status-error,
+        .gr-field-grid .ant-form-item-has-error .gr-select.ant-select {
+          border-radius: 9px !important;
+          color: #f4fffb !important;
+          background: rgba(255, 255, 255, 0.05) !important;
         }
 
         .gr-input,
@@ -396,18 +406,46 @@ export default function RegisterForm() {
         }
 
         .gr-select .ant-select-selection-placeholder {
-          color: rgba(244, 255, 251, 0.55) !important;
+          color: rgba(244, 255, 251, 0.78) !important;
+        }
+
+        .gr-select.ant-select .ant-select-selection-placeholder,
+        .gr-select.ant-select-single .ant-select-selector .ant-select-selection-placeholder,
+        .gr-field-grid .ant-select .ant-select-selection-placeholder {
+          color: rgba(244, 255, 251, 0.78) !important;
         }
 
         .gr-select.ant-select-focused .ant-select-selector,
         .gr-select.ant-select-open .ant-select-selector,
-        .gr-select:hover .ant-select-selector {
+        .gr-select:hover .ant-select-selector,
+        .gr-select.ant-select:hover,
+        .gr-select.ant-select-focused,
+        .gr-select.ant-select-open,
+        .gr-field-grid .ant-select:hover .ant-select-selector,
+        .gr-field-grid .ant-select-focused .ant-select-selector,
+        .gr-field-grid .ant-select-open .ant-select-selector {
           border-color: rgba(94, 248, 216, 0.56) !important;
           background: rgba(255, 255, 255, 0.06) !important;
         }
 
+        .gr-select.ant-select-status-error,
+        .gr-select.ant-select-status-error:hover,
+        .gr-select.ant-select-status-error.ant-select-focused,
+        .gr-select.ant-select-status-error.ant-select-open,
+        .gr-field-grid .ant-form-item-has-error .ant-select-selector,
+        .gr-field-grid .ant-form-item-has-error .ant-select:not(.ant-select-disabled):not(.ant-select-customize-input) .ant-select-selector,
+        .gr-field-grid .ant-form-item-has-error .gr-select.ant-select,
+        .gr-field-grid .ant-form-item-has-error .gr-select.ant-select:hover {
+          background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .gr-select.ant-select-status-error .ant-select-selector,
+        .gr-field-grid .ant-form-item-has-error .gr-select .ant-select-selector {
+          border-color: rgba(255, 112, 112, 0.72) !important;
+        }
+
         .gr-select .ant-select-selection-search-input {
-          color: #f4fffb !important;
+          color: #64edba !important;
         }
 
         .gr-select-dropdown {

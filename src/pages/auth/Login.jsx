@@ -205,6 +205,29 @@ export default function GoldenHoofLogin() {
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
         }
 
+        .gh-ant-input:hover,
+        .gh-ant-input:focus,
+        .gh-ant-input:focus-within,
+        .gh-ant-input.ant-input-affix-wrapper-focused {
+          border-color: rgba(94, 248, 216, 0.58) !important;
+          background: rgba(94, 248, 216, 0.1) !important;
+          box-shadow: 0 0 0 3px rgba(94, 248, 216, 0.08) !important;
+        }
+
+        .gh-ant-form .ant-form-item-has-error .gh-ant-input,
+        .gh-ant-form .ant-form-item-has-error .gh-ant-input:hover,
+        .gh-ant-form .ant-form-item-has-error .gh-ant-input:focus,
+        .gh-ant-form .ant-form-item-has-error .gh-ant-input:focus-within {
+          border-color: rgba(255, 112, 112, 0.72) !important;
+          background: rgba(255, 112, 112, 0.08) !important;
+          box-shadow: 0 0 0 3px rgba(255, 112, 112, 0.07) !important;
+        }
+
+        .gh-ant-form .ant-form-item-explain-error {
+          color: #ffd6d6;
+          font-size: 13px;
+        }
+
         .gh-ant-input input,
         .gh-ant-input .ant-input {
           color: #f4fffb !important;
