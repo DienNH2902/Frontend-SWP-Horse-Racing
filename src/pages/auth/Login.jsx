@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { message } from "antd";
 import { Link } from "react-router-dom";
+import { login } from "../../api/services/auth.service";
+import { saveAuthSession } from "../../utils/storage";
 
 const features = [
   ["trophy", "Live Races", "Real-time updates and results"],
@@ -112,8 +115,33 @@ function GoogleLogo() {
 }
 
 export default function GoldenHoofLogin() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const authSession = await login({ email, password });
+
+      saveAuthSession(authSession, remember);
+      message.success("Login successful");
+    } catch (loginError) {
+      const errorMessage =
+        loginError?.message || "Login failed. Please try again.";
+
+      setError(errorMessage);
+      message.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <main className="gh-page">
@@ -331,6 +359,11 @@ export default function GoldenHoofLogin() {
           font-weight: 900;
         }
 
+        .gh-login-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.72;
+        }
+
         .gh-divider {
           display: grid;
           grid-template-columns: 1fr auto 1fr;
@@ -365,6 +398,17 @@ export default function GoldenHoofLogin() {
           text-align: center;
           color: rgba(244, 255, 251, 0.78);
           font-size: 15px;
+        }
+
+        .gh-error {
+          margin: 0 0 12px;
+          padding: 10px 12px;
+          border: 1px solid rgba(255, 112, 112, 0.32);
+          border-radius: 9px;
+          color: #ffd6d6;
+          background: rgba(255, 112, 112, 0.1);
+          font-size: 14px;
+          line-height: 1.35;
         }
 
         .gh-hero {
@@ -569,14 +613,24 @@ export default function GoldenHoofLogin() {
               horse racing.
             </p>
 
-            <form>
+            <form onSubmit={handleLogin}>
+              {error ? <p className="gh-error">{error}</p> : null}
+
               <div className="gh-field">
                 <label className="gh-label" htmlFor="email">
                   Email Address
                 </label>
                 <div className="gh-input-box">
                   <Icon name="mail" />
-                  <input id="email" type="email" placeholder="goldenhoof@example.com" autoComplete="email" />
+                  <input
+                    id="email"
+                    autoComplete="email"
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="goldenhoof@example.com"
+                    required
+                    type="email"
+                    value={email}
+                  />
                 </div>
               </div>
 
@@ -588,9 +642,12 @@ export default function GoldenHoofLogin() {
                   <Icon name="lock" />
                   <input
                     id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
                     autoComplete="current-password"
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={password}
                   />
                   <button
                     className="gh-icon-btn"
@@ -620,8 +677,8 @@ export default function GoldenHoofLogin() {
                 </a>
               </div>
 
-              <button className="gh-login-btn" type="submit">
-                <span>Log In</span>
+              <button className="gh-login-btn" disabled={isSubmitting} type="submit">
+                <span>{isSubmitting ? "Logging in..." : "Log In"}</span>
                 <Icon name="arrow" />
               </button>
 
