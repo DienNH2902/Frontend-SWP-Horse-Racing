@@ -1,6 +1,6 @@
 import { Button, Checkbox, Form, Input, message } from "antd";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login } from "../../../api/services/auth.service";
 import { saveAuthSession } from "../../../utils/storage";
 
@@ -55,6 +55,7 @@ function GoogleLogo() {
 
 export default function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   async function handleFinish(values) {
     setIsSubmitting(true);
@@ -67,6 +68,7 @@ export default function LoginForm() {
 
       saveAuthSession(authSession, values.remember);
       message.success("Login successful");
+      navigate("/", { replace: true });
     } catch (error) {
       message.error(error?.message || "Login failed. Please try again.");
     } finally {
