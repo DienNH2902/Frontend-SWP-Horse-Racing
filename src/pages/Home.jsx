@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
+import { clearAuthSession, getAuthSession } from "../utils/storage";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -95,6 +96,20 @@ function Icon({ name, size = 24 }) {
         <path d="m3 7 9 6 9-6" />
       </>
     ),
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+    chevron: <path d="m6 9 6 6 6-6" />,
+    logout: (
+      <>
+        <path d="M10 17 15 12l-5-5" />
+        <path d="M15 12H3" />
+        <path d="M21 3v18" />
+      </>
+    ),
   };
 
   return <svg {...common}>{paths[name]}</svg>;
@@ -139,6 +154,8 @@ function Avatar({ name, rank }) {
 }
 
 function Home() {
+  const [authSession, setAuthSession] = useState(() => getAuthSession());
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -168,6 +185,12 @@ function Home() {
       isMounted = false;
     };
   }, []);
+
+  function handleLogout() {
+    clearAuthSession();
+    setAuthSession(null);
+    setIsAccountMenuOpen(false);
+  }
 
   return (
     <main className="home-page">
@@ -274,6 +297,58 @@ function Home() {
           border-color: transparent;
           color: #062724;
           background: #69f8dd;
+        }
+
+        .account-menu {
+          position: relative;
+        }
+
+        .account-trigger {
+          min-width: 150px;
+          justify-content: space-between;
+        }
+
+        .account-trigger svg:last-child {
+          transition: transform 0.18s ease;
+        }
+
+        .account-trigger-open svg:last-child {
+          transform: rotate(180deg);
+        }
+
+        .account-dropdown {
+          position: absolute;
+          top: calc(100% + 12px);
+          right: 0;
+          width: 190px;
+          padding: 8px;
+          border: 1px solid rgba(105, 248, 221, 0.22);
+          border-radius: 8px;
+          background: rgba(0, 45, 40, 0.96);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .account-menu-item {
+          width: 100%;
+          min-height: 42px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 0 12px;
+          border: 0;
+          border-radius: 6px;
+          color: #f4fffb;
+          background: transparent;
+          font-weight: 850;
+          cursor: pointer;
+        }
+
+        .account-menu-item:hover {
+          background: rgba(105, 248, 221, 0.12);
+        }
+
+        .account-menu-logout {
+          color: #ffd9d9;
         }
 
         .home-hero {
@@ -949,12 +1024,50 @@ function Home() {
             <button className="home-icon-btn" type="button" aria-label="Search">
               <Icon name="search" size={24} />
             </button>
-            <Link className="home-btn" to="/login">
-              Log in
-            </Link>
-            <Link className="home-btn home-btn-primary" to="/register">
-              Sign up
-            </Link>
+            {authSession ? (
+              <div className="account-menu">
+                <button
+                  className={`home-btn account-trigger ${
+                    isAccountMenuOpen ? "account-trigger-open" : ""
+                  }`}
+                  type="button"
+                  aria-expanded={isAccountMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setIsAccountMenuOpen((current) => !current)}
+                >
+                  <Icon name="user" size={20} />
+                  <span>Account</span>
+                  <Icon name="chevron" size={18} />
+                </button>
+
+                {isAccountMenuOpen && (
+                  <div className="account-dropdown" role="menu">
+                    <Link className="account-menu-item" role="menuitem" to="/profile">
+                      <Icon name="user" size={18} />
+                      <span>Profile</span>
+                    </Link>
+                    <button
+                      className="account-menu-item account-menu-logout"
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                    >
+                      <Icon name="logout" size={18} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link className="home-btn" to="/login">
+                  Log in
+                </Link>
+                <Link className="home-btn home-btn-primary" to="/register">
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

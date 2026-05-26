@@ -2,8 +2,12 @@ import { apiClient } from "../client";
 import { AUTH_ENDPOINTS } from "../endpoints/auth.endpoint";
 
 function pickFirstValue(source, keys) {
+  if (!source || typeof source !== "object") {
+    return null;
+  }
+
   for (const key of keys) {
-    if (source && source[key] !== undefined && source[key] !== null) {
+    if (source[key] !== undefined && source[key] !== null) {
       return source[key];
     }
   }
@@ -13,12 +17,15 @@ function pickFirstValue(source, keys) {
 
 function normalizeLoginResponse(response) {
   const data = response?.data || response;
-  const accessToken = pickFirstValue(data, [
-    "accessToken",
-    "access_token",
-    "token",
-    "jwt",
-  ]);
+  const accessToken =
+    typeof data === "string"
+      ? data
+      : pickFirstValue(data, [
+          "accessToken",
+          "access_token",
+          "token",
+          "jwt",
+        ]);
   const refreshToken = pickFirstValue(data, [
     "refreshToken",
     "refresh_token",
@@ -28,7 +35,6 @@ function normalizeLoginResponse(response) {
   return {
     accessToken,
     refreshToken,
-    raw: response,
     user,
   };
 }

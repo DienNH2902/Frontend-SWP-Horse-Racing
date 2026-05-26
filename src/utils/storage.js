@@ -1,6 +1,7 @@
 
 const AUTH_STORAGE_KEY = "goldenhoof_auth";
 const ACCESS_TOKEN_COOKIE_KEY = "goldenhoof_access_token";
+const REFRESH_TOKEN_COOKIE_KEY = "goldenhoof_refresh_token";
 
 function getStorage(persistent = true) {
   return persistent ? window.localStorage : window.sessionStorage;
@@ -28,17 +29,35 @@ function deleteCookie(name) {
   document.cookie = `${encodeURIComponent(name)}=; path=/; max-age=0; SameSite=Lax`;
 }
 
+function getCookie(name) {
+  const encodedName = `${encodeURIComponent(name)}=`;
+  const cookie = document.cookie
+    .split("; ")
+    .find((item) => item.startsWith(encodedName));
+
+  return cookie ? decodeURIComponent(cookie.slice(encodedName.length)) : null;
+}
+
 export function saveAuthSession(authSession, persistent = true) {
   const storage = getStorage(persistent);
   const otherStorage = getStorage(!persistent);
+  const cookieOptions = {
+    maxAge: persistent ? 60 * 60 * 24 * 30 : undefined,
+  };
+  const sessionWithoutTokens = {
+    isAuthenticated: Boolean(authSession?.accessToken),
+    user: authSession?.user || null,
+  };
 
-  storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authSession));
+  storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionWithoutTokens));
   otherStorage.removeItem(AUTH_STORAGE_KEY);
 
   if (authSession?.accessToken) {
-    setCookie(ACCESS_TOKEN_COOKIE_KEY, authSession.accessToken, {
-      maxAge: persistent ? 60 * 60 * 24 * 30 : undefined,
-    });
+    setCookie(ACCESS_TOKEN_COOKIE_KEY, authSession.accessToken, cookieOptions);
+  }
+
+  if (authSession?.refreshToken) {
+    setCookie(REFRESH_TOKEN_COOKIE_KEY, authSession.refreshToken, cookieOptions);
   }
 }
 
@@ -63,12 +82,13 @@ export function clearAuthSession() {
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
   window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
   deleteCookie(ACCESS_TOKEN_COOKIE_KEY);
+  deleteCookie(REFRESH_TOKEN_COOKIE_KEY);
 }
 
 export function getAccessToken() {
-  return getAuthSession()?.accessToken || null;
+  return getCookie(ACCESS_TOKEN_COOKIE_KEY);
 }
 
 export function getRefreshToken() {
-  return getAuthSession()?.refreshToken || null;
+  return getCookie(REFRESH_TOKEN_COOKIE_KEY);
 }
