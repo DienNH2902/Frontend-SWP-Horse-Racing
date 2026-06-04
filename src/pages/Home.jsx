@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getHomePageData } from "../api/services/home.service";
+// import { getHomePageData } from "../api/services/home.service";
+import { getHorses } from "../api/services/horse.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 
 function Icon({ name, size = 24 }) {
@@ -169,17 +170,26 @@ function Home() {
   useEffect(() => {
     let isMounted = true;
 
-    getHomePageData()
-      .then((data) => {
-        if (isMounted) {
-          setHomeData(data);
-        }
-      })
-      .finally(() => {
+    async function loadData() {
+      try {
+        const horses = await getHorses();
+
+        if (!isMounted) return;
+
+        setHomeData((prev) => ({
+          ...prev,
+          horses: horses || [],
+        }));
+      } catch (error) {
+        console.error("Failed to load horses:", error);
+      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
-      });
+      }
+    }
+
+    loadData();
 
     return () => {
       isMounted = false;
@@ -1013,7 +1023,16 @@ function Home() {
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {["Races", "Horses", "Jockeys", "Results", "Rankings", "Predictions", "News", "About"].map((item) => (
+            {[
+              "Races",
+              "Horses",
+              "Jockeys",
+              "Results",
+              "Rankings",
+              "Predictions",
+              "News",
+              "About",
+            ].map((item) => (
               <a href={`#${item.toLowerCase()}`} key={item}>
                 {item}
               </a>
@@ -1042,7 +1061,11 @@ function Home() {
 
                 {isAccountMenuOpen && (
                   <div className="account-dropdown" role="menu">
-                    <Link className="account-menu-item" role="menuitem" to="/profile">
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      to="/profile"
+                    >
                       <Icon name="user" size={18} />
                       <span>Profile</span>
                     </Link>
@@ -1120,7 +1143,9 @@ function Home() {
                 {homeData.races.map((race) => (
                   <article className="race-card" key={race.id}>
                     <div className="race-meta">
-                      <span className={`pill ${race.status ? "pill-live" : ""}`}>
+                      <span
+                        className={`pill ${race.status ? "pill-live" : ""}`}
+                      >
                         {race.status || race.time}
                       </span>
                       <span>Race {race.id}</span>
@@ -1137,7 +1162,9 @@ function Home() {
                         {race.surface}
                       </span>
                     </div>
-                    {race.status && <img src={race.image} alt={`${race.name} race`} />}
+                    {race.status && (
+                      <img src={race.image} alt={`${race.name} race`} />
+                    )}
                     <button className="card-action" type="button">
                       {race.status ? "Watch Live" : "View Details"}
                     </button>
@@ -1154,32 +1181,44 @@ function Home() {
                 action={{ label: "View All Horses", href: "#horses" }}
               />
               <div className="horse-grid">
-                {homeData.horses.map((horse) => (
-                  <article className="horse-card" key={horse.id}>
+                {homeData.horses.map((horse, index) => (
+                  <article className="horse-card" key={horse._id}>
                     <div className="horse-photo">
-                      <img src={horse.image} alt={horse.name} />
-                      <span className="rank-badge">{horse.rank}</span>
+                      <img src="/goldenhoof-hero.png" alt={horse.name} />
+                      <span className="rank-badge">{index + 1}</span>
                     </div>
+
                     <div className="horse-body">
                       <h3>{horse.name}</h3>
-                      <span className="muted">
-                        {horse.age} · {horse.breed}
-                      </span>
+
                       <div className="horse-stat-row">
-                        <span>Owner</span>
-                        <strong>{horse.owner}</strong>
+                        <span>Color</span>
+                        <strong>{horse.color}</strong>
                       </div>
+
                       <div className="horse-stat-row">
-                        <span>Rating</span>
-                        <strong>{horse.rating}</strong>
+                        <span>Height</span>
+                        <strong>{horse.height} m</strong>
                       </div>
+
                       <div className="horse-stat-row">
-                        <span>Wins</span>
-                        <strong>{horse.wins}</strong>
+                        <span>Weight</span>
+                        <strong>{horse.weight} kg</strong>
                       </div>
-                      <button className="card-action" type="button">
+
+                      <div className="horse-stat-row">
+                        <span>Win Rate</span>
+                        <strong>{horse.winRate ?? 0}%</strong>
+                      </div>
+
+                      <div className="horse-stat-row">
+                        <span>Total Wins</span>
+                        <strong>{horse.totalWin ?? 0}</strong>
+                      </div>
+
+                      {/* <button className="card-action" type="button">
                         View Profile
-                      </button>
+                      </button> */}
                     </div>
                   </article>
                 ))}
@@ -1208,7 +1247,11 @@ function Home() {
           <div className="lower-grid">
             <section className="panel" id="rankings">
               <SectionTitle title="Leaderboard" />
-              <div className="tabs" role="tablist" aria-label="Leaderboard views">
+              <div
+                className="tabs"
+                role="tablist"
+                aria-label="Leaderboard views"
+              >
                 <button type="button">Horses</button>
                 <button type="button">Jockeys</button>
                 <button type="button">Owners</button>
@@ -1230,7 +1273,11 @@ function Home() {
                       <td>{row.id}</td>
                       <td>
                         <span className="horse-name-cell">
-                          <img className="mini-thumb" src="/goldenhoof-hero.png" alt="" />
+                          <img
+                            className="mini-thumb"
+                            src="/goldenhoof-hero.png"
+                            alt=""
+                          />
                           {row.horse}
                         </span>
                       </td>
@@ -1286,8 +1333,8 @@ function Home() {
             <div>
               <h2>Make Your Predictions</h2>
               <p>
-                Predict race winners and compete with fans around the world.
-                Win points and unlock exclusive rewards.
+                Predict race winners and compete with fans around the world. Win
+                points and unlock exclusive rewards.
               </p>
               <a className="home-btn home-btn-primary" href="#predictions">
                 Start Predicting
@@ -1360,7 +1407,11 @@ function Home() {
             <h3>Stay Updated</h3>
             <p>Subscribe to our newsletter</p>
             <div className="newsletter">
-              <input type="email" placeholder="Enter your email" aria-label="Email address" />
+              <input
+                type="email"
+                placeholder="Enter your email"
+                aria-label="Email address"
+              />
               <button type="button" aria-label="Subscribe">
                 <Icon name="mail" size={18} />
               </button>
