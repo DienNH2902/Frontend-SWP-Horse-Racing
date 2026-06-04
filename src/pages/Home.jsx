@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
-import { clearAuthSession, getAuthSession } from "../utils/storage";
+import { clearAuthSession, getAccessToken, getAuthSession } from "../utils/storage";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -110,6 +110,14 @@ function Icon({ name, size = 24 }) {
         <path d="M21 3v18" />
       </>
     ),
+    dashboard: (
+      <>
+        <rect x="3" y="3" width="7" height="8" rx="1" />
+        <rect x="14" y="3" width="7" height="5" rx="1" />
+        <rect x="14" y="12" width="7" height="9" rx="1" />
+        <rect x="3" y="15" width="7" height="6" rx="1" />
+      </>
+    ),
   };
 
   return <svg {...common}>{paths[name]}</svg>;
@@ -153,6 +161,41 @@ function Avatar({ name, rank }) {
   );
 }
 
+function decodeJwtClaims(token) {
+  if (!token || !token.includes(".")) {
+    return null;
+  }
+
+  try {
+    const payload = token.split(".")[1];
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      "="
+    );
+    const json = decodeURIComponent(
+      atob(paddedPayload)
+        .split("")
+        .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
+        .join("")
+    );
+
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function pickFirstValue(source, keys) {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null) {
+      return source[key];
+    }
+  }
+
+  return null;
+}
+
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -191,6 +234,20 @@ function Home() {
     setAuthSession(null);
     setIsAccountMenuOpen(false);
   }
+
+  const tokenClaims = decodeJwtClaims(getAccessToken());
+  const currentUser = authSession?.user || {};
+  const accountName =
+    pickFirstValue(currentUser, ["fullName", "name", "displayName", "username", "email"]) ||
+    pickFirstValue(tokenClaims, ["fullName", "name", "displayName", "username", "email", "sub"]) ||
+    "Account";
+  const accountRole =
+    pickFirstValue(currentUser, ["role", "roleName"]) ||
+    pickFirstValue(tokenClaims, ["role", "roleName", "roles", "authorities"]) ||
+    "";
+  const isAdmin = Array.isArray(accountRole)
+    ? accountRole.some((role) => String(role).toLowerCase().includes("admin"))
+    : String(accountRole).toLowerCase().includes("admin");
 
   return (
     <main className="home-page">
@@ -240,11 +297,18 @@ function Home() {
         .home-footer-brand {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
+          gap: 0;
+          flex: 0 0 auto;
           font-size: 26px;
           font-weight: 900;
           letter-spacing: 0;
           white-space: nowrap;
+        }
+
+        .home-brand-logo {
+          height: 78px;
+          width: auto;
+          display: block;
         }
 
         .home-brand svg,
@@ -304,8 +368,17 @@ function Home() {
         }
 
         .account-trigger {
-          min-width: 150px;
+          min-width: 210px;
+          max-width: 320px;
           justify-content: space-between;
+          font-size: 14px;
+        }
+
+        .account-trigger-name {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .account-trigger svg:last-child {
@@ -972,7 +1045,8 @@ function Home() {
         @media (max-width: 720px) {
           .home-container { width: min(100% - 28px, 1230px); }
           .home-nav { height: 74px; }
-          .home-brand { font-size: 21px; }
+          .home-brand-logo { height: 62px; width: auto; }
+          .account-trigger { min-width: 160px; max-width: 210px; }
           .home-actions .home-icon-btn { display: none; }
           .home-btn { min-height: 42px; padding: 0 14px; font-size: 13px; }
           .home-hero {
@@ -1008,8 +1082,7 @@ function Home() {
       <header className="home-nav">
         <div className="home-container home-nav-inner">
           <a className="home-brand" href="#top" aria-label="GoldenHoof home">
-            <Icon name="logo" size={34} />
-            <span>GoldenHoof</span>
+            <img className="home-brand-logo" src="/navbar-logo.png" alt="" />
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
@@ -1036,12 +1109,18 @@ function Home() {
                   onClick={() => setIsAccountMenuOpen((current) => !current)}
                 >
                   <Icon name="user" size={20} />
-                  <span>Account</span>
+                  <span className="account-trigger-name">{accountName}</span>
                   <Icon name="chevron" size={18} />
                 </button>
 
                 {isAccountMenuOpen && (
                   <div className="account-dropdown" role="menu">
+                    {isAdmin && (
+                      <Link className="account-menu-item" role="menuitem" to="/admin/dashboard">
+                        <Icon name="dashboard" size={18} />
+                        <span>Dashboard</span>
+                      </Link>
+                    )}
                     <Link className="account-menu-item" role="menuitem" to="/profile">
                       <Icon name="user" size={18} />
                       <span>Profile</span>

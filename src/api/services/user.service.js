@@ -30,6 +30,14 @@ export async function deleteUser(id) {
   return response.data;
 }
 
+export async function updateUser(id, payload) {
+  const response = await apiClient.put(USER_ENDPOINTS.DETAIL(id), payload, {
+    includeAuth: true,
+  });
+
+  return response.data;
+}
+
 export async function updateSpectator(id, payload) {
   const response = await apiClient.put(USER_ENDPOINTS.UPDATE_SPECTATOR(id), payload, {
     includeAuth: true,
@@ -60,4 +68,26 @@ export async function updateReferee(id, payload) {
   });
 
   return response.data;
+}
+
+export async function updateUserAccount(id, payload) {
+  const role = String(payload?.role || "").toLowerCase();
+
+  if (role.includes("horse")) {
+    return updateHorseOwner(id, payload);
+  }
+
+  if (role.includes("jockey")) {
+    return updateJockey(id, payload);
+  }
+
+  if (role.includes("referee")) {
+    return updateReferee(id, payload);
+  }
+
+  if (role.includes("spectator")) {
+    return updateSpectator(id, payload);
+  }
+
+  return updateUser(id, payload);
 }
