@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 // import { getHomePageData } from "../api/services/home.service";
 import { getHorses } from "../api/services/horse.service";
+import { getUsersByRole } from "../api/services/user.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 
 function Icon({ name, size = 24 }) {
@@ -172,13 +173,17 @@ function Home() {
 
     async function loadData() {
       try {
-        const horses = await getHorses();
+        const [horses, jockeys] = await Promise.all([
+          getHorses(),
+          getUsersByRole("Jockey"),
+        ]);
 
         if (!isMounted) return;
 
         setHomeData((prev) => ({
           ...prev,
           horses: horses || [],
+          jockeys: jockeys || [],
         }));
       } catch (error) {
         console.error("Failed to load horses:", error);
@@ -1231,13 +1236,17 @@ function Home() {
                 action={{ label: "View All Jockeys", href: "#jockeys" }}
               />
               <div className="jockey-list">
-                {homeData.jockeys.map((jockey) => (
-                  <div className="jockey-row" key={jockey.id}>
-                    <span className="rank-number">{jockey.rank}</span>
-                    <Avatar name={jockey.name} rank={jockey.rank} />
-                    <strong>{jockey.name}</strong>
-                    <span>{jockey.wins} Wins</span>
-                    <span>Win Rate {jockey.winRate}</span>
+                {homeData.jockeys.map((jockey, index) => (
+                  <div className="jockey-row" key={jockey._id}>
+                    <span className="rank-number">{index + 1}</span>
+
+                    <Avatar name={jockey.fullName} rank={index + 1} />
+
+                    <strong>{jockey.fullName}</strong>
+
+                    <span>{jockey.reputationPoints ?? 0} Points</span>
+
+                    <span>Win Rate {jockey.winRate ?? 0}%</span>
                   </div>
                 ))}
               </div>
