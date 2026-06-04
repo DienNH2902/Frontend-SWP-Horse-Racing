@@ -158,6 +158,7 @@ function Avatar({ name, rank }) {
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [leaderboardTab, setLeaderboardTab] = useState("horses");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -206,6 +207,14 @@ function Home() {
     setAuthSession(null);
     setIsAccountMenuOpen(false);
   }
+
+  const horseLeaderboard = [...homeData.horses]
+    .sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
+    .slice(0, 10);
+
+  const jockeyLeaderboard = [...homeData.jockeys]
+    .sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
+    .slice(0, 10);
 
   return (
     <main className="home-page">
@@ -745,7 +754,7 @@ function Home() {
 
         .tabs {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, 1fr);
           margin-bottom: 18px;
           border: 1px solid #d9ece9;
           border-radius: 8px;
@@ -1256,48 +1265,101 @@ function Home() {
           <div className="lower-grid">
             <section className="panel" id="rankings">
               <SectionTitle title="Leaderboard" />
+
               <div
                 className="tabs"
                 role="tablist"
                 aria-label="Leaderboard views"
               >
-                <button type="button">Horses</button>
-                <button type="button">Jockeys</button>
-                <button type="button">Owners</button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardTab("horses")}
+                  className={leaderboardTab === "horses" ? "active-tab" : ""}
+                >
+                  Horses
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardTab("jockeys")}
+                  className={leaderboardTab === "jockeys" ? "active-tab" : ""}
+                >
+                  Jockeys
+                </button>
               </div>
-              <table className="home-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Horse</th>
-                    <th>Rating</th>
-                    <th>Wins</th>
-                    <th>Places</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {homeData.standings.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.id}</td>
-                      <td>
-                        <span className="horse-name-cell">
-                          <img
-                            className="mini-thumb"
-                            src="/goldenhoof-hero.png"
-                            alt=""
-                          />
-                          {row.horse}
-                        </span>
-                      </td>
-                      <td>{row.rating}</td>
-                      <td>{row.wins}</td>
-                      <td>{row.places}</td>
-                      <td>{row.points}</td>
+
+              {leaderboardTab === "horses" ? (
+                <table className="home-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Horse</th>
+                      <th>Status</th>
+                      <th>Wins</th>
+                      <th>Win Rate</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+
+                  <tbody>
+                    {horseLeaderboard.map((horse, index) => (
+                      <tr key={horse._id}>
+                        <td>{index + 1}</td>
+
+                        <td>
+                          <span className="horse-name-cell">
+                            <img
+                              className="mini-thumb"
+                              src="/goldenhoof-hero.png"
+                              alt=""
+                            />
+                            {horse.name}
+                          </span>
+                        </td>
+
+                        <td>{horse.horseStatus}</td>
+
+                        <td>{horse.totalWin || 0}</td>
+
+                        <td>{horse.winRate || 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="home-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Jockey</th>
+                      <th>Status</th>
+                      <th>Weight</th>
+                      <th>Win Rate</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {jockeyLeaderboard.map((jockey, index) => (
+                      <tr key={jockey._id}>
+                        <td>{index + 1}</td>
+
+                        <td>
+                          <span className="horse-name-cell">
+                            <Avatar name={jockey.fullName} rank={index + 1} />
+                            {jockey.fullName}
+                          </span>
+                        </td>
+
+                        <td>{jockey.jockeyStatus}</td>
+
+                        <td>{jockey.weight} kg</td>
+
+                        <td>{jockey.winRate || 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
               <a className="home-panel-link" href="#rankings">
                 View Full Rankings
                 <Icon name="arrow" size={16} />
