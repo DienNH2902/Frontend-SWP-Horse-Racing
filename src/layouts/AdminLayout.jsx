@@ -117,7 +117,7 @@ function AdminLayout({ children }) {
             <span>GoldenHoof</span>
           </Link>
           <Link className="admin-nav-item" to="/admin/users">
-            Quản lý tài khoản người dùng
+            User Management
           </Link>
           <Button className="admin-home-btn" onClick={() => navigate("/")}>
             Quay lại Home

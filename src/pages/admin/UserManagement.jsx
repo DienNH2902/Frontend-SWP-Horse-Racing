@@ -187,24 +187,24 @@ function UserManagement() {
         render: (value) => <Text strong>{value}</Text>,
       },
       {
-        title: "Tên",
+        title: "Full Name",
         dataIndex: "fullName",
         fixed: "left",
         width: 190,
       },
       {
-        title: "DOB",
+        title: "Date of Birth",
         dataIndex: "dob",
-        width: 120,
+        width: 130,
         render: formatDate,
       },
       {
-        title: "Số điện thoại",
+        title: "Phone Number",
         dataIndex: "phoneNumber",
         width: 150,
       },
       {
-        title: "Địa chỉ",
+        title: "Address",
         dataIndex: "address",
         width: 260,
         ellipsis: true,
@@ -229,7 +229,7 @@ function UserManagement() {
         render: (_, record) => (
           <Space>
             <Button className="user-management-link-btn" size="small" onClick={() => openEditModal(record)}>
-              Chỉnh sửa
+              Edit
             </Button>
             <Popconfirm
               title="Disable tài khoản?"
@@ -340,7 +340,7 @@ function UserManagement() {
       <div className="user-management-header">
         <div>
           <div className="user-management-kicker">Admin dashboard</div>
-          <Title level={1}>Quản lý tài khoản người dùng</Title>
+          <Title level={1}>User Management</Title>
         </div>
         <Button className="user-management-refresh" onClick={loadUsers}>
           Refresh
