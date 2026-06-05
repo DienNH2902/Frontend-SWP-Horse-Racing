@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-// import { getHomePageData } from "../api/services/home.service";
-import { getHorses } from "../api/services/horse.service";
-import { getUsersByRole } from "../api/services/user.service";
+import { getHomePageData } from "../api/services/home.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 
 function Icon({ name, size = 24 }) {
@@ -158,7 +156,6 @@ function Avatar({ name, rank }) {
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [leaderboardTab, setLeaderboardTab] = useState("horses");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -172,30 +169,17 @@ function Home() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadData() {
-      try {
-        const [horses, jockeys] = await Promise.all([
-          getHorses(),
-          getUsersByRole("Jockey"),
-        ]);
-
-        if (!isMounted) return;
-
-        setHomeData((prev) => ({
-          ...prev,
-          horses: horses || [],
-          jockeys: jockeys || [],
-        }));
-      } catch (error) {
-        console.error("Failed to load horses:", error);
-      } finally {
+    getHomePageData()
+      .then((data) => {
+        if (isMounted) {
+          setHomeData(data);
+        }
+      })
+      .finally(() => {
         if (isMounted) {
           setIsLoading(false);
         }
-      }
-    }
-
-    loadData();
+      });
 
     return () => {
       isMounted = false;
@@ -207,14 +191,6 @@ function Home() {
     setAuthSession(null);
     setIsAccountMenuOpen(false);
   }
-
-  const horseLeaderboard = [...homeData.horses]
-    .sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
-    .slice(0, 10);
-
-  const jockeyLeaderboard = [...homeData.jockeys]
-    .sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
-    .slice(0, 10);
 
   return (
     <main className="home-page">
@@ -754,7 +730,7 @@ function Home() {
 
         .tabs {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           margin-bottom: 18px;
           border: 1px solid #d9ece9;
           border-radius: 8px;
@@ -1037,16 +1013,7 @@ function Home() {
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {[
-              "Races",
-              "Horses",
-              "Jockeys",
-              "Results",
-              "Rankings",
-              "Predictions",
-              "News",
-              "About",
-            ].map((item) => (
+            {["Races", "Horses", "Jockeys", "Results", "Rankings", "Predictions", "News", "About"].map((item) => (
               <a href={`#${item.toLowerCase()}`} key={item}>
                 {item}
               </a>
@@ -1075,11 +1042,7 @@ function Home() {
 
                 {isAccountMenuOpen && (
                   <div className="account-dropdown" role="menu">
-                    <Link
-                      className="account-menu-item"
-                      role="menuitem"
-                      to="/profile"
-                    >
+                    <Link className="account-menu-item" role="menuitem" to="/profile">
                       <Icon name="user" size={18} />
                       <span>Profile</span>
                     </Link>
@@ -1157,9 +1120,7 @@ function Home() {
                 {homeData.races.map((race) => (
                   <article className="race-card" key={race.id}>
                     <div className="race-meta">
-                      <span
-                        className={`pill ${race.status ? "pill-live" : ""}`}
-                      >
+                      <span className={`pill ${race.status ? "pill-live" : ""}`}>
                         {race.status || race.time}
                       </span>
                       <span>Race {race.id}</span>
@@ -1176,9 +1137,7 @@ function Home() {
                         {race.surface}
                       </span>
                     </div>
-                    {race.status && (
-                      <img src={race.image} alt={`${race.name} race`} />
-                    )}
+                    {race.status && <img src={race.image} alt={`${race.name} race`} />}
                     <button className="card-action" type="button">
                       {race.status ? "Watch Live" : "View Details"}
                     </button>
@@ -1195,44 +1154,32 @@ function Home() {
                 action={{ label: "View All Horses", href: "#horses" }}
               />
               <div className="horse-grid">
-                {homeData.horses.map((horse, index) => (
-                  <article className="horse-card" key={horse._id}>
+                {homeData.horses.map((horse) => (
+                  <article className="horse-card" key={horse.id}>
                     <div className="horse-photo">
-                      <img src="/goldenhoof-hero.png" alt={horse.name} />
-                      <span className="rank-badge">{index + 1}</span>
+                      <img src={horse.image} alt={horse.name} />
+                      <span className="rank-badge">{horse.rank}</span>
                     </div>
-
                     <div className="horse-body">
                       <h3>{horse.name}</h3>
-
+                      <span className="muted">
+                        {horse.age} · {horse.breed}
+                      </span>
                       <div className="horse-stat-row">
-                        <span>Color</span>
-                        <strong>{horse.color}</strong>
+                        <span>Owner</span>
+                        <strong>{horse.owner}</strong>
                       </div>
-
                       <div className="horse-stat-row">
-                        <span>Height</span>
-                        <strong>{horse.height} m</strong>
+                        <span>Rating</span>
+                        <strong>{horse.rating}</strong>
                       </div>
-
                       <div className="horse-stat-row">
-                        <span>Weight</span>
-                        <strong>{horse.weight} kg</strong>
+                        <span>Wins</span>
+                        <strong>{horse.wins}</strong>
                       </div>
-
-                      <div className="horse-stat-row">
-                        <span>Win Rate</span>
-                        <strong>{horse.winRate ?? 0}%</strong>
-                      </div>
-
-                      <div className="horse-stat-row">
-                        <span>Total Wins</span>
-                        <strong>{horse.totalWin ?? 0}</strong>
-                      </div>
-
-                      {/* <button className="card-action" type="button">
+                      <button className="card-action" type="button">
                         View Profile
-                      </button> */}
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -1245,17 +1192,13 @@ function Home() {
                 action={{ label: "View All Jockeys", href: "#jockeys" }}
               />
               <div className="jockey-list">
-                {homeData.jockeys.map((jockey, index) => (
-                  <div className="jockey-row" key={jockey._id}>
-                    <span className="rank-number">{index + 1}</span>
-
-                    <Avatar name={jockey.fullName} rank={index + 1} />
-
-                    <strong>{jockey.fullName}</strong>
-
-                    <span>{jockey.reputationPoints ?? 0} Points</span>
-
-                    <span>Win Rate {jockey.winRate ?? 0}%</span>
+                {homeData.jockeys.map((jockey) => (
+                  <div className="jockey-row" key={jockey.id}>
+                    <span className="rank-number">{jockey.rank}</span>
+                    <Avatar name={jockey.name} rank={jockey.rank} />
+                    <strong>{jockey.name}</strong>
+                    <span>{jockey.wins} Wins</span>
+                    <span>Win Rate {jockey.winRate}</span>
                   </div>
                 ))}
               </div>
@@ -1265,101 +1208,40 @@ function Home() {
           <div className="lower-grid">
             <section className="panel" id="rankings">
               <SectionTitle title="Leaderboard" />
-
-              <div
-                className="tabs"
-                role="tablist"
-                aria-label="Leaderboard views"
-              >
-                <button
-                  type="button"
-                  onClick={() => setLeaderboardTab("horses")}
-                  className={leaderboardTab === "horses" ? "active-tab" : ""}
-                >
-                  Horses
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setLeaderboardTab("jockeys")}
-                  className={leaderboardTab === "jockeys" ? "active-tab" : ""}
-                >
-                  Jockeys
-                </button>
+              <div className="tabs" role="tablist" aria-label="Leaderboard views">
+                <button type="button">Horses</button>
+                <button type="button">Jockeys</button>
+                <button type="button">Owners</button>
               </div>
-
-              {leaderboardTab === "horses" ? (
-                <table className="home-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Horse</th>
-                      <th>Status</th>
-                      <th>Wins</th>
-                      <th>Win Rate</th>
+              <table className="home-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Horse</th>
+                    <th>Rating</th>
+                    <th>Wins</th>
+                    <th>Places</th>
+                    <th>Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {homeData.standings.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.id}</td>
+                      <td>
+                        <span className="horse-name-cell">
+                          <img className="mini-thumb" src="/goldenhoof-hero.png" alt="" />
+                          {row.horse}
+                        </span>
+                      </td>
+                      <td>{row.rating}</td>
+                      <td>{row.wins}</td>
+                      <td>{row.places}</td>
+                      <td>{row.points}</td>
                     </tr>
-                  </thead>
-
-                  <tbody>
-                    {horseLeaderboard.map((horse, index) => (
-                      <tr key={horse._id}>
-                        <td>{index + 1}</td>
-
-                        <td>
-                          <span className="horse-name-cell">
-                            <img
-                              className="mini-thumb"
-                              src="/goldenhoof-hero.png"
-                              alt=""
-                            />
-                            {horse.name}
-                          </span>
-                        </td>
-
-                        <td>{horse.horseStatus}</td>
-
-                        <td>{horse.totalWin || 0}</td>
-
-                        <td>{horse.winRate || 0}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <table className="home-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Jockey</th>
-                      <th>Status</th>
-                      <th>Weight</th>
-                      <th>Win Rate</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {jockeyLeaderboard.map((jockey, index) => (
-                      <tr key={jockey._id}>
-                        <td>{index + 1}</td>
-
-                        <td>
-                          <span className="horse-name-cell">
-                            <Avatar name={jockey.fullName} rank={index + 1} />
-                            {jockey.fullName}
-                          </span>
-                        </td>
-
-                        <td>{jockey.jockeyStatus}</td>
-
-                        <td>{jockey.weight} kg</td>
-
-                        <td>{jockey.winRate || 0}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
+                  ))}
+                </tbody>
+              </table>
               <a className="home-panel-link" href="#rankings">
                 View Full Rankings
                 <Icon name="arrow" size={16} />
@@ -1404,8 +1286,8 @@ function Home() {
             <div>
               <h2>Make Your Predictions</h2>
               <p>
-                Predict race winners and compete with fans around the world. Win
-                points and unlock exclusive rewards.
+                Predict race winners and compete with fans around the world.
+                Win points and unlock exclusive rewards.
               </p>
               <a className="home-btn home-btn-primary" href="#predictions">
                 Start Predicting
@@ -1478,11 +1360,7 @@ function Home() {
             <h3>Stay Updated</h3>
             <p>Subscribe to our newsletter</p>
             <div className="newsletter">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                aria-label="Email address"
-              />
+              <input type="email" placeholder="Enter your email" aria-label="Email address" />
               <button type="button" aria-label="Subscribe">
                 <Icon name="mail" size={18} />
               </button>

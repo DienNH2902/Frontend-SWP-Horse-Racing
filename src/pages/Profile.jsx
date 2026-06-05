@@ -115,7 +115,7 @@ function Profile() {
         <h1>{displayName}</h1>
         <p>{email}</p>
         <div className="profile-actions">
-          <Link className="profile-btn profile-btn-primary" to="/">
+          <Link className="profile-btn profile-btn-primary" to="/home">
             Back Home
           </Link>
           <button className="profile-btn" type="button" onClick={handleLogout}>
