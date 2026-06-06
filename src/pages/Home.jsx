@@ -1,545 +1,1497 @@
-// App.jsx hoặc HomePage.jsx
-import React, { useState } from 'react';
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+// import { getHomePageData } from "../api/services/home.service";
+import { getHorses } from "../api/services/horse.service";
+import { getUsersByRole } from "../api/services/user.service";
+import { clearAuthSession, getAuthSession } from "../utils/storage";
 
-// Data mẫu
-const upcomingRaces = [
-    { id: 1, status: 'LIVE', time: '', raceNum: 'Race 4', name: 'Emerald Stakes', venue: 'Royal Turf Club', distance: '1,600m', surface: 'Turf', image: '/race1.jpg' },
-    { id: 2, status: '', time: '15:15', raceNum: 'Race 5', name: 'Golden Mile Cup', venue: 'Sunshine Racecourse', distance: '1,600m', surface: 'Turf', image: null },
-    { id: 3, status: '', time: '16:00', raceNum: 'Race 6', name: 'Thunderbolt Sprint', venue: 'Valley Racecourse', distance: '1,200m', surface: 'Dirt', image: null },
-    { id: 4, status: '', time: '16:45', raceNum: 'Race 7', name: "Champion's Cup", venue: 'Royal Turf Club', distance: '2,400m', surface: 'Turf', image: null },
-    { id: 5, status: '', time: '17:30', raceNum: 'Race 8', name: 'Victory Purse', venue: 'Sunshine Racecourse', distance: '1,800m', surface: 'Turf', image: null },
-];
+function Icon({ name, size = 24 }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.9,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": true,
+  };
 
-const topHorses = [
-    { id: 1, rank: 1, name: 'Silver Bullet', age: '6 yrs', breed: 'Thoroughbred', owner: 'Greenfield Stable', rating: 98, wins: 12, image: '/horse1.jpg' },
-    { id: 2, rank: 2, name: 'Emerald Dream', age: '5 yrs', breed: 'Thoroughbred', owner: 'Skyline Racing', rating: 96, wins: 10, image: '/horse2.jpg' },
-    { id: 3, rank: 3, name: 'Midnight Runner', age: '7 yrs', breed: 'Thoroughbred', owner: 'Victory Stables', rating: 95, wins: 14, image: '/horse3.jpg' },
-    { id: 4, rank: 4, name: 'Thunder King', age: '6 yrs', breed: 'Thoroughbred', owner: 'Royal Bloodstock', rating: 94, wins: 9, image: '/horse4.jpg' },
-];
+  const paths = {
+    logo: (
+      <>
+        <path d="M7 20c0-7 3-10 8-12l2-4 1 6c2 2 3 4 3 7v3" />
+        <path d="M7 20h9c2 0 3-1 3-3" />
+        <path d="M10 10 5 6" />
+        <path d="M15 12h.01" />
+        <path d="M11 15h5" />
+      </>
+    ),
+    search: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </>
+    ),
+    arrow: (
+      <>
+        <path d="M5 12h14" />
+        <path d="m13 5 7 7-7 7" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 20V10" />
+        <path d="M10 20V4" />
+        <path d="M16 20v-7" />
+        <path d="M22 20V8" />
+      </>
+    ),
+    horse: (
+      <>
+        <path d="M4 18v-5l4-4 5 1 3-3 4 4-3 2v5" />
+        <path d="M8 14v4" />
+        <path d="M13 14v4" />
+        <path d="M16 8V4" />
+      </>
+    ),
+    trophy: (
+      <>
+        <path d="M8 21h8" />
+        <path d="M12 17v4" />
+        <path d="M7 4h10v6a5 5 0 0 1-10 0V4Z" />
+        <path d="M5 6H3v3a4 4 0 0 0 4 4" />
+        <path d="M19 6h2v3a4 4 0 0 1-4 4" />
+      </>
+    ),
+    users: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </>
+    ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    map: (
+      <>
+        <path d="M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Z" />
+        <path d="M9 3v15" />
+        <path d="M15 6v15" />
+      </>
+    ),
+    crown: (
+      <>
+        <path d="m3 8 4 8 5-10 5 10 4-8v11H3V8Z" />
+        <path d="M3 21h18" />
+      </>
+    ),
+    mail: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m3 7 9 6 9-6" />
+      </>
+    ),
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21a8 8 0 0 1 16 0" />
+      </>
+    ),
+    chevron: <path d="m6 9 6 6 6-6" />,
+    logout: (
+      <>
+        <path d="M10 17 15 12l-5-5" />
+        <path d="M15 12H3" />
+        <path d="M21 3v18" />
+      </>
+    ),
+  };
 
-const topJockeys = [
-    { id: 1, rank: 1, name: "Liam O'Connor", wins: 123, winRate: '24%', image: '/jockey1.jpg' },
-    { id: 2, rank: 2, name: 'Sophia Martinez', wins: 98, winRate: '21%', image: '/jockey2.jpg' },
-    { id: 3, rank: 3, name: 'Noah Henderson', wins: 87, winRate: '19%', image: '/jockey3.jpg' },
-    { id: 4, rank: 4, name: 'Ava Thompson', wins: 76, winRate: '18%', image: '/jockey4.jpg' },
-    { id: 5, rank: 5, name: 'Ethan Walker', wins: 68, winRate: '17%', image: '/jockey5.jpg' },
-];
-
-const leaderboardData = [
-    { rank: 1, name: 'Silver Bullet', rating: 98, wins: 12, places: 5, points: 1250, image: '/horse1.jpg' },
-    { rank: 2, name: 'Emerald Dream', rating: 96, wins: 10, places: 4, points: 1080, image: '/horse2.jpg' },
-    { rank: 3, name: 'Midnight Runner', rating: 95, wins: 14, places: 3, points: 1075, image: '/horse3.jpg' },
-    { rank: 4, name: 'Thunder King', rating: 94, wins: 9, places: 6, points: 980, image: '/horse4.jpg' },
-    { rank: 5, name: 'Royal Phantom', rating: 93, wins: 8, places: 4, points: 870, image: '/horse5.jpg' },
-];
-
-const latestResults = [
-    { id: 1, status: 'LIVE', race: 'Race 4 - Emerald Stakes', venue: 'Royal Turf Club', distance: '1,600m', surface: 'Turf', winner: 'Silver Bullet', jockey: "L. O'Connor", time: '1:34.25', image: '/result1.jpg' },
-    { id: 2, status: 'Finished', race: 'Race 3 - Sunshine Cup', venue: 'Sunshine Racecourse', distance: '1,800m', surface: 'Turf', winner: 'Emerald Dream', jockey: 'S. Martinez', time: '1:48.63', image: '/result2.jpg' },
-    { id: 3, status: 'Finished', race: 'Race 2 - Rapid Dash', venue: 'Valley Racecourse', distance: '1,200m', surface: 'Dirt', winner: 'Thunder King', jockey: 'N. Henderson', time: '1:12.45', image: '/result3.jpg' },
-    { id: 4, status: 'Finished', race: 'Race 1 - Morning Sprint', venue: 'Royal Turf Club', distance: '1,000m', surface: 'Turf', winner: 'Speed Demon', jockey: 'E. Walker', time: '0:58.34', image: '/result4.jpg' },
-];
-
-const topPredictors = [
-    { rank: 1, name: 'RacingFan88', points: '2,450 PTS', avatar: '/pred1.jpg' },
-    { rank: 2, name: 'TurfMaster', points: '2,150 PTS', avatar: '/pred2.jpg' },
-    { rank: 3, name: 'SpeedKing', points: '1,980 PTS', avatar: '/pred3.jpg' },
-];
-
-// Icons components
-const HorseIcon = () => (
-    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M20 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2m16 0v8a2 2 0 01-2 2H6a2 2 0 01-2-2V8m16 0H4" />
-    </svg>
-);
-
-const ClockIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" strokeWidth="2" />
-        <path strokeWidth="2" d="M12 6v6l4 2" />
-    </svg>
-);
-
-const SurfaceIcon = () => (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-);
-
-
-export default function Home() {
-    const [leaderboardTab, setLeaderboardTab] = useState('Horses');
-
-    const navigate = useNavigate();
-
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    const handleLogout = () => {
-        localStorage.removeItem("user");
-        navigate("/");
-    };
-
-    return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Navigation */}
-            <nav className="bg-slate-900 px-6 py-4">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-8">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-emerald-400 rounded-full"></div>
-                            <span className="text-white font-bold text-xl">GoldenHoof</span>
-                        </div>
-                        <div className="hidden md:flex items-center gap-6">
-                            {['Races', 'Horses', 'Jockeys', 'Results', 'Rankings', 'Predictions', 'News', 'About'].map((item) => (
-                                <a key={item} href="#" className="text-gray-300 hover:text-white transition-colors text-sm">
-                                    {item}
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <button className="text-gray-300 hover:text-white">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </nav>
-
-            {/* Hero Section */}
-            <section className="relative bg-slate-900 overflow-hidden">
-                <div className="absolute inset-0">
-                    <img
-                        src="/api/placeholder/1920/600"
-                        alt="Horse racing"
-                        className="w-full h-full object-cover opacity-50"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/80 to-transparent"></div>
-                </div>
-
-                <div className="relative max-w-7xl mx-auto px-6 py-20">
-                    <div className="max-w-xl">
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-                            <span className="text-emerald-400 text-sm font-medium">LIVE THE THRILL</span>
-                        </div>
-                        <h1 className="text-5xl font-bold text-white mb-2">Where Champions</h1>
-                        <h1 className="text-5xl font-bold text-emerald-400 italic mb-6">Run to Glory</h1>
-                        <p className="text-gray-300 mb-8 leading-relaxed">
-                            GoldenHoof is your ultimate destination for horse racing. Follow the races, track the champions, and be part of every thrilling moment.
-                        </p>
-
-                        <div className="flex gap-4 mb-12">
-                            <button className="bg-slate-800 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-slate-700 transition-colors">
-                                Explore Races
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                            <button className="border border-gray-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-slate-800 transition-colors">
-                                View Live Results
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div className="flex gap-12">
-                            <div>
-                                <div className="text-3xl font-bold text-white">120+</div>
-                                <div className="text-gray-400 text-sm">Races This Season</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-bold text-white">200+</div>
-                                <div className="text-gray-400 text-sm">Horses</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-bold text-white">150+</div>
-                                <div className="text-gray-400 text-sm">Jockeys</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-bold text-white">50K+</div>
-                                <div className="text-gray-400 text-sm">Active Fans</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Upcoming Races */}
-            <section className="max-w-7xl mx-auto px-6 py-12">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800">Upcoming Races</h2>
-                    <a href="#" className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm">
-                        View Full Schedule
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
-                </div>
-
-                <div className="flex gap-4 overflow-x-auto pb-4">
-                    {upcomingRaces.map((race) => (
-                        <div key={race.id} className="min-w-[220px] bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-shrink-0">
-                            <div className="p-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    {race.status === 'LIVE' ? (
-                                        <span className="bg-emerald-500 text-white text-xs px-2 py-1 rounded font-medium">LIVE</span>
-                                    ) : (
-                                        <span className="text-slate-600 text-sm font-medium">{race.time}</span>
-                                    )}
-                                    <span className="text-gray-400 text-sm">{race.raceNum}</span>
-                                </div>
-                                <h3 className="font-semibold text-slate-800 mb-1">{race.name}</h3>
-                                <p className="text-gray-500 text-sm mb-3">{race.venue}</p>
-                                <div className="flex items-center gap-4 text-xs text-gray-500">
-                                    <span className="flex items-center gap-1">
-                                        <ClockIcon />
-                                        {race.distance}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <SurfaceIcon />
-                                        {race.surface}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {race.status === 'LIVE' && (
-                                <div className="relative">
-                                    <img src="/api/placeholder/220/120" alt="Race" className="w-full h-28 object-cover" />
-                                    <button className="absolute bottom-3 left-3 bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-emerald-600 transition-colors">
-                                        Watch Live
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            )}
-
-                            {race.status !== 'LIVE' && (
-                                <div className="px-4 pb-4">
-                                    <button className="w-full border border-gray-200 text-slate-700 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                                        View Details
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-
-                    <button className="min-w-[40px] flex items-center justify-center text-gray-400 hover:text-gray-600">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
-                </div>
-            </section>
-
-            {/* Top Horses & Top Jockeys */}
-            <section className="max-w-7xl mx-auto px-6 py-8">
-                <div className="grid md:grid-cols-2 gap-8">
-                    {/* Top Horses */}
-                    <div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-slate-800">Top Horses</h2>
-                            <a href="#" className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm">
-                                View All Horses
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            {topHorses.map((horse) => (
-                                <div key={horse.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                    <div className="relative">
-                                        <img src="/api/placeholder/200/140" alt={horse.name} className="w-full h-32 object-cover" />
-                                        <span className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${horse.rank === 1 ? 'bg-yellow-500' : horse.rank === 2 ? 'bg-gray-400' : horse.rank === 3 ? 'bg-amber-600' : 'bg-slate-500'
-                                            }`}>
-                                            {horse.rank}
-                                        </span>
-                                    </div>
-                                    <div className="p-3">
-                                        <h3 className="font-semibold text-slate-800 text-sm">{horse.name}</h3>
-                                        <p className="text-gray-500 text-xs mb-2">{horse.age} · {horse.breed}</p>
-                                        <div className="text-xs text-gray-500 mb-2">
-                                            <span className="text-gray-400">Owner</span>
-                                            <span className="block text-slate-700">{horse.owner}</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs mb-3">
-                                            <div>
-                                                <span className="text-gray-400">Rating</span>
-                                                <span className="block text-slate-700 font-semibold">{horse.rating}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-400">Wins</span>
-                                                <span className="block text-slate-700 font-semibold">{horse.wins}</span>
-                                            </div>
-                                        </div>
-                                        <button className="w-full border border-gray-200 text-slate-700 py-1.5 rounded-lg text-xs hover:bg-gray-50 transition-colors">
-                                            View Profile
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Top Jockeys */}
-                    <div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-slate-800">Top Jockeys</h2>
-                            <a href="#" className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm">
-                                View All Jockeys
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                            {topJockeys.map((jockey, index) => (
-                                <div key={jockey.id} className={`flex items-center justify-between p-4 ${index !== topJockeys.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-gray-400 font-medium w-4">{jockey.rank}</span>
-                                        <img src="/api/placeholder/40/40" alt={jockey.name} className="w-10 h-10 rounded-full object-cover" />
-                                        <div>
-                                            <h4 className="font-semibold text-slate-800">{jockey.name}</h4>
-                                            <p className="text-gray-500 text-sm">{jockey.wins} Wins</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-emerald-600 font-semibold">Win Rate {jockey.winRate}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Leaderboard & Latest Results */}
-            <section className="max-w-7xl mx-auto px-6 py-8">
-                <div className="grid md:grid-cols-2 gap-8">
-                    {/* Leaderboard */}
-                    <div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-6">Leaderboard</h2>
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="flex border-b border-gray-100">
-                                {['Horses', 'Jockeys', 'Owners'].map((tab) => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setLeaderboardTab(tab)}
-                                        className={`flex-1 py-3 text-sm font-medium transition-colors ${leaderboardTab === tab
-                                            ? 'bg-emerald-50 text-emerald-600 border-b-2 border-emerald-500'
-                                            : 'text-gray-500 hover:text-gray-700'
-                                            }`}
-                                    >
-                                        {tab}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <table className="w-full">
-                                <thead className="bg-gray-50">
-                                    <tr className="text-xs text-gray-500 uppercase">
-                                        <th className="py-3 px-4 text-left">#</th>
-                                        <th className="py-3 px-4 text-left">Horse</th>
-                                        <th className="py-3 px-4 text-center">Rating</th>
-                                        <th className="py-3 px-4 text-center">Wins</th>
-                                        <th className="py-3 px-4 text-center">Places</th>
-                                        <th className="py-3 px-4 text-center">Points</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {leaderboardData.map((horse) => (
-                                        <tr key={horse.rank} className="border-t border-gray-50 hover:bg-gray-50">
-                                            <td className="py-3 px-4 text-gray-500">{horse.rank}</td>
-                                            <td className="py-3 px-4">
-                                                <div className="flex items-center gap-3">
-                                                    <img src="/api/placeholder/32/32" alt={horse.name} className="w-8 h-8 rounded-full object-cover" />
-                                                    <span className="font-medium text-slate-800">{horse.name}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-4 text-center text-slate-700">{horse.rating}</td>
-                                            <td className="py-3 px-4 text-center text-slate-700">{horse.wins}</td>
-                                            <td className="py-3 px-4 text-center text-slate-700">{horse.places}</td>
-                                            <td className="py-3 px-4 text-center font-semibold text-slate-800">{horse.points}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-
-                            <div className="p-4 border-t border-gray-100">
-                                <a href="#" className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm">
-                                    View Full Rankings
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Latest Race Results */}
-                    <div>
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-slate-800">Latest Race Results</h2>
-                            <a href="#" className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 text-sm">
-                                View All Results
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-
-                        <div className="space-y-4">
-                            {latestResults.map((result) => (
-                                <div key={result.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex gap-4">
-                                    <img src="/api/placeholder/100/80" alt="Race" className="w-24 h-20 rounded-lg object-cover flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${result.status === 'LIVE' ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
-                                                }`}>
-                                                {result.status}
-                                            </span>
-                                        </div>
-                                        <h4 className="font-semibold text-slate-800 text-sm">{result.race}</h4>
-                                        <p className="text-gray-500 text-xs">{result.venue} · {result.distance} · {result.surface}</p>
-                                    </div>
-                                    <div className="text-right flex-shrink-0">
-                                        <div className="flex items-center gap-1 text-yellow-500 mb-1">
-                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                            </svg>
-                                            <span className="text-xs font-medium text-slate-800">{result.winner}</span>
-                                        </div>
-                                        <p className="text-gray-500 text-xs">1st · {result.jockey}</p>
-                                        <p className="text-emerald-600 font-bold text-lg">{result.time}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Predictions CTA */}
-            <section className="max-w-7xl mx-auto px-6 py-8">
-                <div className="bg-slate-800 rounded-2xl overflow-hidden">
-                    <div className="flex flex-col md:flex-row">
-                        <div className="p-8 md:w-1/3">
-                            <div className="flex items-center gap-2 mb-4">
-                                <svg className="w-6 h-6 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-4H8l4-4 4 4h-2v4z" />
-                                </svg>
-                                <h3 className="text-xl font-bold text-white">Make Your Predictions</h3>
-                            </div>
-                            <p className="text-gray-400 mb-6">Predict race winners and compete with fans around the world. Win points and unlock exclusive rewards!</p>
-                            <button className="bg-emerald-500 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-emerald-600 transition-colors">
-                                Start Predicting
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div className="p-8 md:w-1/3 bg-slate-700/50">
-                            <h4 className="text-gray-400 text-sm mb-4">Top Predictors This Week</h4>
-                            <div className="space-y-3">
-                                {topPredictors.map((predictor) => (
-                                    <div key={predictor.rank} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-gray-500 font-medium">{predictor.rank}</span>
-                                            <img src="/api/placeholder/36/36" alt={predictor.name} className="w-9 h-9 rounded-full" />
-                                            <span className="text-white font-medium">{predictor.name}</span>
-                                        </div>
-                                        <span className="text-emerald-400 font-semibold">{predictor.points}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="md:w-1/3 flex items-end justify-end p-8">
-                            <img src="/api/placeholder/200/180" alt="Trophy" className="opacity-50" />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Footer */}
-            <footer className="bg-slate-900 text-gray-400 py-12">
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
-                        <div className="col-span-2 md:col-span-1">
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 bg-emerald-400 rounded-full"></div>
-                                <span className="text-white font-bold text-xl">GoldenHoof</span>
-                            </div>
-                            <p className="text-sm mb-4">The ultimate platform for horse racing enthusiasts. Stay updated, stay excited.</p>
-                            <div className="flex gap-4">
-                                {['facebook', 'twitter', 'instagram', 'youtube'].map((social) => (
-                                    <a key={social} href="#" className="hover:text-white transition-colors">
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="10" />
-                                        </svg>
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 className="text-white font-semibold mb-4">Explore</h4>
-                            <ul className="space-y-2 text-sm">
-                                {['Races', 'Horses', 'Jockeys', 'Results', 'Rankings'].map((item) => (
-                                    <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="text-white font-semibold mb-4">Support</h4>
-                            <ul className="space-y-2 text-sm">
-                                {['Help Center', 'Contact Us', 'Terms of Use', 'Privacy Policy', 'FAQ'].map((item) => (
-                                    <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="text-white font-semibold mb-4">Community</h4>
-                            <ul className="space-y-2 text-sm">
-                                {['News', 'Events', 'Blog', 'Forum', 'About Us'].map((item) => (
-                                    <li key={item}><a href="#" className="hover:text-white transition-colors">{item}</a></li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="text-white font-semibold mb-4">Stay Updated</h4>
-                            <p className="text-sm mb-3">Subscribe to our newsletter</p>
-                            <div className="flex">
-                                <input
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    className="bg-slate-800 text-white px-4 py-2 rounded-l-lg flex-1 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                />
-                                <button className="bg-emerald-500 text-white px-4 py-2 rounded-r-lg hover:bg-emerald-600 transition-colors">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-slate-800 pt-8 text-center text-sm">
-                        <p>© 2024 GoldenHoof. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
-        </div>
-    );
+  return <svg {...common}>{paths[name]}</svg>;
 }
+
+function SectionTitle({ title, action }) {
+  return (
+    <div className="home-section-title">
+      <h2>{title}</h2>
+      {action && (
+        <a href={action.href}>
+          {action.label}
+          <Icon name="arrow" size={16} />
+        </a>
+      )}
+    </div>
+  );
+}
+
+function Stat({ icon, value, label }) {
+  return (
+    <div className="home-stat">
+      <Icon name={icon} size={30} />
+      <div>
+        <strong>{value}</strong>
+        <span>{label}</span>
+      </div>
+    </div>
+  );
+}
+
+function Avatar({ name, rank }) {
+  return (
+    <span className={`home-avatar home-avatar-${rank}`}>
+      {name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)}
+    </span>
+  );
+}
+
+function Home() {
+  const [authSession, setAuthSession] = useState(() => getAuthSession());
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [leaderboardTab, setLeaderboardTab] = useState("horses");
+  const [homeData, setHomeData] = useState({
+    races: [],
+    horses: [],
+    jockeys: [],
+    standings: [],
+    results: [],
+    predictors: [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const [horses, jockeys] = await Promise.all([
+          getHorses(),
+          getUsersByRole("Jockey"),
+        ]);
+
+        if (!isMounted) return;
+
+        setHomeData((prev) => ({
+          ...prev,
+          horses: horses || [],
+          jockeys: jockeys || [],
+        }));
+      } catch (error) {
+        console.error("Failed to load horses:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  function handleLogout() {
+    clearAuthSession();
+    setAuthSession(null);
+    setIsAccountMenuOpen(false);
+  }
+
+  const horseLeaderboard = [...homeData.horses]
+    .sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
+    .slice(0, 10);
+
+  const jockeyLeaderboard = [...homeData.jockeys]
+    .sort((a, b) => (b.winRate || 0) - (a.winRate || 0))
+    .slice(0, 10);
+
+  return (
+    <main className="home-page">
+      <style>{`
+        * { box-sizing: border-box; }
+        html, body, #root { min-height: 100%; margin: 0; }
+        body {
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          color: #0d2321;
+          background: #f7fffd;
+        }
+        button, input { font: inherit; }
+        a { color: inherit; text-decoration: none; }
+
+        .home-page {
+          min-height: 100dvh;
+          overflow-x: hidden;
+          background: #f7fffd;
+        }
+
+        .home-nav {
+          position: fixed;
+          z-index: 20;
+          inset: 0 0 auto;
+          height: 86px;
+          display: flex;
+          align-items: center;
+          border-bottom: 1px solid rgba(105, 248, 221, 0.22);
+          color: #f4fffb;
+          background: rgba(0, 45, 40, 0.82);
+          backdrop-filter: blur(18px);
+        }
+
+        .home-container {
+          width: min(1230px, calc(100% - 44px));
+          margin: 0 auto;
+        }
+
+        .home-nav-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 28px;
+        }
+
+        .home-brand,
+        .home-footer-brand {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 26px;
+          font-weight: 900;
+          letter-spacing: 0;
+          white-space: nowrap;
+        }
+
+        .home-brand svg,
+        .home-footer-brand svg {
+          color: #5ef8d8;
+        }
+
+        .home-menu {
+          display: flex;
+          align-items: center;
+          gap: clamp(18px, 2.1vw, 34px);
+          color: rgba(244, 255, 251, 0.88);
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .home-actions {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .home-icon-btn {
+          width: 42px;
+          height: 42px;
+          display: grid;
+          place-items: center;
+          border: 0;
+          color: #f4fffb;
+          background: transparent;
+          cursor: pointer;
+        }
+
+        .home-btn {
+          min-height: 48px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 14px;
+          padding: 0 24px;
+          border: 1px solid rgba(94, 248, 216, 0.55);
+          border-radius: 8px;
+          color: #f4fffb;
+          background: rgba(255, 255, 255, 0.04);
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .home-btn-primary {
+          border-color: transparent;
+          color: #062724;
+          background: #69f8dd;
+        }
+
+        .account-menu {
+          position: relative;
+        }
+
+        .account-trigger {
+          min-width: 150px;
+          justify-content: space-between;
+        }
+
+        .account-trigger svg:last-child {
+          transition: transform 0.18s ease;
+        }
+
+        .account-trigger-open svg:last-child {
+          transform: rotate(180deg);
+        }
+
+        .account-dropdown {
+          position: absolute;
+          top: calc(100% + 12px);
+          right: 0;
+          width: 190px;
+          padding: 8px;
+          border: 1px solid rgba(105, 248, 221, 0.22);
+          border-radius: 8px;
+          background: rgba(0, 45, 40, 0.96);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .account-menu-item {
+          width: 100%;
+          min-height: 42px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 0 12px;
+          border: 0;
+          border-radius: 6px;
+          color: #f4fffb;
+          background: transparent;
+          font-weight: 850;
+          cursor: pointer;
+        }
+
+        .account-menu-item:hover {
+          background: rgba(105, 248, 221, 0.12);
+        }
+
+        .account-menu-logout {
+          color: #ffd9d9;
+        }
+
+        .home-hero {
+          min-height: 720px;
+          display: flex;
+          align-items: center;
+          color: #f4fffb;
+          background-image:
+            linear-gradient(90deg, rgba(0, 35, 32, 0.96) 0%, rgba(0, 48, 43, 0.82) 36%, rgba(0, 37, 35, 0.3) 69%, rgba(0, 28, 27, 0.25) 100%),
+            linear-gradient(0deg, rgba(0, 21, 20, 0.22), rgba(0, 21, 20, 0.18)),
+            url("/goldenhoof-hero.png");
+          background-size: cover;
+          background-position: center right;
+        }
+
+        .home-hero-content {
+          width: min(610px, 100%);
+          padding-top: 80px;
+        }
+
+        .home-kicker {
+          width: max-content;
+          display: inline-flex;
+          align-items: center;
+          gap: 9px;
+          margin-bottom: 26px;
+          padding: 9px 18px;
+          border-radius: 999px;
+          color: #69f8dd;
+          background: rgba(96, 248, 218, 0.14);
+          font-size: 14px;
+          font-weight: 950;
+        }
+
+        .home-kicker::before {
+          content: "";
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
+          background: #69f8dd;
+        }
+
+        .home-hero h1 {
+          margin: 0;
+          font-size: clamp(48px, 6vw, 76px);
+          line-height: 1.06;
+          font-weight: 950;
+          letter-spacing: 0;
+        }
+
+        .home-hero h1 span {
+          display: block;
+          color: #69f8dd;
+        }
+
+        .home-hero p {
+          max-width: 560px;
+          margin: 28px 0 32px;
+          color: rgba(244, 255, 251, 0.88);
+          font-size: 18px;
+          line-height: 1.7;
+        }
+
+        .home-hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-bottom: 70px;
+        }
+
+        .home-stats {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(130px, 1fr));
+          gap: 26px;
+        }
+
+        .home-stat {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .home-stat svg {
+          color: #69f8dd;
+          flex: 0 0 auto;
+        }
+
+        .home-stat strong {
+          display: block;
+          color: #fff;
+          font-size: 21px;
+          line-height: 1.1;
+        }
+
+        .home-stat span {
+          display: block;
+          margin-top: 3px;
+          color: rgba(244, 255, 251, 0.76);
+          font-size: 13px;
+        }
+
+        .home-content {
+          padding: 42px 0 28px;
+        }
+
+        .home-section-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          margin-bottom: 24px;
+        }
+
+        .home-section-title h2 {
+          margin: 0;
+          font-size: 27px;
+          line-height: 1.2;
+          font-weight: 950;
+          letter-spacing: 0;
+        }
+
+        .home-section-title a {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          color: #007a68;
+          font-size: 14px;
+          font-weight: 900;
+          white-space: nowrap;
+        }
+
+        .home-panel-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          width: 100%;
+          margin-top: 18px;
+          color: #007a68;
+          font-size: 14px;
+          font-weight: 900;
+        }
+
+        .race-grid {
+          position: relative;
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 14px;
+          margin-bottom: 34px;
+        }
+
+        .race-card,
+        .panel,
+        .horse-card {
+          border: 1px solid #cdeee8;
+          border-radius: 8px;
+          background: #fff;
+          box-shadow: 0 18px 50px rgba(14, 71, 66, 0.06);
+        }
+
+        .race-card {
+          min-height: 315px;
+          display: flex;
+          flex-direction: column;
+          padding: 16px;
+        }
+
+        .race-meta {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 34px;
+          color: #315a56;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 30px;
+          padding: 0 12px;
+          border-radius: 5px;
+          color: #006755;
+          background: #d9fbf4;
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .pill-live {
+          color: #fff;
+          background: #18b99e;
+        }
+
+        .race-card h3,
+        .horse-card h3 {
+          margin: 18px 0 9px;
+          font-size: 20px;
+          line-height: 1.2;
+          font-weight: 950;
+        }
+
+        .muted {
+          color: #6a817e;
+          font-size: 14px;
+        }
+
+        .race-facts {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          margin-top: 14px;
+          color: #41605d;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .race-facts span {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+        }
+
+        .race-card img {
+          width: 100%;
+          height: 94px;
+          margin: 18px 0 0;
+          border-radius: 7px;
+          object-fit: cover;
+        }
+
+        .card-action {
+          width: 100%;
+          min-height: 42px;
+          margin-top: auto;
+          border: 1px solid #bfece5;
+          border-radius: 7px;
+          color: #006755;
+          background: #f3fffc;
+          font-weight: 950;
+          cursor: pointer;
+        }
+
+        .dashboard-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 20px;
+          margin-bottom: 20px;
+        }
+
+        .panel {
+          padding: 24px;
+        }
+
+        .horse-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 16px;
+        }
+
+        .horse-card {
+          overflow: hidden;
+        }
+
+        .horse-photo {
+          position: relative;
+          height: 138px;
+        }
+
+        .horse-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .rank-badge {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          width: 28px;
+          height: 28px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          color: #0d2321;
+          background: #f9df94;
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .horse-body {
+          padding: 14px;
+        }
+
+        .horse-body h3 {
+          margin-top: 0;
+          font-size: 18px;
+        }
+
+        .horse-stat-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 12px;
+          color: #6a817e;
+          font-size: 12px;
+        }
+
+        .horse-stat-row strong {
+          color: #0d2321;
+        }
+
+        .jockey-list,
+        .result-list,
+        .predictor-list {
+          display: grid;
+          gap: 0;
+        }
+
+        .jockey-row,
+        .result-row {
+          display: grid;
+          align-items: center;
+          gap: 14px;
+          border-bottom: 1px solid #e5f3f0;
+        }
+
+        .jockey-row {
+          grid-template-columns: 28px 42px 1fr auto auto;
+          min-height: 76px;
+          font-size: 13px;
+        }
+
+        .home-avatar {
+          width: 38px;
+          height: 38px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          color: #06332e;
+          background: #d9fbf4;
+          font-size: 12px;
+          font-weight: 950;
+        }
+
+        .home-avatar-1 { background: #f9df94; }
+        .home-avatar-2 { background: #d6f2f5; }
+        .home-avatar-3 { background: #ffd7b8; }
+
+        .rank-number {
+          width: 26px;
+          height: 26px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #eef6f4;
+          color: #315a56;
+          font-weight: 950;
+        }
+
+        .jockey-row strong,
+        .result-row strong {
+          color: #0d2321;
+          font-weight: 950;
+        }
+
+        .jockey-row span,
+        .result-row span {
+          color: #78918d;
+        }
+
+        .lower-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.15fr;
+          gap: 20px;
+          margin-bottom: 28px;
+        }
+
+        .tabs {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          margin-bottom: 18px;
+          border: 1px solid #d9ece9;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        .tabs button {
+          min-height: 43px;
+          border: 0;
+          border-right: 1px solid #d9ece9;
+          color: #53706c;
+          background: #fff;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .tabs button:first-child {
+          color: #006755;
+          background: #edfffb;
+          box-shadow: inset 0 0 0 1px #bff1e8;
+        }
+
+        .tabs button:last-child {
+          border-right: 0;
+        }
+
+        .home-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 14px;
+        }
+
+        .home-table th {
+          padding: 15px 10px;
+          color: #6a817e;
+          font-size: 12px;
+          text-align: left;
+        }
+
+        .home-table td {
+          padding: 15px 10px;
+          border-top: 1px solid #e5f3f0;
+          font-weight: 800;
+        }
+
+        .horse-name-cell {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .mini-thumb {
+          width: 28px;
+          height: 28px;
+          border-radius: 4px;
+          object-fit: cover;
+        }
+
+        .result-row {
+          grid-template-columns: 140px 1fr auto auto;
+          min-height: 112px;
+        }
+
+        .result-row img {
+          width: 140px;
+          height: 70px;
+          border-radius: 8px;
+          object-fit: cover;
+        }
+
+        .result-details {
+          display: grid;
+          gap: 5px;
+        }
+
+        .result-status {
+          width: max-content;
+          padding: 4px 8px;
+          border-radius: 5px;
+          color: #315a56;
+          background: #eef6f4;
+          font-size: 11px;
+          font-weight: 950;
+        }
+
+        .result-status-live {
+          color: #fff;
+          background: #18b99e;
+        }
+
+        .winner {
+          display: grid;
+          gap: 3px;
+          min-width: 150px;
+        }
+
+        .winner-icon {
+          color: #f0a826;
+          font-weight: 950;
+        }
+
+        .prediction-band {
+          position: relative;
+          display: grid;
+          grid-template-columns: 1fr 1fr 260px;
+          gap: 34px;
+          align-items: center;
+          min-height: 230px;
+          margin-bottom: 30px;
+          padding: 42px;
+          border-radius: 8px;
+          color: #f4fffb;
+          overflow: hidden;
+          background:
+            radial-gradient(circle at 86% 55%, rgba(105, 248, 221, 0.28), transparent 28%),
+            linear-gradient(120deg, #003b35, #008272);
+        }
+
+        .prediction-band h2 {
+          margin: 0 0 12px;
+          font-size: 27px;
+          font-weight: 950;
+        }
+
+        .prediction-band p {
+          max-width: 390px;
+          margin: 0 0 22px;
+          color: rgba(244, 255, 251, 0.82);
+          line-height: 1.6;
+        }
+
+        .predictor-list {
+          gap: 10px;
+        }
+
+        .predictor-row {
+          display: grid;
+          grid-template-columns: 28px 38px 1fr auto;
+          align-items: center;
+          gap: 12px;
+          min-height: 44px;
+          padding: 0 16px;
+          border: 1px solid rgba(244, 255, 251, 0.24);
+          border-radius: 999px;
+          background: rgba(0, 35, 32, 0.2);
+          font-weight: 900;
+        }
+
+        .predictor-row span:last-child {
+          color: rgba(244, 255, 251, 0.86);
+        }
+
+        .trophy-art {
+          justify-self: center;
+          width: 210px;
+          height: 210px;
+          display: grid;
+          place-items: center;
+          color: #69f8dd;
+          border-radius: 50%;
+          background: rgba(244, 255, 251, 0.08);
+          box-shadow: inset 0 0 60px rgba(105, 248, 221, 0.18);
+        }
+
+        .home-footer {
+          color: #f4fffb;
+          background: #002d28;
+          padding: 34px 0 26px;
+        }
+
+        .footer-grid {
+          display: grid;
+          grid-template-columns: 1.5fr repeat(4, 1fr);
+          gap: 50px;
+        }
+
+        .home-footer p,
+        .home-footer a {
+          color: rgba(244, 255, 251, 0.74);
+          font-size: 14px;
+          line-height: 1.7;
+        }
+
+        .home-footer h3 {
+          margin: 0 0 14px;
+          font-size: 15px;
+        }
+
+        .footer-links {
+          display: grid;
+          gap: 7px;
+        }
+
+        .newsletter {
+          display: flex;
+          align-items: center;
+          height: 44px;
+          border: 1px solid rgba(105, 248, 221, 0.38);
+          border-radius: 6px;
+          overflow: hidden;
+        }
+
+        .newsletter input {
+          min-width: 0;
+          flex: 1;
+          height: 100%;
+          border: 0;
+          padding: 0 13px;
+          color: #f4fffb;
+          background: transparent;
+          outline: 0;
+        }
+
+        .newsletter button {
+          width: 44px;
+          height: 44px;
+          border: 0;
+          color: #06332e;
+          background: #69f8dd;
+          cursor: pointer;
+        }
+
+        .loading-line {
+          color: #53706c;
+          font-weight: 800;
+        }
+
+        @media (max-width: 1120px) {
+          .home-menu { display: none; }
+          .race-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .dashboard-grid,
+          .lower-grid,
+          .prediction-band { grid-template-columns: 1fr; }
+          .horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .trophy-art { display: none; }
+          .footer-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 720px) {
+          .home-container { width: min(100% - 28px, 1230px); }
+          .home-nav { height: 74px; }
+          .home-brand { font-size: 21px; }
+          .home-actions .home-icon-btn { display: none; }
+          .home-btn { min-height: 42px; padding: 0 14px; font-size: 13px; }
+          .home-hero {
+            min-height: 660px;
+            background-position: center;
+          }
+          .home-hero h1 { font-size: clamp(42px, 13vw, 58px); }
+          .home-stats,
+          .race-grid,
+          .horse-grid,
+          .footer-grid { grid-template-columns: 1fr; }
+          .panel { padding: 18px; }
+          .jockey-row { grid-template-columns: 26px 38px 1fr; }
+          .jockey-row span:nth-last-child(-n + 2) { display: none; }
+          .result-row {
+            grid-template-columns: 92px 1fr;
+            padding: 14px 0;
+          }
+          .result-row img {
+            width: 92px;
+            height: 72px;
+          }
+          .winner,
+          .result-row > strong:last-child { display: none; }
+          .home-table th:nth-child(4),
+          .home-table td:nth-child(4),
+          .home-table th:nth-child(6),
+          .home-table td:nth-child(6) { display: none; }
+          .prediction-band { padding: 26px; }
+        }
+      `}</style>
+
+      <header className="home-nav">
+        <div className="home-container home-nav-inner">
+          <a className="home-brand" href="#top" aria-label="GoldenHoof home">
+            <Icon name="logo" size={34} />
+            <span>GoldenHoof</span>
+          </a>
+
+          <nav className="home-menu" aria-label="Primary navigation">
+            {[
+              "Races",
+              "Horses",
+              "Jockeys",
+              "Results",
+              "Rankings",
+              "Predictions",
+              "News",
+              "About",
+            ].map((item) => (
+              <a href={`#${item.toLowerCase()}`} key={item}>
+                {item}
+              </a>
+            ))}
+          </nav>
+
+          <div className="home-actions">
+            <button className="home-icon-btn" type="button" aria-label="Search">
+              <Icon name="search" size={24} />
+            </button>
+            {authSession ? (
+              <div className="account-menu">
+                <button
+                  className={`home-btn account-trigger ${
+                    isAccountMenuOpen ? "account-trigger-open" : ""
+                  }`}
+                  type="button"
+                  aria-expanded={isAccountMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setIsAccountMenuOpen((current) => !current)}
+                >
+                  <Icon name="user" size={20} />
+                  <span>Account</span>
+                  <Icon name="chevron" size={18} />
+                </button>
+
+                {isAccountMenuOpen && (
+                  <div className="account-dropdown" role="menu">
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      to="/profile"
+                    >
+                      <Icon name="user" size={18} />
+                      <span>Profile</span>
+                    </Link>
+                    <button
+                      className="account-menu-item account-menu-logout"
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                    >
+                      <Icon name="logout" size={18} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link className="home-btn" to="/login">
+                  Log in
+                </Link>
+                <Link className="home-btn home-btn-primary" to="/register">
+                  Sign up
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <section className="home-hero" id="top">
+        <div className="home-container">
+          <div className="home-hero-content">
+            <span className="home-kicker">LIVE THE THRILL</span>
+            <h1>
+              Where Champions
+              <span>Run to Glory</span>
+            </h1>
+            <p>
+              GoldenHoof is your ultimate destination for horse racing. Follow
+              the races, track the champions, and be part of every thrilling
+              moment.
+            </p>
+            <div className="home-hero-actions">
+              <a className="home-btn home-btn-primary" href="#races">
+                Explore Races
+                <Icon name="arrow" size={20} />
+              </a>
+              <a className="home-btn" href="#results">
+                View Live Results
+                <Icon name="chart" size={20} />
+              </a>
+            </div>
+
+            <div className="home-stats">
+              <Stat icon="trophy" value="120+" label="Races This Season" />
+              <Stat icon="horse" value="200+" label="Horses" />
+              <Stat icon="users" value="150+" label="Jockeys" />
+              <Stat icon="crown" value="50K+" label="Active Fans" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-content">
+        <div className="home-container">
+          <section id="races">
+            <SectionTitle
+              title="Upcoming Races"
+              action={{ label: "View Full Schedule", href: "#races" }}
+            />
+            {isLoading ? (
+              <p className="loading-line">Loading races...</p>
+            ) : (
+              <div className="race-grid">
+                {homeData.races.map((race) => (
+                  <article className="race-card" key={race.id}>
+                    <div className="race-meta">
+                      <span
+                        className={`pill ${race.status ? "pill-live" : ""}`}
+                      >
+                        {race.status || race.time}
+                      </span>
+                      <span>Race {race.id}</span>
+                    </div>
+                    <h3>{race.name}</h3>
+                    <span className="muted">{race.venue}</span>
+                    <div className="race-facts">
+                      <span>
+                        <Icon name="clock" size={15} />
+                        {race.distance}
+                      </span>
+                      <span>
+                        <Icon name="map" size={15} />
+                        {race.surface}
+                      </span>
+                    </div>
+                    {race.status && (
+                      <img src={race.image} alt={`${race.name} race`} />
+                    )}
+                    <button className="card-action" type="button">
+                      {race.status ? "Watch Live" : "View Details"}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <div className="dashboard-grid" id="horses">
+            <section className="panel">
+              <SectionTitle
+                title="Top Horses"
+                action={{ label: "View All Horses", href: "#horses" }}
+              />
+              <div className="horse-grid">
+                {homeData.horses.map((horse, index) => (
+                  <article className="horse-card" key={horse._id}>
+                    <div className="horse-photo">
+                      <img src="/goldenhoof-hero.png" alt={horse.name} />
+                      <span className="rank-badge">{index + 1}</span>
+                    </div>
+
+                    <div className="horse-body">
+                      <h3>{horse.name}</h3>
+
+                      <div className="horse-stat-row">
+                        <span>Color</span>
+                        <strong>{horse.color}</strong>
+                      </div>
+
+                      <div className="horse-stat-row">
+                        <span>Height</span>
+                        <strong>{horse.height} m</strong>
+                      </div>
+
+                      <div className="horse-stat-row">
+                        <span>Weight</span>
+                        <strong>{horse.weight} kg</strong>
+                      </div>
+
+                      <div className="horse-stat-row">
+                        <span>Win Rate</span>
+                        <strong>{horse.winRate ?? 0}%</strong>
+                      </div>
+
+                      <div className="horse-stat-row">
+                        <span>Total Wins</span>
+                        <strong>{horse.totalWin ?? 0}</strong>
+                      </div>
+
+                      {/* <button className="card-action" type="button">
+                        View Profile
+                      </button> */}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+
+            <section className="panel" id="jockeys">
+              <SectionTitle
+                title="Top Jockeys"
+                action={{ label: "View All Jockeys", href: "#jockeys" }}
+              />
+              <div className="jockey-list">
+                {homeData.jockeys.map((jockey, index) => (
+                  <div className="jockey-row" key={jockey._id}>
+                    <span className="rank-number">{index + 1}</span>
+
+                    <Avatar name={jockey.fullName} rank={index + 1} />
+
+                    <strong>{jockey.fullName}</strong>
+
+                    <span>{jockey.reputationPoints ?? 0} Points</span>
+
+                    <span>Win Rate {jockey.winRate ?? 0}%</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div className="lower-grid">
+            <section className="panel" id="rankings">
+              <SectionTitle title="Leaderboard" />
+
+              <div
+                className="tabs"
+                role="tablist"
+                aria-label="Leaderboard views"
+              >
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardTab("horses")}
+                  className={leaderboardTab === "horses" ? "active-tab" : ""}
+                >
+                  Horses
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardTab("jockeys")}
+                  className={leaderboardTab === "jockeys" ? "active-tab" : ""}
+                >
+                  Jockeys
+                </button>
+              </div>
+
+              {leaderboardTab === "horses" ? (
+                <table className="home-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Horse</th>
+                      <th>Status</th>
+                      <th>Wins</th>
+                      <th>Win Rate</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {horseLeaderboard.map((horse, index) => (
+                      <tr key={horse._id}>
+                        <td>{index + 1}</td>
+
+                        <td>
+                          <span className="horse-name-cell">
+                            <img
+                              className="mini-thumb"
+                              src="/goldenhoof-hero.png"
+                              alt=""
+                            />
+                            {horse.name}
+                          </span>
+                        </td>
+
+                        <td>{horse.horseStatus}</td>
+
+                        <td>{horse.totalWin || 0}</td>
+
+                        <td>{horse.winRate || 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="home-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Jockey</th>
+                      <th>Status</th>
+                      <th>Weight</th>
+                      <th>Win Rate</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {jockeyLeaderboard.map((jockey, index) => (
+                      <tr key={jockey._id}>
+                        <td>{index + 1}</td>
+
+                        <td>
+                          <span className="horse-name-cell">
+                            <Avatar name={jockey.fullName} rank={index + 1} />
+                            {jockey.fullName}
+                          </span>
+                        </td>
+
+                        <td>{jockey.jockeyStatus}</td>
+
+                        <td>{jockey.weight} kg</td>
+
+                        <td>{jockey.winRate || 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <a className="home-panel-link" href="#rankings">
+                View Full Rankings
+                <Icon name="arrow" size={16} />
+              </a>
+            </section>
+
+            <section className="panel" id="results">
+              <SectionTitle
+                title="Latest Race Results"
+                action={{ label: "View All Results", href: "#results" }}
+              />
+              <div className="result-list">
+                {homeData.results.map((result) => (
+                  <article className="result-row" key={result.id}>
+                    <img src={result.image} alt={result.race} />
+                    <div className="result-details">
+                      <span
+                        className={`result-status ${
+                          result.status === "LIVE" ? "result-status-live" : ""
+                        }`}
+                      >
+                        {result.status}
+                      </span>
+                      <strong>{result.race}</strong>
+                      <span>
+                        {result.venue} · {result.distance} · {result.surface}
+                      </span>
+                    </div>
+                    <div className="winner">
+                      <span className="winner-icon">1st</span>
+                      <strong>{result.winner}</strong>
+                      <span>{result.jockey}</span>
+                    </div>
+                    <strong>{result.time}</strong>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <section className="prediction-band" id="predictions">
+            <div>
+              <h2>Make Your Predictions</h2>
+              <p>
+                Predict race winners and compete with fans around the world. Win
+                points and unlock exclusive rewards.
+              </p>
+              <a className="home-btn home-btn-primary" href="#predictions">
+                Start Predicting
+                <Icon name="arrow" size={20} />
+              </a>
+            </div>
+            <div>
+              <h3>Top Predictors This Week</h3>
+              <div className="predictor-list">
+                {homeData.predictors.map((predictor) => (
+                  <div className="predictor-row" key={predictor.id}>
+                    <span>{predictor.id}</span>
+                    <Avatar name={predictor.name} rank={predictor.id} />
+                    <strong>{predictor.name}</strong>
+                    <span>{predictor.points.toLocaleString()} PTS</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="trophy-art">
+              <Icon name="trophy" size={132} />
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <footer className="home-footer">
+        <div className="home-container footer-grid">
+          <div>
+            <a className="home-footer-brand" href="#top">
+              <Icon name="logo" size={32} />
+              <span>GoldenHoof</span>
+            </a>
+            <p>
+              The ultimate platform for horse racing enthusiasts. Stay updated,
+              stay excited.
+            </p>
+          </div>
+          <div>
+            <h3>Explore</h3>
+            <div className="footer-links">
+              <a href="#races">Races</a>
+              <a href="#horses">Horses</a>
+              <a href="#jockeys">Jockeys</a>
+              <a href="#results">Results</a>
+              <a href="#rankings">Rankings</a>
+            </div>
+          </div>
+          <div>
+            <h3>Support</h3>
+            <div className="footer-links">
+              <a href="#support">Help Center</a>
+              <a href="#support">Contact Us</a>
+              <a href="#support">Terms of Use</a>
+              <a href="#support">Privacy Policy</a>
+              <a href="#support">FAQ</a>
+            </div>
+          </div>
+          <div>
+            <h3>Community</h3>
+            <div className="footer-links">
+              <a href="#news">News</a>
+              <a href="#events">Events</a>
+              <a href="#blog">Blog</a>
+              <a href="#forum">Forum</a>
+              <a href="#about">About Us</a>
+            </div>
+          </div>
+          <div>
+            <h3>Stay Updated</h3>
+            <p>Subscribe to our newsletter</p>
+            <div className="newsletter">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                aria-label="Email address"
+              />
+              <button type="button" aria-label="Subscribe">
+                <Icon name="mail" size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+export default Home;

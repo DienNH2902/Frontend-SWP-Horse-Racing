@@ -1,0 +1,108 @@
+import { apiClient } from "../client";
+import { AUTH_ENDPOINTS } from "../endpoints/auth.endpoint";
+
+function pickFirstValue(source, keys) {
+  if (!source || typeof source !== "object") {
+    return null;
+  }
+
+  for (const key of keys) {
+    if (source[key] !== undefined && source[key] !== null) {
+      return source[key];
+    }
+  }
+
+  return null;
+}
+
+function normalizeLoginResponse(response) {
+  const data = response?.data || response;
+  const accessToken =
+    typeof data === "string"
+      ? data
+      : pickFirstValue(data, [
+        "accessToken",
+        "access_token",
+        "token",
+        "jwt",
+      ]);
+  const refreshToken = pickFirstValue(data, [
+    "refreshToken",
+    "refresh_token",
+  ]);
+  const user = pickFirstValue(data, ["user", "account", "profile"]) || null;
+
+  return {
+    accessToken,
+    refreshToken,
+    user,
+  };
+}
+
+// export async function login(credentials) {
+//   const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN, credentials);
+
+//   return normalizeLoginResponse(response.data);
+// }
+
+export async function getProfile() {
+  const response = await apiClient.get(AUTH_ENDPOINTS.PROFILE, {
+    includeAuth: true,
+    includeRefreshToken: true,
+  });
+
+  return response.data;
+}
+
+export async function registerSpectator(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_SPECTATOR, payload);
+  return response.data;
+}
+
+export async function registerHorseOwner(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_HORSE_OWNER, payload);
+  return response.data;
+}
+
+export async function registerJockey(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_JOCKEY, payload);
+  return response.data;
+}
+
+export async function login(credentials) {
+  const { email, password } = credentials;
+
+  if (password !== "123456") {
+    throw new Error("Sai mật khẩu");
+  }
+
+  // OWNER
+  if (email === "owner@goldenhoof.com") {
+    return {
+      accessToken: "fake-owner-token",
+      refreshToken: "fake-owner-refresh",
+      user: {
+        id: 1,
+        fullName: "Horse Owner Demo",
+        email: "owner@goldenhoof.com",
+        role: "Horse Owner",
+      },
+    };
+  }
+
+  // REFEREE
+  if (email === "referee@goldenhoof.com") {
+    return {
+      accessToken: "fake-referee-token",
+      refreshToken: "fake-referee-refresh",
+      user: {
+        id: 2,
+        fullName: "Referee Demo",
+        email: "referee@goldenhoof.com",
+        role: "Referee",
+      },
+    };
+  }
+
+  throw new Error("Tài khoản không tồn tại");
+}
