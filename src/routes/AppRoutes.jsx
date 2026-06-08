@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Home from "../pages/Home";
+import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import Login from "../pages/auth/Login";
@@ -28,6 +29,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["Jockey"]}>
             <RoleHome allowedRole="Jockey" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jockey/profile"
+        element={
+          <ProtectedRoute allowedRoles={["Jockey"]}>
+            <JockeyProfile />
           </ProtectedRoute>
         }
       />
