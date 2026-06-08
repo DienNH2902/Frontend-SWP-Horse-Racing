@@ -241,7 +241,7 @@ function Profile() {
             <span>GoldenHoof</span>
           </Link>
           <Space>
-            <Button className="profile-secondary" onClick={() => navigate("/")}>
+            <Button className="profile-secondary" onClick={() => navigate("/home")}>
               Home
             </Button>
             <Button className="profile-primary" onClick={handleLogout}>
