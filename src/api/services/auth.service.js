@@ -95,20 +95,24 @@ function pickFirstValue(source, keys) {
 
 function normalizeLoginResponse(response) {
   const data = response?.data || response;
+  const authData = pickFirstValue(data, ["data", "result", "auth", "authentication"]) || data;
   const accessToken =
-    typeof data === "string"
-      ? data
-      : pickFirstValue(data, [
+    typeof authData === "string"
+      ? authData
+      : pickFirstValue(authData, [
           "accessToken",
           "access_token",
           "token",
           "jwt",
         ]);
-  const refreshToken = pickFirstValue(data, [
+  const refreshToken = pickFirstValue(authData, [
     "refreshToken",
     "refresh_token",
   ]);
-  const user = pickFirstValue(data, ["user", "account", "profile"]) || null;
+  const user =
+    pickFirstValue(authData, ["user", "account", "profile"]) ||
+    pickFirstValue(data, ["user", "account", "profile"]) ||
+    null;
 
   return {
     accessToken,

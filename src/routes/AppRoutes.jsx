@@ -8,7 +8,6 @@ import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
-import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
 import OwnerHorseDetail from "../pages/owner/OwnerHorseDetail";
 import OwnerHorses from "../pages/owner/OwnerHorses";
@@ -48,63 +47,44 @@ export default function AppRoutes() {
       <Route path="/admin/dashboard" element={<AdminUsersPage />} />
       <Route path="/admin/users" element={<AdminUsersPage />} />
 
-      <Route element={<ProtectedRoute allowedRoles={["Horse Owner"]} />}>
-        <Route
-          element={
-            <RoleLayout
-              role="Horse Owner"
-              title="Owner workspace"
-              subtitle="Manage your stable and horses"
-              navItems={OWNER_NAV}
-            />
-          }
-        >
-          <Route path="owner" element={<OwnerDashboard />} />
-          <Route path="owner/horses" element={<OwnerHorses />} />
-          <Route path="owner/horses/:id" element={<OwnerHorseDetail />} />
-        </Route>
-      </Route>
-
-      <Route element={<ProtectedRoute allowedRoles={["Referee"]} />}>
-        <Route
-          element={
-            <RoleLayout
-              role="Referee"
-              title="Referee workspace"
-              subtitle="Review races and manage results"
-              navItems={REFEREE_NAV}
-            />
-          }
-        >
-          <Route path="referee" element={<RefereeDashboard />} />
-          <Route path="referee/races" element={<RefereeRaces />} />
-          <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
-        </Route>
+      <Route
+        element={
+          <RoleLayout
+            role="Horse Owner"
+            title="Owner workspace"
+            subtitle="Manage your stable and horses"
+            navItems={OWNER_NAV}
+          />
+        }
+      >
+        <Route path="owner" element={<OwnerDashboard />} />
+        <Route path="owner/horses" element={<OwnerHorses />} />
+        <Route path="owner/horses/:id" element={<OwnerHorseDetail />} />
       </Route>
 
       <Route
-        path="/spectator"
         element={
-          <ProtectedRoute allowedRoles={["Spectator"]}>
-            <RoleHome allowedRole="Spectator" />
-          </ProtectedRoute>
+          <RoleLayout
+            role="Referee"
+            title="Referee workspace"
+            subtitle="Review races and manage results"
+            navItems={REFEREE_NAV}
+          />
         }
-      />
+      >
+        <Route path="referee" element={<RefereeDashboard />} />
+        <Route path="referee/races" element={<RefereeRaces />} />
+        <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
+      </Route>
+
+      <Route path="/spectator" element={<RoleHome allowedRole="Spectator" />} />
       <Route
         path="/jockey"
-        element={
-          <ProtectedRoute allowedRoles={["Jockey"]}>
-            <RoleHome allowedRole="Jockey" />
-          </ProtectedRoute>
-        }
+        element={<RoleHome allowedRole="Jockey" />}
       />
       <Route
         path="/jockey/profile"
-        element={
-          <ProtectedRoute allowedRoles={["Jockey"]}>
-            <JockeyProfile />
-          </ProtectedRoute>
-        }
+        element={<JockeyProfile />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

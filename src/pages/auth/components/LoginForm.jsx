@@ -3,18 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { login } from "../../../api/services/auth.service";
 import { saveAuthSession } from "../../../utils/storage";
-
-function getRolePath(role) {
-  if (role === "Jockey") {
-    return "/jockey";
-  }
-
-  if (role === "Spectator") {
-    return "/spectator";
-  }
-
-  return "/";
-}
+import { getRoleHomePath } from "../../../utils/roles";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -77,10 +66,14 @@ export default function LoginForm() {
         email: values.email,
         password: values.password,
       });
+      const session = {
+        ...authSession,
+        user: authSession.user || { email: values.email },
+      };
 
-      saveAuthSession(authSession, values.remember);
+      saveAuthSession(session, values.remember);
       message.success("Login successful");
-      navigate(getRolePath(authSession.user?.role), { replace: true });
+      navigate(getRoleHomePath(session.user?.role), { replace: true });
     } catch (error) {
       message.error(error?.message || "Login failed. Please try again.");
     } finally {

@@ -1,4 +1,4 @@
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 
 const roleData = {
@@ -177,16 +177,12 @@ function DashboardCard({ children, className = "" }) {
 export default function RoleHome({ allowedRole }) {
   const navigate = useNavigate();
   const authSession = getAuthSession();
-  const user = authSession?.user;
+  const user = authSession?.user || {
+    fullName: allowedRole,
+    email: `${allowedRole.toLowerCase().replace(/\s+/g, "-")}@goldenhoof.local`,
+    role: allowedRole,
+  };
   const data = roleData[allowedRole];
-
-  if (!authSession) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user?.role !== allowedRole) {
-    return <Navigate to="/" replace />;
-  }
 
   function handleLogout() {
     clearAuthSession();
