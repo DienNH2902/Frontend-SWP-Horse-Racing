@@ -1,59 +1,18 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
+import RoleLayout from "../layouts/RoleLayout";
 import Home from "../pages/Home";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
-
-export default function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route
-        path="/admin"
-        element={
-          <AdminLayout>
-            <UserManagement />
-          </AdminLayout>
-        }
-      />
-      <Route
-        path="/admin/dashboard"
-        element={
-          <AdminLayout>
-            <UserManagement />
-          </AdminLayout>
-        }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <AdminLayout>
-            <UserManagement />
-          </AdminLayout>
-        }
-      />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-}
-import { Navigate, Route, Routes } from "react-router-dom";
-import Home from "../pages/Home";
-import Profile from "../pages/Profile";
-import Login from "../pages/auth/Login";
-import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
-import RoleLayout from "../layouts/RoleLayout";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
-import OwnerHorses from "../pages/owner/OwnerHorses";
 import OwnerHorseDetail from "../pages/owner/OwnerHorseDetail";
+import OwnerHorses from "../pages/owner/OwnerHorses";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
-import RefereeRaces from "../pages/referee/RefereeRaces";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
+import RefereeRaces from "../pages/referee/RefereeRaces";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -65,6 +24,14 @@ const REFEREE_NAV = [
   { key: "referee-races", to: "/referee/races", label: "Races" },
 ];
 
+function AdminUsersPage() {
+  return (
+    <AdminLayout>
+      <UserManagement />
+    </AdminLayout>
+  );
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -72,6 +39,10 @@ export default function AppRoutes() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      <Route path="/admin" element={<AdminUsersPage />} />
+      <Route path="/admin/dashboard" element={<AdminUsersPage />} />
+      <Route path="/admin/users" element={<AdminUsersPage />} />
 
       <Route element={<ProtectedRoute allowedRoles={["Horse Owner"]} />}>
         <Route
