@@ -112,14 +112,14 @@ function AdminLayout({ children }) {
 
       <Sider className="admin-sidebar" width={290}>
         <div className="admin-sidebar-inner">
-          <Link className="admin-brand" to="/">
+          <Link className="admin-brand" to="/admin/dashboard">
             <img className="admin-brand-logo" src="/navbar-logo.png" alt="" />
             <span>GoldenHoof</span>
           </Link>
           <Link className="admin-nav-item" to="/admin/users">
             User Management
           </Link>
-          <Button className="admin-home-btn" onClick={() => navigate("/")}>
+          <Button className="admin-home-btn" onClick={() => navigate("/home")}>
             Quay lại Home
           </Button>
         </div>
