@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import RoleLayout from "../layouts/RoleLayout";
 import Home from "../pages/Home";
+import JockeyProfile from "../pages/JockeyProfile";
+import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
 import Login from "../pages/auth/Login";
@@ -31,11 +33,13 @@ function AdminUsersPage() {
     </AdminLayout>
   );
 }
+import RoleHome from "../pages/RoleHome";
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/home" element={<Home />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -78,6 +82,30 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
+      <Route
+        path="/spectator"
+        element={
+          <ProtectedRoute allowedRoles={["Spectator"]}>
+            <RoleHome allowedRole="Spectator" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jockey"
+        element={
+          <ProtectedRoute allowedRoles={["Jockey"]}>
+            <RoleHome allowedRole="Jockey" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jockey/profile"
+        element={
+          <ProtectedRoute allowedRoles={["Jockey"]}>
+            <JockeyProfile />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
