@@ -1,37 +1,67 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Avatar, Button, Card, Descriptions, Skeleton, Space, Tag, Typography, message } from "antd";
+import { Avatar, Button, Card, Descriptions, Form, Input, Select, Skeleton, Space, Tag, Typography, message } from "antd";
 import "antd/dist/reset.css";
-import { getAdminProfile } from "../api/services/profile.service";
+import { getProfile } from "../api/services/auth.service";
+import { updateUserAccount } from "../api/services/user.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 
 const { Text, Title } = Typography;
 
-function formatDate(value) {
-  if (!value) {
+function formatValue(value) {
+  if (value === undefined || value === null || value === "") {
     return "N/A";
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
+  return value;
+}
+
+function getInitials(name) {
+  if (!name) {
+    return "GH";
+  }
+
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function getProfileId(profile) {
+  return profile?._id || profile?.id || profile?.userId;
+}
+
+function getResponseProfile(response, fallback) {
+  return response?.data || response?.result || response?.user || response?.profile || fallback;
 }
 
 function Profile() {
   const navigate = useNavigate();
   const authSession = getAuthSession();
+  const [form] = Form.useForm();
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
 
-    getAdminProfile()
+    getProfile()
       .then((data) => {
         if (isMounted) {
           setProfile(data);
+          form.setFieldsValue({
+            avatar: data?.avatar || data?.avatarUrl || "",
+            fullName: data?.fullName || data?.name || "",
+            email: data?.email || "",
+            phoneNumber: data?.phoneNumber || "",
+            address: data?.address || "",
+            dateOfBirth: data?.dateOfBirth || data?.dob || "",
+            gender: data?.gender,
+          });
         }
       })
       .catch(() => {
@@ -46,7 +76,7 @@ function Profile() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [form]);
 
   if (!authSession) {
     return <Navigate to="/login" replace />;
@@ -56,6 +86,39 @@ function Profile() {
     clearAuthSession();
     navigate("/", { replace: true });
   }
+
+  async function handleSave(values) {
+    const profileId = getProfileId(profile);
+
+    if (!profileId) {
+      message.error("Unable to update profile because user id is missing");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const payload = {
+        ...values,
+        role: profile.role,
+      };
+      const response = await updateUserAccount(profileId, payload);
+      const updatedProfile = getResponseProfile(response, { ...profile, ...payload });
+
+      setProfile((currentProfile) => ({
+        ...currentProfile,
+        ...updatedProfile,
+      }));
+      message.success("Profile updated");
+    } catch (error) {
+      message.error(error?.message || "Unable to update profile");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const fullName = formatValue(profile?.fullName || profile?.name);
+  const avatarUrl = profile?.avatar || profile?.avatarUrl;
 
   return (
     <main className="profile-page">
@@ -184,6 +247,39 @@ function Profile() {
           font-weight: 800;
         }
 
+        .profile-form {
+          display: grid;
+          gap: 18px;
+        }
+
+        .profile-form-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px 18px;
+        }
+
+        .profile-form .ant-form-item {
+          margin-bottom: 0;
+        }
+
+        .profile-form .ant-form-item-label > label {
+          color: #52726e;
+          font-weight: 850;
+        }
+
+        .profile-form .ant-input,
+        .profile-form .ant-select-selector {
+          border-color: #bdeee5 !important;
+          border-radius: 8px;
+          color: #0d2321;
+          font-weight: 750;
+          background: #fafffe;
+        }
+
+        .profile-readonly {
+          margin-top: 26px;
+        }
+
         .profile-actions {
           display: flex;
           flex-wrap: wrap;
@@ -228,6 +324,9 @@ function Profile() {
             flex-direction: column;
           }
           .profile-content { padding: 22px; }
+          .profile-form-grid {
+            grid-template-columns: 1fr;
+          }
           .profile-descriptions.ant-descriptions .ant-descriptions-item-label {
             width: auto;
           }
@@ -259,42 +358,109 @@ function Profile() {
                     <Avatar
                       className="profile-avatar"
                       size={112}
-                      src={profile.avatarUrl}
+                      src={avatarUrl}
                     >
-                      {profile.fullName
-                        .split(" ")
-                        .map((part) => part[0])
-                        .join("")
-                        .slice(0, 2)}
+                      {getInitials(profile.fullName || profile.name)}
                     </Avatar>
                     <div>
-                      <Title level={1}>{profile.fullName}</Title>
-                      <Tag className="profile-role">{profile.role}</Tag>
+                      <Title level={1}>{fullName}</Title>
+                      <Tag className="profile-role">{formatValue(profile.role)}</Tag>
                     </div>
                   </div>
                 </div>
 
                 <div className="profile-content">
                   <Title className="profile-section-title" level={3}>
-                    Admin Profile
+                    Profile
                   </Title>
+                  <Form
+                    className="profile-form"
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleSave}
+                    requiredMark={false}
+                  >
+                    <div className="profile-form-grid">
+                      <Form.Item
+                        label="Full Name"
+                        name="fullName"
+                        rules={[{ required: true, message: "Full name is required" }]}
+                      >
+                        <Input placeholder="Nguyen Van A" />
+                      </Form.Item>
+
+                      <Form.Item
+                        label="Email"
+                        name="email"
+                        rules={[
+                          { required: true, message: "Email is required" },
+                          { type: "email", message: "Email is invalid" },
+                        ]}
+                      >
+                        <Input placeholder="user@example.com" />
+                      </Form.Item>
+
+                      <Form.Item label="Phone Number" name="phoneNumber">
+                        <Input placeholder="0793829964" />
+                      </Form.Item>
+
+                      <Form.Item label="Date of Birth" name="dateOfBirth">
+                        <Input placeholder="20/12/2003" />
+                      </Form.Item>
+
+                      <Form.Item label="Gender" name="gender">
+                        <Select
+                          placeholder="Select gender"
+                          options={[
+                            { label: "Female", value: 0 },
+                            { label: "Male", value: 1 },
+                            { label: "Other", value: 2 },
+                          ]}
+                        />
+                      </Form.Item>
+
+                      <Form.Item label="Avatar URL" name="avatar">
+                        <Input placeholder="https://ui-avatars.com/api/?name=Nguyen+Van+A" />
+                      </Form.Item>
+                    </div>
+
+                    <Form.Item label="Address" name="address">
+                      <Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} placeholder="123 Duong so 123" />
+                    </Form.Item>
+
+                    <div className="profile-actions">
+                      <Button className="profile-primary" htmlType="submit" loading={isSaving}>
+                        Save Profile
+                      </Button>
+                      <Button className="profile-secondary" type="button">
+                        Change Password
+                      </Button>
+                    </div>
+                  </Form>
+
                   <Descriptions
                     bordered
-                    className="profile-descriptions"
+                    className="profile-descriptions profile-readonly"
                     column={1}
                     size="middle"
                   >
-                    <Descriptions.Item label="Avatar">
-                      <Text strong>{profile.avatarUrl}</Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Name">
-                      <Text strong>{profile.fullName}</Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Date of Birth">
-                      <Text strong>{formatDate(profile.dob)}</Text>
-                    </Descriptions.Item>
                     <Descriptions.Item label="Role">
-                      <Tag className="profile-role">{profile.role}</Tag>
+                      <Tag className="profile-role">{formatValue(profile.role)}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Status">
+                      <Text strong>{formatValue(profile.status)}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Point Balance">
+                      <Text strong>{formatValue(profile.pointBalance)}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Total Points">
+                      <Text strong>{formatValue(profile.totalPoints)}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Total Bets">
+                      <Text strong>{formatValue(profile.totalBets)}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Win Rate">
+                      <Text strong>{formatValue(profile.winRate)}</Text>
                     </Descriptions.Item>
                   </Descriptions>
                 </div>
