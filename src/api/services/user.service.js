@@ -14,14 +14,6 @@ export async function getUsers() {
   return response.data;
 }
 
-export async function getUsersByRole(role) {
-  const response = await apiClient.get(USER_ENDPOINTS.ROLE(role), {
-    includeAuth: true,
-  });
-
-  return response.data;
-}
-
 export async function getUserById(id) {
   const response = await apiClient.get(USER_ENDPOINTS.DETAIL(id), {
     includeAuth: true,
@@ -38,50 +30,64 @@ export async function deleteUser(id) {
   return response.data;
 }
 
+export async function updateUser(id, payload) {
+  const response = await apiClient.put(USER_ENDPOINTS.DETAIL(id), payload, {
+    includeAuth: true,
+  });
+
+  return response.data;
+}
+
 export async function updateSpectator(id, payload) {
-  const response = await apiClient.put(
-    USER_ENDPOINTS.UPDATE_SPECTATOR(id),
-    payload,
-    {
-      includeAuth: true,
-    },
-  );
+  const response = await apiClient.put(USER_ENDPOINTS.UPDATE_SPECTATOR(id), payload, {
+    includeAuth: true,
+  });
 
   return response.data;
 }
 
 export async function updateJockey(id, payload) {
-  const response = await apiClient.put(
-    USER_ENDPOINTS.UPDATE_JOCKEY(id),
-    payload,
-    {
-      includeAuth: true,
-    },
-  );
+  const response = await apiClient.put(USER_ENDPOINTS.UPDATE_JOCKEY(id), payload, {
+    includeAuth: true,
+  });
 
   return response.data;
 }
 
 export async function updateHorseOwner(id, payload) {
-  const response = await apiClient.put(
-    USER_ENDPOINTS.UPDATE_HORSE_OWNER(id),
-    payload,
-    {
-      includeAuth: true,
-    },
-  );
+  const response = await apiClient.put(USER_ENDPOINTS.UPDATE_HORSE_OWNER(id), payload, {
+    includeAuth: true,
+  });
 
   return response.data;
 }
 
 export async function updateReferee(id, payload) {
-  const response = await apiClient.put(
-    USER_ENDPOINTS.UPDATE_REFEREE(id),
-    payload,
-    {
-      includeAuth: true,
-    },
-  );
+  const response = await apiClient.put(USER_ENDPOINTS.UPDATE_REFEREE(id), payload, {
+    includeAuth: true,
+  });
 
   return response.data;
+}
+
+export async function updateUserAccount(id, payload) {
+  const role = String(payload?.role || "").toLowerCase();
+
+  if (role.includes("horse")) {
+    return updateHorseOwner(id, payload);
+  }
+
+  if (role.includes("jockey")) {
+    return updateJockey(id, payload);
+  }
+
+  if (role.includes("referee")) {
+    return updateReferee(id, payload);
+  }
+
+  if (role.includes("spectator")) {
+    return updateSpectator(id, payload);
+  }
+
+  return updateUser(id, payload);
 }

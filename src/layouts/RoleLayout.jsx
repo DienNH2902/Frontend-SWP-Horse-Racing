@@ -1,7 +1,7 @@
 import { Avatar, Button, Layout, Menu, Space, Typography } from "antd";
-import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
-import { getDisplayName, getInitials, normalizeRole } from "../utils/roles";
+import { getDisplayName, getInitials } from "../utils/roles";
 
 const { Sider, Header, Content } = Layout;
 
@@ -9,16 +9,7 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
     const navigate = useNavigate();
     const location = useLocation();
     const session = getAuthSession();
-
-    if (!session) {
-        return <Navigate to="/login" replace />;
-    }
-
-    if (role && normalizeRole(session?.user?.role) !== normalizeRole(role)) {
-        return <Navigate to="/" replace />;
-    }
-
-    const user = session?.user || {};
+    const user = session?.user || { fullName: role || "GoldenHoof User", role };
     const displayName = getDisplayName(user);
     const initials = getInitials(displayName);
 

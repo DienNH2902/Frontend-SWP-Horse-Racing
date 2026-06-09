@@ -113,10 +113,8 @@ export default function RegisterForm() {
   async function handleFinish(values) {
     const payload = {
       ...values,
-      dateOfBirth: values.dateOfBirth?.toDate(),
+      dateOfBirth: values.dateOfBirth?.format("YYYY-MM-DD"),
     };
-
-    delete payload.dateOfBirth;
 
     if (values.role === "Spectator") {
       payload.role = "Spectator";

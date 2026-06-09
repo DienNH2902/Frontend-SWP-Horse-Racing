@@ -37,11 +37,11 @@ export function attachInterceptors(apiClient) {
       const payload = error.response?.data;
       const message = resolveErrorMessage(
         payload,
-        error.message || "Request failed"
+        error.message || "Request failed",
       );
 
       return Promise.reject(new Error(message));
-    }
+    },
   );
 
   return apiClient;

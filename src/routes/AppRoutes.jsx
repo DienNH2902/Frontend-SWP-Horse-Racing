@@ -1,16 +1,24 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import AdminLayout from "../layouts/AdminLayout";
+import RoleLayout from "../layouts/RoleLayout";
 import Home from "../pages/Home";
+import JockeyProfile from "../pages/JockeyProfile";
+import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
+import UserManagement from "../pages/admin/UserManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
-import RoleLayout from "../layouts/RoleLayout";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
-import OwnerHorses from "../pages/owner/OwnerHorses";
 import OwnerHorseDetail from "../pages/owner/OwnerHorseDetail";
+import OwnerHorses from "../pages/owner/OwnerHorses";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
-import RefereeRaces from "../pages/referee/RefereeRaces";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
+import RefereeRaces from "../pages/referee/RefereeRaces";
+import RoleHome from "../pages/RoleHome";
+import OAuthSuccess from "../pages/auth/OAuthSuccess";
+import RefereeReports from "../pages/referee/RefereeReports";
+
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -18,17 +26,50 @@ const OWNER_NAV = [
 ];
 
 const REFEREE_NAV = [
-  { key: "referee-dashboard", to: "/referee", label: "Dashboard" },
-  { key: "referee-races", to: "/referee/races", label: "Races" },
+  {
+    key: "dashboard",
+    to: "/referee",
+    label: "Dashboard",
+  },
+  {
+    key: "races",
+    to: "/referee/races",
+    label: "Races",
+  },
+  {
+    key: "reports",
+    to: "/referee/reports",
+    label: "Reports",
+  },
 ];
+
+function AdminUsersPage() {
+  return (
+    <AdminLayout>
+      <UserManagement />
+    </AdminLayout>
+  );
+}
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/profile" element={<Profile />} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      <Route path="/oauth-success" element={<OAuthSuccess />} />
+
+      <Route element={<ProtectedRoute />}>
+        <Route path="/profile" element={<Profile />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
+        <Route path="/admin" element={<AdminUsersPage />} />
+        <Route path="/admin/dashboard" element={<AdminUsersPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+      </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Horse Owner"]} />}>
         <Route
@@ -61,9 +102,21 @@ export default function AppRoutes() {
           <Route path="referee" element={<RefereeDashboard />} />
           <Route path="referee/races" element={<RefereeRaces />} />
           <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
+          <Route path="referee/reports" element={<RefereeReports />} />
         </Route>
       </Route>
 
+      <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
+        <Route
+          path="/spectator"
+          element={<RoleHome allowedRole="Spectator" />}
+        />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
+        <Route path="/jockey" element={<RoleHome allowedRole="Jockey" />} />
+        <Route path="/jockey/profile" element={<JockeyProfile />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

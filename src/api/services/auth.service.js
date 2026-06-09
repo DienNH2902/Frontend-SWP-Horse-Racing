@@ -17,20 +17,24 @@ function pickFirstValue(source, keys) {
 
 function normalizeLoginResponse(response) {
   const data = response?.data || response;
+  const authData = pickFirstValue(data, ["data", "result", "auth", "authentication"]) || data;
   const accessToken =
-    typeof data === "string"
-      ? data
-      : pickFirstValue(data, [
-        "accessToken",
-        "access_token",
-        "token",
-        "jwt",
-      ]);
-  const refreshToken = pickFirstValue(data, [
+    typeof authData === "string"
+      ? authData
+      : pickFirstValue(authData, [
+          "accessToken",
+          "access_token",
+          "token",
+          "jwt",
+        ]);
+  const refreshToken = pickFirstValue(authData, [
     "refreshToken",
     "refresh_token",
   ]);
-  const user = pickFirstValue(data, ["user", "account", "profile"]) || null;
+  const user =
+    pickFirstValue(authData, ["user", "account", "profile"]) ||
+    pickFirstValue(data, ["user", "account", "profile"]) ||
+    null;
 
   return {
     accessToken,
@@ -39,11 +43,11 @@ function normalizeLoginResponse(response) {
   };
 }
 
-// export async function login(credentials) {
-//   const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN, credentials);
+export async function login(credentials) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN, credentials);
 
-//   return normalizeLoginResponse(response.data);
-// }
+  return normalizeLoginResponse(response.data);
+}
 
 export async function getProfile() {
   const response = await apiClient.get(AUTH_ENDPOINTS.PROFILE, {
@@ -51,7 +55,10 @@ export async function getProfile() {
     includeRefreshToken: true,
   });
 
-  return response.data;
+  return (
+    pickFirstValue(response.data, ["data", "result", "user", "profile"]) ||
+    response.data
+  );
 }
 
 export async function registerSpectator(payload) {
@@ -67,42 +74,4 @@ export async function registerHorseOwner(payload) {
 export async function registerJockey(payload) {
   const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_JOCKEY, payload);
   return response.data;
-}
-
-export async function login(credentials) {
-  const { email, password } = credentials;
-
-  if (password !== "123456") {
-    throw new Error("Sai mật khẩu");
-  }
-
-  // OWNER
-  if (email === "owner@goldenhoof.com") {
-    return {
-      accessToken: "fake-owner-token",
-      refreshToken: "fake-owner-refresh",
-      user: {
-        id: 1,
-        fullName: "Horse Owner Demo",
-        email: "owner@goldenhoof.com",
-        role: "Horse Owner",
-      },
-    };
-  }
-
-  // REFEREE
-  if (email === "referee@goldenhoof.com") {
-    return {
-      accessToken: "fake-referee-token",
-      refreshToken: "fake-referee-refresh",
-      user: {
-        id: 2,
-        fullName: "Referee Demo",
-        email: "referee@goldenhoof.com",
-        role: "Referee",
-      },
-    };
-  }
-
-  throw new Error("Tài khoản không tồn tại");
 }
