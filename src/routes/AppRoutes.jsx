@@ -16,6 +16,7 @@ import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeRaces from "../pages/referee/RefereeRaces";
 import RoleHome from "../pages/RoleHome";
+import OAuthSuccess from "../pages/auth/OAuthSuccess";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -42,6 +43,8 @@ export default function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      <Route path="/oauth-success" element={<OAuthSuccess />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
