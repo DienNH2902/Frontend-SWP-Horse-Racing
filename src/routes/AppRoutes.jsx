@@ -91,7 +91,10 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
-        <Route path="/spectator" element={<RoleHome allowedRole="Spectator" />} />
+        <Route
+          path="/spectator"
+          element={<RoleHome allowedRole="Spectator" />}
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
