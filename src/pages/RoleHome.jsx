@@ -186,7 +186,7 @@ export default function RoleHome({ allowedRole }) {
 
   function handleLogout() {
     clearAuthSession();
-    navigate("/", { replace: true });
+    navigate("/home", { replace: true });
   }
 
   const profilePath = allowedRole === "Jockey" ? "/jockey/profile" : "/profile";
@@ -594,7 +594,7 @@ export default function RoleHome({ allowedRole }) {
 
       <div className="role-shell">
         <header className="role-topbar">
-          <Link className="role-brand" to="/">
+          <Link className="role-brand" to="/home">
             <Icon name="logo" size={32} />
             <span>GoldenHoof</span>
           </Link>

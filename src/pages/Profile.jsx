@@ -84,7 +84,7 @@ function Profile() {
 
   function handleLogout() {
     clearAuthSession();
-    navigate("/", { replace: true });
+    navigate("/home", { replace: true });
   }
 
   async function handleSave(values) {
@@ -335,7 +335,7 @@ function Profile() {
 
       <section className="profile-shell">
         <div className="profile-topbar">
-          <Link className="profile-brand" to="/">
+          <Link className="profile-brand" to="/home">
             <span className="profile-brand-mark">GH</span>
             <span>GoldenHoof</span>
           </Link>

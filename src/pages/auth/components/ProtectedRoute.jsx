@@ -64,7 +64,7 @@ export default function ProtectedRoute({ allowedRoles = [] }) {
         const allowed = allowedRoles.map(normalizeRole);
 
         if (!allowed.includes(userRole)) {
-            return <Navigate to="/" replace />;
+            return <Navigate to="/home" replace />;
         }
     }
 

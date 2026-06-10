@@ -1,53 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Col, Empty, Row, Skeleton, Space, Statistic, Table, Tag, Typography } from "antd";
 import { Link } from "react-router-dom";
+import { getMyHorses } from "../../api/services/horse.service";
 import { getHorseStatusColor, horseCollectionFrom, isActiveHorse, normalizeHorse } from "./horseViewModel";
 
-const horses = [
-  {
-    id: 1,
-    name: "Thunder",
-    totalWin: 12,
-    winRate: 65,
-  },
-  {
-    id: 2,
-    name: "Storm",
-    totalWin: 7,
-    winRate: 48,
-  },
-];
 export default function OwnerDashboard() {
   const [horses, setHorses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    const mockHorses = [
-      {
-        id: 1,
-        name: "Thunder",
-        breed: "Arabian",
-        age: 4,
-        status: "Active",
-        ownerName: "Golden Hoof",
-        totalWin: 12,
-        winRate: 65,
-      },
-      {
-        id: 2,
-        name: "Storm",
-        breed: "Thoroughbred",
-        age: 5,
-        status: "Training",
-        ownerName: "Golden Hoof",
-        totalWin: 7,
-        winRate: 48,
-      },
-    ];
-
-    setHorses(mockHorses);
-    setLoading(false);
+    getMyHorses()
+      .then((data) => setHorses(horseCollectionFrom(data)))
+      .catch((error) => setErrorMessage(error.message || "Could not load owner dashboard."))
+      .finally(() => setLoading(false));
   }, []);
 
   const rows = useMemo(() => horses.map(normalizeHorse), [horses]);
@@ -123,8 +89,8 @@ export default function OwnerDashboard() {
             <Link to="/owner/horses">
               <Button>Manage horses</Button>
             </Link>
-            <Link to="/owner/horses?create=1">
-              <Button type="primary">Add horse</Button>
+            <Link to="/owner/horses/register">
+              <Button type="primary">Register horse</Button>
             </Link>
           </Space>
         }
@@ -136,8 +102,8 @@ export default function OwnerDashboard() {
             description="No horses found"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
-            <Link to="/owner/horses?create=1">
-              <Button type="primary">Add your first horse</Button>
+            <Link to="/owner/horses/register">
+              <Button type="primary">Register your first horse</Button>
             </Link>
           </Empty>
         ) : (
@@ -162,6 +128,7 @@ export default function OwnerDashboard() {
                 <Typography.Text>Breed: {horse.breed}</Typography.Text>
                 <Typography.Text>Owner: {horse.ownerName}</Typography.Text>
                 <Typography.Text>Wins: {horse.totalWin}</Typography.Text>
+                <Typography.Text>Rating: {horse.rating}</Typography.Text>
                 <Link to={`/owner/horses/${horse.id}`}>Open detail</Link>
               </Space>
             </Card>

@@ -1,5 +1,6 @@
 import { apiClient } from "../client";
 import { AUTH_ENDPOINTS } from "../endpoints/auth.endpoint";
+import { getAuthSession } from "../../utils/storage";
 
 function pickFirstValue(source, keys) {
   if (!source || typeof source !== "object") {
@@ -50,15 +51,25 @@ export async function login(credentials) {
 }
 
 export async function getProfile() {
-  const response = await apiClient.get(AUTH_ENDPOINTS.PROFILE, {
-    includeAuth: true,
-    includeRefreshToken: true,
-  });
+  try {
+    const response = await apiClient.get(AUTH_ENDPOINTS.PROFILE, {
+      includeAuth: true,
+      includeRefreshToken: true,
+    });
 
-  return (
-    pickFirstValue(response.data, ["data", "result", "user", "profile"]) ||
-    response.data
-  );
+    return (
+      pickFirstValue(response.data, ["data", "result", "user", "profile"]) ||
+      response.data
+    );
+  } catch (error) {
+    const sessionUser = getAuthSession()?.user;
+
+    if (sessionUser) {
+      return sessionUser;
+    }
+
+    throw error;
+  }
 }
 
 export async function registerSpectator(payload) {

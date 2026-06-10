@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
+import { getRoleHomePath } from "../utils/roles";
 import { clearAuthSession, getAccessToken, getAuthSession } from "../utils/storage";
 
 function Icon({ name, size = 24 }) {
@@ -116,6 +117,13 @@ function Icon({ name, size = 24 }) {
         <rect x="14" y="3" width="7" height="5" rx="1" />
         <rect x="14" y="12" width="7" height="9" rx="1" />
         <rect x="3" y="15" width="7" height="6" rx="1" />
+      </>
+    ),
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+        <path d="M10 20v-6h4v6" />
       </>
     ),
   };
@@ -245,6 +253,8 @@ function Home() {
     pickFirstValue(currentUser, ["role", "roleName"]) ||
     pickFirstValue(tokenClaims, ["role", "roleName", "roles", "authorities"]) ||
     "";
+  const primaryRole = Array.isArray(accountRole) ? accountRole[0] : accountRole;
+  const dashboardPath = getRoleHomePath(primaryRole);
   const isAdmin = Array.isArray(accountRole)
     ? accountRole.some((role) => String(role).toLowerCase().includes("admin"))
     : String(accountRole).toLowerCase().includes("admin");
@@ -1115,12 +1125,18 @@ function Home() {
 
                 {isAccountMenuOpen && (
                   <div className="account-dropdown" role="menu">
-                    {isAdmin && (
-                      <Link className="account-menu-item" role="menuitem" to="/admin/dashboard">
-                        <Icon name="dashboard" size={18} />
-                        <span>Dashboard</span>
-                      </Link>
-                    )}
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      to={isAdmin ? "/admin/dashboard" : dashboardPath}
+                    >
+                      <Icon name="dashboard" size={18} />
+                      <span>Dashboard</span>
+                    </Link>
+                    <Link className="account-menu-item" role="menuitem" to="/home">
+                      <Icon name="home" size={18} />
+                      <span>Home</span>
+                    </Link>
                     <Link className="account-menu-item" role="menuitem" to="/profile">
                       <Icon name="user" size={18} />
                       <span>Profile</span>

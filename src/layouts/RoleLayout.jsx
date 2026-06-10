@@ -96,6 +96,7 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
                     </Space>
 
                     <Space>
+                        <Button onClick={() => navigate("/home")}>Home</Button>
                         <Avatar style={{ background: "#06332e", color: "#69f8dd", fontWeight: 800 }}>
                             {initials}
                         </Avatar>

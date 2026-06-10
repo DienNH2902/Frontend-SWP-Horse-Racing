@@ -15,9 +15,8 @@ import {
   Typography,
   message,
 } from "antd";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  createHorse,
   deleteHorse,
   getMyHorses,
   updateHorse,
@@ -29,23 +28,6 @@ import {
   toHorseFormValues,
   toHorsePayload,
 } from "./horseViewModel";
-
-const horses = [
-  {
-    id: 1,
-    name: "Thunder",
-    breed: "Arabian",
-    age: 4,
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Storm",
-    breed: "Thoroughbred",
-    age: 5,
-    status: "Active",
-  },
-];
 
 const STATUS_OPTIONS = [
   { value: "Active", label: "Active" },
@@ -62,6 +44,7 @@ const GENDER_OPTIONS = [
 
 export default function OwnerHorses() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const [horses, setHorses] = useState([]);
@@ -95,10 +78,10 @@ export default function OwnerHorses() {
 
   useEffect(() => {
     if (searchParams.get("create") === "1") {
-      openCreateModal();
+      navigate("/owner/horses/register", { replace: true });
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [navigate, searchParams, setSearchParams]);
 
   const rows = useMemo(() => horses.map(normalizeHorse), [horses]);
 
@@ -120,13 +103,6 @@ export default function OwnerHorses() {
     });
   }, [keyword, rows, statusFilter]);
 
-  function openCreateModal() {
-    setEditingHorse(null);
-    form.resetFields();
-    form.setFieldsValue({ horseStatus: "Active" });
-    setModalOpen(true);
-  }
-
   function openEditModal(horse) {
     setEditingHorse(horse);
     form.setFieldsValue(toHorseFormValues(horse));
@@ -142,9 +118,6 @@ export default function OwnerHorses() {
       if (editingHorse?.id) {
         await updateHorse(editingHorse.id, payload);
         messageApi.success("Horse updated");
-      } else {
-        await createHorse(payload);
-        messageApi.success("Horse created");
       }
 
       setModalOpen(false);
@@ -200,6 +173,8 @@ export default function OwnerHorses() {
       render: (value) => `${value || 0}%`,
       responsive: ["md"],
     },
+    { title: "Starts", dataIndex: "starts", responsive: ["lg"] },
+    { title: "Rating", dataIndex: "rating", responsive: ["lg"] },
     {
       title: "Action",
       key: "action",
@@ -254,9 +229,9 @@ export default function OwnerHorses() {
               ]}
             />
             <Button onClick={loadHorses}>Refresh</Button>
-            <Button type="primary" onClick={openCreateModal}>
-              Add horse
-            </Button>
+            <Link to="/owner/horses/register">
+              <Button type="primary">Register horse</Button>
+            </Link>
           </Space>
         }
       >
@@ -271,12 +246,12 @@ export default function OwnerHorses() {
       </Card>
 
       <Modal
-        title={editingHorse ? `Edit ${editingHorse.name}` : "Add horse"}
+        title={`Edit ${editingHorse?.name || "horse"}`}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={() => form.submit()}
         confirmLoading={saving}
-        okText={editingHorse ? "Save changes" : "Create horse"}
+        okText="Save changes"
         destroyOnHidden
       >
         <Form

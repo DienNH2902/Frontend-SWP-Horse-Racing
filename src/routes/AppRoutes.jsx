@@ -11,7 +11,10 @@ import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
 import OwnerHorseDetail from "../pages/owner/OwnerHorseDetail";
+import OwnerHorseRegister from "../pages/owner/OwnerHorseRegister";
 import OwnerHorses from "../pages/owner/OwnerHorses";
+import OwnerJockeyRaceWorkspace from "../pages/owner/OwnerJockeyRaceWorkspace";
+import OwnerRaceResults from "../pages/owner/OwnerRaceResults";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeRaces from "../pages/referee/RefereeRaces";
@@ -20,6 +23,9 @@ import RoleHome from "../pages/RoleHome";
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
   { key: "owner-horses", to: "/owner/horses", label: "My horses" },
+  { key: "owner-register-horse", to: "/owner/horses/register", label: "Register horse" },
+  { key: "owner-jockey-races", to: "/owner/jockey-races", label: "Jockey & entries" },
+  { key: "owner-results", to: "/owner/race-results", label: "Race results" },
 ];
 
 const REFEREE_NAV = [
@@ -66,7 +72,10 @@ export default function AppRoutes() {
         >
           <Route path="owner" element={<OwnerDashboard />} />
           <Route path="owner/horses" element={<OwnerHorses />} />
+          <Route path="owner/horses/register" element={<OwnerHorseRegister />} />
           <Route path="owner/horses/:id" element={<OwnerHorseDetail />} />
+          <Route path="owner/jockey-races" element={<OwnerJockeyRaceWorkspace />} />
+          <Route path="owner/race-results" element={<OwnerRaceResults />} />
         </Route>
       </Route>
 
@@ -95,7 +104,7 @@ export default function AppRoutes() {
         <Route path="/jockey" element={<RoleHome allowedRole="Jockey" />} />
         <Route path="/jockey/profile" element={<JockeyProfile />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
 }

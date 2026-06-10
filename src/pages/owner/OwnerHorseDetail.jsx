@@ -20,24 +20,13 @@ import {
   message,
 } from "antd";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { deleteHorse, getHorseById, updateHorse } from "../../api/services/horse.service";
 import {
   getHorseStatusColor,
-  horseDetailFrom,
   normalizeHorse,
   toHorseFormValues,
   toHorsePayload,
 } from "./horseViewModel";
-
-const horse = {
-  id: 1,
-  name: "Thunder",
-  breed: "Arabian",
-  age: 4,
-  color: "Black",
-  weight: 450,
-  totalWin: 12,
-  winRate: 65,
-};
 
 const STATUS_OPTIONS = [
   { value: "Active", label: "Active" },
@@ -63,28 +52,24 @@ export default function OwnerHorseDetail() {
   const [modalOpen, setModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const loadHorse = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
 
+    try {
+      const data = await getHorseById(id);
+      setHorse(data ? normalizeHorse(data) : null);
+    } catch (error) {
+      setErrorMessage(error.message || "Could not load horse.");
+      setHorse(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    setHorse({
-      id: Number(id),
-      name: "Thunder",
-      breed: "Arabian",
-      age: 4,
-      gender: "Male",
-      color: "Black",
-      height: 1.65,
-      weight: 450,
-      status: "Active",
-      totalWin: 12,
-      winRate: 65,
-      ownerName: "Golden Hoof Stable",
-      stable: "Stable A",
-      description: "Champion race horse",
-    });
-
-    setLoading(false);
-  }, [id]);
+    loadHorse();
+  }, [loadHorse]);
 
   function openEditModal() {
     if (!horse) return;
@@ -169,14 +154,17 @@ export default function OwnerHorseDetail() {
         }
       >
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={8} lg={6}>
             <Statistic title="Win rate" value={horse.winRate} suffix="%" />
           </Col>
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={8} lg={6}>
             <Statistic title="Total wins" value={horse.totalWin} />
           </Col>
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={8} lg={6}>
             <Statistic title="Age" value={horse.age} />
+          </Col>
+          <Col xs={24} sm={8} lg={6}>
+            <Statistic title="Rating" value={horse.rating} />
           </Col>
         </Row>
 
@@ -188,6 +176,9 @@ export default function OwnerHorseDetail() {
           <Descriptions.Item label="Weight">{horse.weight}</Descriptions.Item>
           <Descriptions.Item label="Owner">{horse.ownerName}</Descriptions.Item>
           <Descriptions.Item label="Stable">{horse.stable}</Descriptions.Item>
+          <Descriptions.Item label="Starts">{horse.starts}</Descriptions.Item>
+          <Descriptions.Item label="Podiums">{horse.podiums}</Descriptions.Item>
+          <Descriptions.Item label="Last race">{horse.lastRace}</Descriptions.Item>
           <Descriptions.Item label="Description">{horse.description}</Descriptions.Item>
         </Descriptions>
       </Card>

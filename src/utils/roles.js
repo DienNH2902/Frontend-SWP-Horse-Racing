@@ -11,6 +11,7 @@ export function getRoleHomePath(role) {
     if (value === "referee") return "/referee";
     if (value === "spectator") return "/spectator";
     if (value === "jockey") return "/jockey";
+    if (value === "admin") return "/admin/dashboard";
 
     return "/home";
 }
