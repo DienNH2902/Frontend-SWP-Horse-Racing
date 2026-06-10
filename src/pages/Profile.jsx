@@ -13,11 +13,16 @@ import {
   Tag,
   Typography,
   message,
+  DatePicker,
 } from "antd";
 import "antd/dist/reset.css";
 import { getProfile } from "../api/services/auth.service";
 import { updateUserAccount } from "../api/services/user.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
+import dayjs from "dayjs"; // 2. Import thêm dayjs tại đây
+import customParseFormat from "dayjs/plugin/customParseFormat"; // Hỗ trợ parse định dạng chuỗi VN
+
+dayjs.extend(customParseFormat);
 
 const { Text, Title } = Typography;
 
@@ -72,13 +77,16 @@ function Profile() {
       .then((data) => {
         if (isMounted) {
           setProfile(data);
+          const rawDob = data?.dateOfBirth || data?.dob || "";
+          const parsedDob = rawDob ? dayjs(rawDob, "DD/MM/YYYY") : null;
+
           form.setFieldsValue({
             avatar: data?.avatar || data?.avatarUrl || "",
             fullName: data?.fullName || data?.name || "",
             email: data?.email || "",
             phoneNumber: data?.phoneNumber || "",
             address: data?.address || "",
-            dateOfBirth: data?.dateOfBirth || data?.dob || "",
+            dateOfBirth: parsedDob && parsedDob.isValid() ? parsedDob : null,
             gender: data?.gender,
           });
         }
@@ -118,6 +126,10 @@ function Profile() {
 
     try {
       const { role, email, ...payload } = values;
+
+      if (payload.dateOfBirth) {
+        payload.dateOfBirth = dayjs(payload.dateOfBirth).format("DD/MM/YYYY");
+      }
 
       const response = await updateUserAccount(
         profileId,
@@ -428,7 +440,7 @@ function Profile() {
                           { type: "email", message: "Email is invalid" },
                         ]}
                       >
-                        <Input placeholder="user@example.com" disabled/>
+                        <Input placeholder="user@example.com" disabled />
                       </Form.Item>
 
                       <Form.Item label="Phone Number" name="phoneNumber">
@@ -436,7 +448,11 @@ function Profile() {
                       </Form.Item>
 
                       <Form.Item label="Date of Birth" name="dateOfBirth">
-                        <Input placeholder="20/12/2003" />
+                        <DatePicker
+                          placeholder="Select date"
+                          format="DD/MM/YYYY"
+                          style={{ width: "100%" }}
+                        />
                       </Form.Item>
 
                       <Form.Item label="Gender" name="gender">
