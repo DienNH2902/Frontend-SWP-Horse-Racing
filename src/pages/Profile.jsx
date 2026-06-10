@@ -1,10 +1,28 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { Avatar, Button, Card, Descriptions, Form, Input, Select, Skeleton, Space, Tag, Typography, message } from "antd";
+import {
+  Avatar,
+  Button,
+  Card,
+  Descriptions,
+  Form,
+  Input,
+  Select,
+  Skeleton,
+  Space,
+  Tag,
+  Typography,
+  message,
+  DatePicker,
+} from "antd";
 import "antd/dist/reset.css";
 import { getProfile } from "../api/services/auth.service";
 import { updateUserAccount } from "../api/services/user.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
+import dayjs from "dayjs"; // 2. Import thêm dayjs tại đây
+import customParseFormat from "dayjs/plugin/customParseFormat"; // Hỗ trợ parse định dạng chuỗi VN
+
+dayjs.extend(customParseFormat);
 
 const { Text, Title } = Typography;
 
@@ -35,7 +53,13 @@ function getProfileId(profile) {
 }
 
 function getResponseProfile(response, fallback) {
-  return response?.data || response?.result || response?.user || response?.profile || fallback;
+  return (
+    response?.data ||
+    response?.result ||
+    response?.user ||
+    response?.profile ||
+    fallback
+  );
 }
 
 function Profile() {
@@ -53,13 +77,16 @@ function Profile() {
       .then((data) => {
         if (isMounted) {
           setProfile(data);
+          const rawDob = data?.dateOfBirth || data?.dob || "";
+          const parsedDob = rawDob ? dayjs(rawDob, "DD/MM/YYYY") : null;
+
           form.setFieldsValue({
             avatar: data?.avatar || data?.avatarUrl || "",
             fullName: data?.fullName || data?.name || "",
             email: data?.email || "",
             phoneNumber: data?.phoneNumber || "",
             address: data?.address || "",
-            dateOfBirth: data?.dateOfBirth || data?.dob || "",
+            dateOfBirth: parsedDob && parsedDob.isValid() ? parsedDob : null,
             gender: data?.gender,
           });
         }
@@ -98,12 +125,21 @@ function Profile() {
     setIsSaving(true);
 
     try {
-      const payload = {
-        ...values,
-        role: profile.role,
-      };
-      const response = await updateUserAccount(profileId, payload);
-      const updatedProfile = getResponseProfile(response, { ...profile, ...payload });
+      const { role, email, ...payload } = values;
+
+      if (payload.dateOfBirth) {
+        payload.dateOfBirth = dayjs(payload.dateOfBirth).format("DD/MM/YYYY");
+      }
+
+      const response = await updateUserAccount(
+        profileId,
+        profile.role,
+        payload,
+      );
+      const updatedProfile = getResponseProfile(response, {
+        ...profile,
+        ...payload,
+      });
 
       setProfile((currentProfile) => ({
         ...currentProfile,
@@ -340,7 +376,10 @@ function Profile() {
             <span>GoldenHoof</span>
           </Link>
           <Space>
-            <Button className="profile-secondary" onClick={() => navigate("/home")}>
+            <Button
+              className="profile-secondary"
+              onClick={() => navigate("/home")}
+            >
               Home
             </Button>
             <Button className="profile-primary" onClick={handleLogout}>
@@ -364,7 +403,9 @@ function Profile() {
                     </Avatar>
                     <div>
                       <Title level={1}>{fullName}</Title>
-                      <Tag className="profile-role">{formatValue(profile.role)}</Tag>
+                      <Tag className="profile-role">
+                        {formatValue(profile.role)}
+                      </Tag>
                     </div>
                   </div>
                 </div>
@@ -384,7 +425,9 @@ function Profile() {
                       <Form.Item
                         label="Full Name"
                         name="fullName"
-                        rules={[{ required: true, message: "Full name is required" }]}
+                        rules={[
+                          { required: true, message: "Full name is required" },
+                        ]}
                       >
                         <Input placeholder="Nguyen Van A" />
                       </Form.Item>
@@ -397,7 +440,7 @@ function Profile() {
                           { type: "email", message: "Email is invalid" },
                         ]}
                       >
-                        <Input placeholder="user@example.com" />
+                        <Input placeholder="user@example.com" disabled />
                       </Form.Item>
 
                       <Form.Item label="Phone Number" name="phoneNumber">
@@ -405,7 +448,11 @@ function Profile() {
                       </Form.Item>
 
                       <Form.Item label="Date of Birth" name="dateOfBirth">
-                        <Input placeholder="20/12/2003" />
+                        <DatePicker
+                          placeholder="Select date"
+                          format="DD/MM/YYYY"
+                          style={{ width: "100%" }}
+                        />
                       </Form.Item>
 
                       <Form.Item label="Gender" name="gender">
@@ -425,11 +472,18 @@ function Profile() {
                     </div>
 
                     <Form.Item label="Address" name="address">
-                      <Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} placeholder="123 Duong so 123" />
+                      <Input.TextArea
+                        autoSize={{ minRows: 2, maxRows: 4 }}
+                        placeholder="123 Duong so 123"
+                      />
                     </Form.Item>
 
                     <div className="profile-actions">
-                      <Button className="profile-primary" htmlType="submit" loading={isSaving}>
+                      <Button
+                        className="profile-primary"
+                        htmlType="submit"
+                        loading={isSaving}
+                      >
                         Save Profile
                       </Button>
                       <Button className="profile-secondary" type="button">
@@ -445,7 +499,9 @@ function Profile() {
                     size="middle"
                   >
                     <Descriptions.Item label="Role">
-                      <Tag className="profile-role">{formatValue(profile.role)}</Tag>
+                      <Tag className="profile-role">
+                        {formatValue(profile.role)}
+                      </Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="Status">
                       <Text strong>{formatValue(profile.status)}</Text>
