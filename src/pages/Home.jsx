@@ -1133,10 +1133,6 @@ function Home() {
                       <Icon name="dashboard" size={18} />
                       <span>Dashboard</span>
                     </Link>
-                    <Link className="account-menu-item" role="menuitem" to="/home">
-                      <Icon name="home" size={18} />
-                      <span>Home</span>
-                    </Link>
                     <Link className="account-menu-item" role="menuitem" to="/profile">
                       <Icon name="user" size={18} />
                       <span>Profile</span>

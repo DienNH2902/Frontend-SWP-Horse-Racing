@@ -9,6 +9,9 @@ import UserManagement from "../pages/admin/UserManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
+import JockeyDashboard from "../pages/jockey/JockeyDashboard";
+import JockeyInvitations from "../pages/jockey/JockeyInvitations";
+import JockeyRaceSchedule from "../pages/jockey/JockeyRaceSchedule";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
 import OwnerHorseDetail from "../pages/owner/OwnerHorseDetail";
 import OwnerHorseRegister from "../pages/owner/OwnerHorseRegister";
@@ -31,6 +34,12 @@ const OWNER_NAV = [
 const REFEREE_NAV = [
   { key: "referee-dashboard", to: "/referee", label: "Dashboard" },
   { key: "referee-races", to: "/referee/races", label: "Races" },
+];
+
+const JOCKEY_NAV = [
+  { key: "jockey-dashboard", to: "/jockey", label: "Dashboard" },
+  { key: "jockey-invitations", to: "/jockey/invitations", label: "Invitations" },
+  { key: "jockey-schedule", to: "/jockey/schedule", label: "My race schedule" },
 ];
 
 function AdminUsersPage() {
@@ -101,7 +110,20 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
-        <Route path="/jockey" element={<RoleHome allowedRole="Jockey" />} />
+        <Route
+          element={
+            <RoleLayout
+              role="Jockey"
+              title="Jockey workspace"
+              subtitle="Manage invitations, assignments, and race performance"
+              navItems={JOCKEY_NAV}
+            />
+          }
+        >
+          <Route path="/jockey" element={<JockeyDashboard />} />
+          <Route path="/jockey/invitations" element={<JockeyInvitations />} />
+          <Route path="/jockey/schedule" element={<JockeyRaceSchedule />} />
+        </Route>
         <Route path="/jockey/profile" element={<JockeyProfile />} />
       </Route>
       <Route path="*" element={<Navigate to="/home" replace />} />
