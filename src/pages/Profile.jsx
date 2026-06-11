@@ -417,6 +417,34 @@ function Profile() {
           color: #006755 !important;
         }
 
+        /* Nút Upload nằm dưới Avatar */
+        .avatar-upload-overlay {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        /* Tùy chỉnh nút Upload cho đồng bộ với thiết kế GoldenHoof */
+        .avatar-upload-overlay .ant-btn {
+          border-color: #bdeee5 !important;
+          color: #006755 !important;
+          background: #ffffff !important;
+          font-weight: 800;
+          border-radius: 6px;
+          padding: 4px 14px;
+          height: auto;
+          box-shadow: 0 2px 8px rgba(13, 70, 63, 0.05);
+          transition: all 0.2s ease;
+        }
+
+        /* Hiệu ứng khi hover vào nút Upload */
+        .avatar-upload-overlay .ant-btn:hover {
+          border-color: #69f8dd !important;
+          background: #f3fffc !important;
+          color: #06332e !important;
+          box-shadow: 0 4px 12px rgba(13, 70, 63, 0.1);
+        }
+
         @media (max-width: 640px) {
           .profile-page { padding: 18px; }
           .profile-topbar {
