@@ -103,6 +103,7 @@ export async function updateUserAccount(id, role, payload) {
       endpoint = USER_ENDPOINTS.UPDATE_REFEREE(id);
       break;
     case "horseowner":
+    case "horse owner":
     case "horse-owner":
     case "horse_owner":
       endpoint = USER_ENDPOINTS.UPDATE_HORSE_OWNER(id);
