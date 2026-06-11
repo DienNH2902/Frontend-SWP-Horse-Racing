@@ -15,15 +15,20 @@ import {
   message,
   DatePicker,
   InputNumber,
+  Upload,
 } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { getProfile } from "../api/services/auth.service";
-import { updateUserAccount } from "../api/services/user.service";
+import { updateUserAccount, uploadAvatar } from "../api/services/user.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 import dayjs from "dayjs"; // 2. Import thêm dayjs tại đây
 import customParseFormat from "dayjs/plugin/customParseFormat"; // Hỗ trợ parse định dạng chuỗi VN
 
 dayjs.extend(customParseFormat);
+
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_IMAGE_URL = API_BASE_URL;
 
 const { Text, Title } = Typography;
 
@@ -70,6 +75,7 @@ function Profile() {
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -134,6 +140,40 @@ function Profile() {
     navigate("/home", { replace: true });
   }
 
+  // --- Xử lý tải ảnh lên hệ thống ---
+  async function handleCustomUpload({ file, onSuccess, onError }) {
+    if (file.size > 5 * 1024 * 1024) {
+      message.error("Image must be smaller than 5MB");
+      onError(new Error("File too large"));
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const resData = await uploadAvatar(file);
+      // Giả định backend trả về đường dẫn ảnh dạng: resData.imageUrl hoặc chính resData là chuỗi URL
+      const path = resData?.imageUrl || resData?.url || resData;
+
+      if (!path) {
+        throw new Error("Invalid response from server");
+      }
+
+      // Cập nhật giá trị vào trường ẩn/hiện của Form
+      form.setFieldsValue({ avatar: path });
+
+      // Đồng bộ trực tiếp lên giao diện để thay đổi Avatar ngay lập tức
+      setProfile((prev) => (prev ? { ...prev, avatar: path } : null));
+
+      message.success("Avatar uploaded successfully");
+      onSuccess(resData);
+    } catch (err) {
+      message.error(err?.message || "Failed to upload avatar");
+      onError(err);
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
   async function handleSave(values) {
     const profileId = getProfileId(profile);
 
@@ -174,7 +214,13 @@ function Profile() {
   }
 
   const fullName = formatValue(profile?.fullName || profile?.name);
-  const avatarUrl = profile?.avatar || profile?.avatarUrl;
+  const avatar = profile?.avatar || profile?.avatarUrl;
+
+  const displayAvatarUrl = avatar
+    ? avatar.startsWith("http")
+      ? avatar
+      : `${BASE_IMAGE_URL}${avatar.replace(/^\//, "")}`
+    : undefined;
 
   // Chuẩn hóa chuỗi Role để kiểm tra giao diện (bất kể viết hoa viết thường)
   const userRole = profile?.role?.toUpperCase() || "";
@@ -371,6 +417,34 @@ function Profile() {
           color: #006755 !important;
         }
 
+        /* Nút Upload nằm dưới Avatar */
+        .avatar-upload-overlay {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
+        /* Tùy chỉnh nút Upload cho đồng bộ với thiết kế GoldenHoof */
+        .avatar-upload-overlay .ant-btn {
+          border-color: #bdeee5 !important;
+          color: #006755 !important;
+          background: #ffffff !important;
+          font-weight: 800;
+          border-radius: 6px;
+          padding: 4px 14px;
+          height: auto;
+          box-shadow: 0 2px 8px rgba(13, 70, 63, 0.05);
+          transition: all 0.2s ease;
+        }
+
+        /* Hiệu ứng khi hover vào nút Upload */
+        .avatar-upload-overlay .ant-btn:hover {
+          border-color: #69f8dd !important;
+          background: #f3fffc !important;
+          color: #06332e !important;
+          box-shadow: 0 4px 12px rgba(13, 70, 63, 0.1);
+        }
+
         @media (max-width: 640px) {
           .profile-page { padding: 18px; }
           .profile-topbar {
@@ -430,13 +504,38 @@ function Profile() {
               <>
                 <div className="profile-hero">
                   <div className="profile-identity">
-                    <Avatar
-                      className="profile-avatar"
-                      size={112}
-                      src={avatarUrl}
-                    >
-                      {getInitials(profile.fullName || profile.name)}
-                    </Avatar>
+                    <Space orientation="vertical" align="center" size="middle">
+                      {/* Bọc Avatar trong Upload component để hỗ trợ click-to-upload */}
+                      <Upload
+                        name="file"
+                        accept="image/*"
+                        showUploadList={false}
+                        customRequest={handleCustomUpload}
+                        disabled={isUploading}
+                      >
+                        <div
+                          style={{ cursor: "pointer", position: "relative" }}
+                        >
+                          <Avatar
+                            className="profile-avatar"
+                            size={112}
+                            src={displayAvatarUrl}
+                          >
+                            {getInitials(profile.fullName || profile.name)}
+                          </Avatar>
+                          <div className="avatar-upload-overlay">
+                            <Button
+                              size="small"
+                              loading={isUploading}
+                              icon={<UploadOutlined />}
+                              style={{ marginTop: 8 }}
+                            >
+                              Upload
+                            </Button>
+                          </div>
+                        </div>
+                      </Upload>
+                    </Space>
                     <div>
                       <Title level={1}>{fullName}</Title>
                       <Tag className="profile-role">
@@ -496,8 +595,11 @@ function Profile() {
                       />
                     </Form.Item>
 
-                    <Form.Item label="Avatar URL" name="avatar">
-                      <Input placeholder="https://ui-avatars.com/api/?name=Nguyen+Van+A" />
+                    <Form.Item label="Avatar Path" name="avatar">
+                      <Input
+                        placeholder="uploads/avatar/filename.jpg"
+                        disabled
+                      />
                     </Form.Item>
 
                     {/* --- THỰC THỂ KHÁC NHAU SHOW FIELD KHÁC NHAU --- */}

@@ -119,3 +119,20 @@ export async function updateUserAccount(id, role, payload) {
 
   return response.data;
 }
+
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post(
+    USER_ENDPOINTS.UPLOAD_AVATAR,
+    formData,
+    {
+      includeAuth: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  return response.data;
+}
