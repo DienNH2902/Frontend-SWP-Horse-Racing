@@ -14,6 +14,7 @@ import {
   Typography,
   message,
   DatePicker,
+  InputNumber,
 } from "antd";
 import "antd/dist/reset.css";
 import { getProfile } from "../api/services/auth.service";
@@ -88,6 +89,25 @@ function Profile() {
             address: data?.address || "",
             dateOfBirth: parsedDob && parsedDob.isValid() ? parsedDob : null,
             gender: data?.gender,
+            // Đổ dữ liệu các trường đặc thù của từng Role
+            //Jockey
+            weight: data?.weight,
+            height: data?.height,
+            jockeyStatus: data?.jockeyStatus,
+            winRate: data?.winRate,
+            reputationPoints: data?.reputationPoints,
+            //owner
+            totalHorsesOwned: data?.totalHorsesOwned,
+            stableName: data?.stableName,
+            stableAddress: data?.stableAddress,
+            //referee
+            experienceYears: data?.experienceYears,
+            certification: data?.certification,
+            racesAttempt: data?.racesAttempt,
+            //spectator
+            totalBets: data?.totalBets,
+            totalPoints: data?.totalPoints,
+            totalBalance: data?.totalBalance,
           });
         }
       })
@@ -155,6 +175,9 @@ function Profile() {
 
   const fullName = formatValue(profile?.fullName || profile?.name);
   const avatarUrl = profile?.avatar || profile?.avatarUrl;
+
+  // Chuẩn hóa chuỗi Role để kiểm tra giao diện (bất kể viết hoa viết thường)
+  const userRole = profile?.role?.toUpperCase() || "";
 
   return (
     <main className="profile-page">
@@ -389,8 +412,21 @@ function Profile() {
         </div>
 
         <Card className="profile-card">
-          <Skeleton active avatar paragraph={{ rows: 4 }} loading={isLoading}>
-            {profile ? (
+          {/* Form luôn luôn được render cố định để `useForm` bám vào DOM */}
+          <Form
+            className="profile-form"
+            form={form}
+            layout="vertical"
+            onFinish={handleSave}
+            requiredMark={false}
+          >
+            {isLoading ? (
+              <div style={{ padding: 28 }}>
+                <Skeleton active avatar paragraph={{ rows: 6 }} />
+              </div>
+            ) : !profile ? (
+              <div style={{ padding: 28 }}>No profile data found.</div>
+            ) : (
               <>
                 <div className="profile-hero">
                   <div className="profile-identity">
@@ -414,83 +450,174 @@ function Profile() {
                   <Title className="profile-section-title" level={3}>
                     Profile
                   </Title>
-                  <Form
-                    className="profile-form"
-                    form={form}
-                    layout="vertical"
-                    onFinish={handleSave}
-                    requiredMark={false}
-                  >
-                    <div className="profile-form-grid">
-                      <Form.Item
-                        label="Full Name"
-                        name="fullName"
-                        rules={[
-                          { required: true, message: "Full name is required" },
-                        ]}
-                      >
-                        <Input placeholder="Nguyen Van A" />
-                      </Form.Item>
 
-                      <Form.Item
-                        label="Email"
-                        name="email"
-                        rules={[
-                          { required: true, message: "Email is required" },
-                          { type: "email", message: "Email is invalid" },
-                        ]}
-                      >
-                        <Input placeholder="user@example.com" disabled />
-                      </Form.Item>
+                  <div className="profile-form-grid">
+                    <Form.Item
+                      label="Full Name"
+                      name="fullName"
+                      rules={[
+                        { required: true, message: "Full name is required" },
+                      ]}
+                    >
+                      <Input placeholder="Nguyen Van A" />
+                    </Form.Item>
 
-                      <Form.Item label="Phone Number" name="phoneNumber">
-                        <Input placeholder="0793829964" />
-                      </Form.Item>
+                    <Form.Item
+                      label="Email"
+                      name="email"
+                      rules={[
+                        { required: true, message: "Email is required" },
+                        { type: "email", message: "Email is invalid" },
+                      ]}
+                    >
+                      <Input placeholder="user@example.com" disabled />
+                    </Form.Item>
 
-                      <Form.Item label="Date of Birth" name="dateOfBirth">
-                        <DatePicker
-                          placeholder="Select date"
-                          format="DD/MM/YYYY"
-                          style={{ width: "100%" }}
-                        />
-                      </Form.Item>
+                    <Form.Item label="Phone Number" name="phoneNumber">
+                      <Input placeholder="0793829964" />
+                    </Form.Item>
 
-                      <Form.Item label="Gender" name="gender">
-                        <Select
-                          placeholder="Select gender"
-                          options={[
-                            { label: "Female", value: 0 },
-                            { label: "Male", value: 1 },
-                            { label: "Other", value: 2 },
-                          ]}
-                        />
-                      </Form.Item>
-
-                      <Form.Item label="Avatar URL" name="avatar">
-                        <Input placeholder="https://ui-avatars.com/api/?name=Nguyen+Van+A" />
-                      </Form.Item>
-                    </div>
-
-                    <Form.Item label="Address" name="address">
-                      <Input.TextArea
-                        autoSize={{ minRows: 2, maxRows: 4 }}
-                        placeholder="123 Duong so 123"
+                    <Form.Item label="Date of Birth" name="dateOfBirth">
+                      <DatePicker
+                        placeholder="Select date"
+                        format="DD/MM/YYYY"
+                        style={{ width: "100%" }}
                       />
                     </Form.Item>
 
-                    <div className="profile-actions">
-                      <Button
-                        className="profile-primary"
-                        htmlType="submit"
-                        loading={isSaving}
-                      >
-                        Save Profile
-                      </Button>
-                      <Button className="profile-secondary" type="button">
-                        Change Password
-                      </Button>
-                    </div>
-                  </Form>
+                    <Form.Item label="Gender" name="gender">
+                      <Select
+                        placeholder="Select gender"
+                        options={[
+                          { label: "Female", value: 0 },
+                          { label: "Male", value: 1 },
+                          { label: "Other", value: 2 },
+                        ]}
+                      />
+                    </Form.Item>
+
+                    <Form.Item label="Avatar URL" name="avatar">
+                      <Input placeholder="https://ui-avatars.com/api/?name=Nguyen+Van+A" />
+                    </Form.Item>
+
+                    {/* --- THỰC THỂ KHÁC NHAU SHOW FIELD KHÁC NHAU --- */}
+
+                    {userRole === "JOCKEY" && (
+                      <>
+                        <Form.Item
+                          label="Weight (kg)"
+                          name="weight"
+                          rules={[
+                            { required: true, message: "Weight is required" },
+                          ]}
+                        >
+                          <InputNumber
+                            min={30}
+                            max={200}
+                            style={{ width: "100%" }}
+                            placeholder="54"
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          label="Height (cm)"
+                          name="height"
+                          rules={[
+                            { required: true, message: "Height is required" },
+                          ]}
+                        >
+                          <InputNumber
+                            min={100}
+                            max={250}
+                            style={{ width: "100%" }}
+                            placeholder="163"
+                          />
+                        </Form.Item>
+                      </>
+                    )}
+
+                    {/* {userRole === "REFEREE" && (
+                      <>
+                        <Form.Item
+                          label="Experience Years"
+                          name="experienceYears"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Experience years is required",
+                            },
+                          ]}
+                        >
+                          <InputNumber
+                            min={0}
+                            max={50}
+                            style={{ width: "100%" }}
+                            placeholder="4"
+                          />
+                        </Form.Item>
+                        <Form.Item
+                          label="Certification"
+                          name="certification"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Certification is required",
+                            },
+                          ]}
+                        >
+                          <Input placeholder="International Referee Level 1" />
+                        </Form.Item>
+                      </>
+                    )} */}
+
+                    {(userRole === "OWNER" || userRole === "HORSE OWNER") && (
+                      <>
+                        <Form.Item
+                          label="Stable Name"
+                          name="stableName"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Stable name is required",
+                            },
+                          ]}
+                        >
+                          <Input placeholder="Golden Horse Stable" />
+                        </Form.Item>
+                        <Form.Item
+                          label="Stable Address"
+                          name="stableAddress"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Stable address is required",
+                            },
+                          ]}
+                        >
+                          <Input placeholder="District 9, Ho Chi Minh City" />
+                        </Form.Item>
+                      </>
+                    )}
+                  </div>
+
+                  <Form.Item label="Address" name="address">
+                    <Input.TextArea
+                      autoSize={{ minRows: 2, maxRows: 4 }}
+                      placeholder="123 Duong so 123"
+                    />
+                  </Form.Item>
+
+                  <div className="profile-actions">
+                    <Button
+                      className="profile-primary"
+                      htmlType="submit"
+                      loading={isSaving}
+                    >
+                      Save Profile
+                    </Button>
+                    <Button className="profile-secondary" type="button">
+                      Change Password
+                    </Button>
+                  </div>
 
                   <Descriptions
                     bordered
@@ -506,23 +633,74 @@ function Profile() {
                     <Descriptions.Item label="Status">
                       <Text strong>{formatValue(profile.status)}</Text>
                     </Descriptions.Item>
-                    <Descriptions.Item label="Point Balance">
-                      <Text strong>{formatValue(profile.pointBalance)}</Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Total Points">
-                      <Text strong>{formatValue(profile.totalPoints)}</Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Total Bets">
-                      <Text strong>{formatValue(profile.totalBets)}</Text>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Win Rate">
-                      <Text strong>{formatValue(profile.winRate)}</Text>
-                    </Descriptions.Item>
+                    {userRole === "JOCKEY" && (
+                      <Descriptions.Item label="Jockey Status">
+                        <Text strong>{formatValue(profile.jockeyStatus)}</Text>
+                      </Descriptions.Item>
+                    )}
+                    {userRole === "REFEREE" && (
+                      <>
+                        <Descriptions.Item label="Certification">
+                          <Text strong>
+                            {formatValue(profile.certification)}
+                          </Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Experience Years">
+                          <Text strong>
+                            {formatValue(profile.experienceYears)}
+                          </Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Races Attempt">
+                          <Text strong>
+                            {formatValue(profile.racesAttempt)}
+                          </Text>
+                        </Descriptions.Item>
+                      </>
+                    )}
+                    {userRole === "OWNER" ||
+                      (userRole === "HORSE OWNER" && (
+                        <Descriptions.Item label="Total Horse Owned">
+                          <Text strong>
+                            {formatValue(profile.totalHorsesOwned)}
+                          </Text>
+                        </Descriptions.Item>
+                      ))}
+
+                    {userRole === "SPECTATOR" && (
+                      <>
+                        <Descriptions.Item label="Points Balance">
+                          <Text strong>
+                            {formatValue(profile.pointBalance)}
+                          </Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Total Bets">
+                          <Text strong>{formatValue(profile.totalBets)}</Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Total Points">
+                          <Text strong>{formatValue(profile.totalPoints)}</Text>
+                        </Descriptions.Item>
+                      </>
+                    )}
+                    {(userRole === "SPECTATOR" || userRole === "JOCKEY") && (
+                      <Descriptions.Item label="Win Rate">
+                        <Text strong>{formatValue(profile.winRate)}</Text>
+                      </Descriptions.Item>
+                    )}
+                    {(userRole === "OWNER" ||
+                      userRole === "HORSE OWNER" ||
+                      userRole === "JOCKEY" ||
+                      userRole === "REFEREE") && (
+                      <Descriptions.Item label="Reputation Points">
+                        <Text strong>
+                          {formatValue(profile.reputationPoints)}
+                        </Text>
+                      </Descriptions.Item>
+                    )}
                   </Descriptions>
                 </div>
               </>
-            ) : null}
-          </Skeleton>
+            )}
+          </Form>
         </Card>
       </section>
     </main>
