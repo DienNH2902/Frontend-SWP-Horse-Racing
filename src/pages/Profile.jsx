@@ -16,11 +16,16 @@ import {
   DatePicker,
   InputNumber,
   Upload,
+  Modal,
 } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { getProfile } from "../api/services/auth.service";
-import { updateUserAccount, uploadAvatar } from "../api/services/user.service";
+import {
+  changePassword,
+  updateUserAccount,
+  uploadAvatar,
+} from "../api/services/user.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 import dayjs from "dayjs"; // 2. Import thêm dayjs tại đây
 import customParseFormat from "dayjs/plugin/customParseFormat"; // Hỗ trợ parse định dạng chuỗi VN
@@ -76,6 +81,9 @@ function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm] = Form.useForm();
 
   useEffect(() => {
     let isMounted = true;
@@ -224,6 +232,24 @@ function Profile() {
 
   // Chuẩn hóa chuỗi Role để kiểm tra giao diện (bất kể viết hoa viết thường)
   const userRole = profile?.role?.toUpperCase() || "";
+
+  // Hàm xử lý gửi dữ liệu đổi mật
+  async function handleChangePasswordSubmit(values) {
+    setIsChangingPassword(true);
+    try {
+      await changePassword({
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
+      });
+      message.success("Password changed successfully");
+      setIsPasswordModalOpen(false);
+      passwordForm.resetFields();
+    } catch (err) {
+      message.error(err?.message || "Failed to change password");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  }
 
   return (
     <main className="profile-page">
@@ -716,7 +742,11 @@ function Profile() {
                     >
                       Save Profile
                     </Button>
-                    <Button className="profile-secondary" type="button">
+                    <Button
+                      className="profile-secondary"
+                      type="button"
+                      onClick={() => setIsPasswordModalOpen(true)}
+                    >
                       Change Password
                     </Button>
                   </div>
@@ -805,6 +835,92 @@ function Profile() {
           </Form>
         </Card>
       </section>
+
+      {/* Modal thay đổi mật khẩu */}
+      <Modal
+        title="Change Password"
+        open={isPasswordModalOpen}
+        onCancel={() => {
+          if (!isChangingPassword) {
+            setIsPasswordModalOpen(false);
+            passwordForm.resetFields();
+          }
+        }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form
+          form={passwordForm}
+          layout="vertical"
+          onFinish={handleChangePasswordSubmit}
+          requiredMark={false}
+          style={{ marginTop: 16 }}
+        >
+          <Form.Item
+            label="Current Password"
+            name="oldPassword"
+            rules={[
+              { required: true, message: "Please enter your current password" },
+            ]}
+          >
+            <Input.Password placeholder="Enter current password" />
+          </Form.Item>
+
+          <Form.Item
+            label="New Password"
+            name="newPassword"
+            rules={[
+              { required: true, message: "Please enter your new password" },
+              { min: 6, message: "Password must be at least 6 characters" },
+            ]}
+          >
+            <Input.Password placeholder="Enter new password" />
+          </Form.Item>
+
+          <Form.Item
+            label="Confirm New Password"
+            name="confirmPassword"
+            dependencies={["newPassword"]}
+            rules={[
+              { required: true, message: "Please confirm your new password" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue("newPassword") === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(
+                    new Error("The two passwords do not match"),
+                  );
+                },
+              }),
+            ]}
+          >
+            <Input.Password placeholder="Confirm new password" />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+            <Space>
+              <Button
+                className="profile-secondary"
+                disabled={isChangingPassword}
+                onClick={() => {
+                  setIsPasswordModalOpen(false);
+                  passwordForm.resetFields();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="profile-primary"
+                htmlType="submit"
+                loading={isChangingPassword}
+              >
+                Update Password
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </main>
   );
 }
