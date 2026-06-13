@@ -901,6 +901,7 @@ function Profile() {
           <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
             <Space>
               <Button
+                className="profile-secondary"
                 disabled={isChangingPassword}
                 onClick={() => {
                   setIsPasswordModalOpen(false);
@@ -910,7 +911,7 @@ function Profile() {
                 Cancel
               </Button>
               <Button
-                type="primary"
+                className="profile-primary"
                 htmlType="submit"
                 loading={isChangingPassword}
               >
