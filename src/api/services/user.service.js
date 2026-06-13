@@ -136,3 +136,15 @@ export async function uploadAvatar(file) {
   );
   return response.data;
 }
+
+export async function changePassword(payload) {
+  const response = await apiClient.put(
+    USER_ENDPOINTS.CHANGE_PASSWORD,
+    payload,
+    {
+      includeAuth: true,
+    },
+  );
+
+  return response.data;
+}
