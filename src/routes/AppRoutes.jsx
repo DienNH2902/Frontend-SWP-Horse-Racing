@@ -23,12 +23,21 @@ import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeRaces from "../pages/referee/RefereeRaces";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
+import ForgotPassword from "../pages/auth/ForgotPassword";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
   { key: "owner-horses", to: "/owner/horses", label: "My horses" },
-  { key: "owner-register-horse", to: "/owner/horses/register", label: "Register horse" },
-  { key: "owner-jockey-races", to: "/owner/jockey-races", label: "Jockey & entries" },
+  {
+    key: "owner-register-horse",
+    to: "/owner/horses/register",
+    label: "Register horse",
+  },
+  {
+    key: "owner-jockey-races",
+    to: "/owner/jockey-races",
+    label: "Jockey & entries",
+  },
   { key: "owner-results", to: "/owner/race-results", label: "Race results" },
 ];
 
@@ -39,7 +48,11 @@ const REFEREE_NAV = [
 
 const JOCKEY_NAV = [
   { key: "jockey-dashboard", to: "/jockey", label: "Dashboard" },
-  { key: "jockey-invitations", to: "/jockey/invitations", label: "Invitations" },
+  {
+    key: "jockey-invitations",
+    to: "/jockey/invitations",
+    label: "Invitations",
+  },
   { key: "jockey-schedule", to: "/jockey/schedule", label: "My race schedule" },
 ];
 
@@ -58,6 +71,8 @@ export default function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       <Route path="/oauth-success" element={<OAuthSuccess />} />
 
@@ -84,9 +99,15 @@ export default function AppRoutes() {
         >
           <Route path="owner" element={<OwnerDashboard />} />
           <Route path="owner/horses" element={<OwnerHorses />} />
-          <Route path="owner/horses/register" element={<OwnerHorseRegister />} />
+          <Route
+            path="owner/horses/register"
+            element={<OwnerHorseRegister />}
+          />
           <Route path="owner/horses/:id" element={<OwnerHorseDetail />} />
-          <Route path="owner/jockey-races" element={<OwnerJockeyRaceWorkspace />} />
+          <Route
+            path="owner/jockey-races"
+            element={<OwnerJockeyRaceWorkspace />}
+          />
           <Route path="owner/race-results" element={<OwnerRaceResults />} />
         </Route>
       </Route>
