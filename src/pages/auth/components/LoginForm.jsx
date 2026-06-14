@@ -134,9 +134,9 @@ export default function LoginForm() {
         <Form.Item name="remember" noStyle valuePropName="checked">
           <Checkbox className="gh-ant-checkbox">Remember me</Checkbox>
         </Form.Item>
-        <a className="gh-link" href="#forgot-password">
+        <Link className="gh-link" to="/forgot-password">
           Forgot password?
-        </a>
+        </Link>
       </div>
 
       <Form.Item shouldUpdate noStyle>
