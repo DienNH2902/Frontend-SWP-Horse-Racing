@@ -197,7 +197,7 @@ export default function ForgotPasswordForm() {
       </Form.Item>
 
       <Form.Item
-        label="New Passphrase"
+        label="New Password"
         name="newPassword"
         rules={[
           { required: true, message: "New password is required" },
@@ -212,7 +212,7 @@ export default function ForgotPasswordForm() {
       </Form.Item>
 
       <Form.Item
-        label="Confirm Passphrase"
+        label="Confirm Password"
         name="confirmPassword"
         dependencies={["newPassword"]}
         rules={[
