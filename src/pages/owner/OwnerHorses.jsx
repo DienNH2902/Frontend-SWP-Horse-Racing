@@ -30,16 +30,11 @@ import {
 } from "./horseViewModel";
 
 const STATUS_OPTIONS = [
-  { value: "Active", label: "Active" },
-  { value: "Training", label: "Training" },
-  { value: "Inactive", label: "Inactive" },
-  { value: "Injured", label: "Injured" },
-];
-
-const GENDER_OPTIONS = [
-  { value: "Male", label: "Male" },
-  { value: "Female", label: "Female" },
-  { value: "Gelding", label: "Gelding" },
+  { value: "IDLE", label: "IDLE" },
+  { value: "TRAINING", label: "TRAINING" },
+  { value: "RACING", label: "RACING" },
+  { value: "INJURED", label: "INJURED" },
+  { value: "RETIRED", label: "RETIRED" },
 ];
 
 export default function OwnerHorses() {
@@ -159,8 +154,6 @@ export default function OwnerHorses() {
         </Space>
       ),
     },
-    { title: "Age", dataIndex: "age", responsive: ["md"] },
-    { title: "Gender", dataIndex: "gender", responsive: ["lg"] },
     { title: "Color", dataIndex: "color", responsive: ["lg"] },
     {
       title: "Status",
@@ -178,10 +171,9 @@ export default function OwnerHorses() {
     {
       title: "Action",
       key: "action",
-      width: 210,
+      width: 150,
       render: (_, record) => (
         <Space wrap>
-          <Link to={`/owner/horses/${record.id}`}>Detail</Link>
           <Button size="small" onClick={() => openEditModal(record)}>
             Edit
           </Button>
@@ -258,7 +250,7 @@ export default function OwnerHorses() {
           layout="vertical"
           form={form}
           onFinish={handleSubmit}
-          initialValues={{ horseStatus: "Active" }}
+          initialValues={{ horseStatus: "IDLE", imageUrl: "" }}
         >
           <Form.Item
             label="Horse name"
@@ -268,39 +260,41 @@ export default function OwnerHorses() {
             <Input placeholder="Midnight Arrow" />
           </Form.Item>
 
-          <Form.Item label="Breed" name="breed">
-            <Input placeholder="Thoroughbred" />
+          <Form.Item
+            label="Color"
+            name="color"
+            rules={[{ required: true, message: "Enter horse color" }]}
+          >
+            <Input placeholder="Đỏ hạt dẻ" />
           </Form.Item>
 
           <Space size={12} className="owner-form-row" align="start">
-            <Form.Item label="Age" name="age" className="owner-form-col">
-              <InputNumber min={0} max={40} className="owner-input-full" />
-            </Form.Item>
-            <Form.Item label="Gender" name="gender" className="owner-form-col">
-              <Select allowClear options={GENDER_OPTIONS} />
-            </Form.Item>
-          </Space>
-
-          <Space size={12} className="owner-form-row" align="start">
-            <Form.Item label="Height (m)" name="height" className="owner-form-col">
+            <Form.Item
+              label="Height (m)"
+              name="height"
+              className="owner-form-col"
+              rules={[{ required: true, message: "Enter height" }]}
+            >
               <InputNumber min={0} precision={2} className="owner-input-full" />
             </Form.Item>
-            <Form.Item label="Weight (kg)" name="weight" className="owner-form-col">
+            <Form.Item
+              label="Weight (kg)"
+              name="weight"
+              className="owner-form-col"
+              rules={[{ required: true, message: "Enter weight" }]}
+            >
               <InputNumber min={0} precision={1} className="owner-input-full" />
             </Form.Item>
           </Space>
 
-          <Form.Item label="Color" name="color">
-            <Input placeholder="Bay" />
+          <Form.Item label="Image URL" name="imageUrl">
+            <Input placeholder="https://example.com/horse.png" />
           </Form.Item>
 
           <Form.Item label="Status" name="horseStatus">
             <Select options={STATUS_OPTIONS} />
           </Form.Item>
 
-          <Form.Item label="Description" name="description">
-            <Input.TextArea rows={3} placeholder="Notes for this horse" />
-          </Form.Item>
         </Form>
       </Modal>
     </Space>

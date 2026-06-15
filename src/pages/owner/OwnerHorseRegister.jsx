@@ -1,20 +1,7 @@
-import { Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Typography, message } from "antd";
+import { Button, Card, Col, Form, Input, InputNumber, Row, Space, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { createHorse } from "../../api/services/horse.service";
-import { toHorsePayload } from "./horseViewModel";
-
-const STATUS_OPTIONS = [
-  { value: "Active", label: "Active" },
-  { value: "Training", label: "Training" },
-  { value: "Inactive", label: "Inactive" },
-  { value: "Injured", label: "Injured" },
-];
-
-const GENDER_OPTIONS = [
-  { value: "Male", label: "Male" },
-  { value: "Female", label: "Female" },
-  { value: "Gelding", label: "Gelding" },
-];
+import { toHorseCreatePayload } from "./horseViewModel";
 
 export default function OwnerHorseRegister() {
   const [form] = Form.useForm();
@@ -23,9 +10,10 @@ export default function OwnerHorseRegister() {
 
   async function handleSubmit(values) {
     try {
-      const horse = await createHorse(toHorsePayload(values));
+      await createHorse(toHorseCreatePayload(values));
       messageApi.success("Horse registered");
-      navigate(`/owner/horses/${horse.id}`);
+
+      navigate("/owner/horses");
     } catch (error) {
       messageApi.error(error.message || "Could not register horse.");
     }
@@ -50,7 +38,7 @@ export default function OwnerHorseRegister() {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ horseStatus: "Active" }}
+          initialValues={{ imageUrl: "" }}
           onFinish={handleSubmit}
         >
           <Row gutter={16}>
@@ -60,67 +48,43 @@ export default function OwnerHorseRegister() {
                 name="name"
                 rules={[{ required: true, message: "Enter horse name" }]}
               >
-                <Input placeholder="Midnight Arrow" />
+                <Input placeholder="Xích Thố" />
               </Form.Item>
             </Col>
             <Col xs={24} lg={12}>
               <Form.Item
-                label="Breed"
-                name="breed"
-                rules={[{ required: true, message: "Enter breed" }]}
+                label="Color"
+                name="color"
+                rules={[{ required: true, message: "Enter horse color" }]}
               >
-                <Input placeholder="Thoroughbred" />
+                <Input placeholder="Đỏ hạt dẻ" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
-            <Col xs={24} sm={12} lg={6}>
+            <Col xs={24} lg={12}>
               <Form.Item
-                label="Age"
-                name="age"
-                rules={[{ required: true, message: "Enter age" }]}
+                label="Height (m)"
+                name="height"
+                rules={[{ required: true, message: "Enter height" }]}
               >
-                <InputNumber min={0} max={40} className="owner-input-full" />
+                <InputNumber min={0} precision={2} className="owner-input-full" placeholder="1.65" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Form.Item label="Gender" name="gender">
-                <Select allowClear options={GENDER_OPTIONS} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Form.Item label="Height (m)" name="height">
-                <InputNumber min={0} precision={2} className="owner-input-full" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Form.Item label="Weight (kg)" name="weight">
-                <InputNumber min={0} precision={1} className="owner-input-full" />
+            <Col xs={24} lg={12}>
+              <Form.Item
+                label="Weight (kg)"
+                name="weight"
+                rules={[{ required: true, message: "Enter weight" }]}
+              >
+                <InputNumber min={0} precision={1} className="owner-input-full" placeholder="450" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col xs={24} lg={8}>
-              <Form.Item label="Color" name="color">
-                <Input placeholder="Bay" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} lg={8}>
-              <Form.Item label="Stable" name="stable">
-                <Input placeholder="Stable A" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} lg={8}>
-              <Form.Item label="Status" name="horseStatus">
-                <Select options={STATUS_OPTIONS} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label="Description" name="description">
-            <Input.TextArea rows={4} placeholder="Training notes, temperament, medical notes" />
+          <Form.Item label="Image URL" name="imageUrl">
+            <Input placeholder="https://example.com/horse.png" />
           </Form.Item>
 
           <Space wrap>

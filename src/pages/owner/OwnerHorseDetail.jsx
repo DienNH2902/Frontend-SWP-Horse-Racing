@@ -29,16 +29,11 @@ import {
 } from "./horseViewModel";
 
 const STATUS_OPTIONS = [
-  { value: "Active", label: "Active" },
-  { value: "Training", label: "Training" },
-  { value: "Inactive", label: "Inactive" },
-  { value: "Injured", label: "Injured" },
-];
-
-const GENDER_OPTIONS = [
-  { value: "Male", label: "Male" },
-  { value: "Female", label: "Female" },
-  { value: "Gelding", label: "Gelding" },
+  { value: "IDLE", label: "IDLE" },
+  { value: "TRAINING", label: "TRAINING" },
+  { value: "RACING", label: "RACING" },
+  { value: "INJURED", label: "INJURED" },
+  { value: "RETIRED", label: "RETIRED" },
 ];
 
 export default function OwnerHorseDetail() {
@@ -161,17 +156,13 @@ export default function OwnerHorseDetail() {
             <Statistic title="Total wins" value={horse.totalWin} />
           </Col>
           <Col xs={24} sm={8} lg={6}>
-            <Statistic title="Age" value={horse.age} />
-          </Col>
-          <Col xs={24} sm={8} lg={6}>
             <Statistic title="Rating" value={horse.rating} />
           </Col>
         </Row>
 
         <Descriptions bordered column={1}>
-          <Descriptions.Item label="Breed">{horse.breed}</Descriptions.Item>
-          <Descriptions.Item label="Gender">{horse.gender}</Descriptions.Item>
           <Descriptions.Item label="Color">{horse.color}</Descriptions.Item>
+          <Descriptions.Item label="Image URL">{horse.imageUrl || "N/A"}</Descriptions.Item>
           <Descriptions.Item label="Height">{horse.height}</Descriptions.Item>
           <Descriptions.Item label="Weight">{horse.weight}</Descriptions.Item>
           <Descriptions.Item label="Owner">{horse.ownerName}</Descriptions.Item>
@@ -192,7 +183,12 @@ export default function OwnerHorseDetail() {
         okText="Save changes"
         destroyOnHidden
       >
-        <Form layout="vertical" form={form} onFinish={handleSubmit}>
+        <Form
+          layout="vertical"
+          form={form}
+          onFinish={handleSubmit}
+          initialValues={{ horseStatus: "IDLE", imageUrl: "" }}
+        >
           <Form.Item
             label="Horse name"
             name="name"
@@ -201,39 +197,41 @@ export default function OwnerHorseDetail() {
             <Input />
           </Form.Item>
 
-          <Form.Item label="Breed" name="breed">
+          <Form.Item
+            label="Color"
+            name="color"
+            rules={[{ required: true, message: "Enter horse color" }]}
+          >
             <Input />
           </Form.Item>
 
           <Space size={12} className="owner-form-row" align="start">
-            <Form.Item label="Age" name="age" className="owner-form-col">
-              <InputNumber min={0} max={40} className="owner-input-full" />
-            </Form.Item>
-            <Form.Item label="Gender" name="gender" className="owner-form-col">
-              <Select allowClear options={GENDER_OPTIONS} />
-            </Form.Item>
-          </Space>
-
-          <Space size={12} className="owner-form-row" align="start">
-            <Form.Item label="Height (m)" name="height" className="owner-form-col">
+            <Form.Item
+              label="Height (m)"
+              name="height"
+              className="owner-form-col"
+              rules={[{ required: true, message: "Enter height" }]}
+            >
               <InputNumber min={0} precision={2} className="owner-input-full" />
             </Form.Item>
-            <Form.Item label="Weight (kg)" name="weight" className="owner-form-col">
+            <Form.Item
+              label="Weight (kg)"
+              name="weight"
+              className="owner-form-col"
+              rules={[{ required: true, message: "Enter weight" }]}
+            >
               <InputNumber min={0} precision={1} className="owner-input-full" />
             </Form.Item>
           </Space>
 
-          <Form.Item label="Color" name="color">
-            <Input />
+          <Form.Item label="Image URL" name="imageUrl">
+            <Input placeholder="https://example.com/horse.png" />
           </Form.Item>
 
           <Form.Item label="Status" name="horseStatus">
             <Select options={STATUS_OPTIONS} />
           </Form.Item>
 
-          <Form.Item label="Description" name="description">
-            <Input.TextArea rows={3} />
-          </Form.Item>
         </Form>
       </Modal>
     </Space>
