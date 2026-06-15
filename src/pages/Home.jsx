@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
 import { getRoleHomePath } from "../utils/roles";
 import { clearAuthSession, getAccessToken, getAuthSession } from "../utils/storage";
@@ -258,6 +258,10 @@ function Home() {
   const isAdmin = Array.isArray(accountRole)
     ? accountRole.some((role) => String(role).toLowerCase().includes("admin"))
     : String(accountRole).toLowerCase().includes("admin");
+
+  if (!authSession) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <main className="home-page">
@@ -1107,58 +1111,47 @@ function Home() {
             <button className="home-icon-btn" type="button" aria-label="Search">
               <Icon name="search" size={24} />
             </button>
-            {authSession ? (
-              <div className="account-menu">
-                <button
-                  className={`home-btn account-trigger ${
-                    isAccountMenuOpen ? "account-trigger-open" : ""
-                  }`}
-                  type="button"
-                  aria-expanded={isAccountMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => setIsAccountMenuOpen((current) => !current)}
-                >
-                  <Icon name="user" size={20} />
-                  <span className="account-trigger-name">{accountName}</span>
-                  <Icon name="chevron" size={18} />
-                </button>
+            <div className="account-menu">
+              <button
+                className={`home-btn account-trigger ${
+                  isAccountMenuOpen ? "account-trigger-open" : ""
+                }`}
+                type="button"
+                aria-expanded={isAccountMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setIsAccountMenuOpen((current) => !current)}
+              >
+                <Icon name="user" size={20} />
+                <span className="account-trigger-name">{accountName}</span>
+                <Icon name="chevron" size={18} />
+              </button>
 
-                {isAccountMenuOpen && (
-                  <div className="account-dropdown" role="menu">
-                    <Link
-                      className="account-menu-item"
-                      role="menuitem"
-                      to={isAdmin ? "/admin/dashboard" : dashboardPath}
-                    >
-                      <Icon name="dashboard" size={18} />
-                      <span>Dashboard</span>
-                    </Link>
-                    <Link className="account-menu-item" role="menuitem" to="/profile">
-                      <Icon name="user" size={18} />
-                      <span>Profile</span>
-                    </Link>
-                    <button
-                      className="account-menu-item account-menu-logout"
-                      type="button"
-                      role="menuitem"
-                      onClick={handleLogout}
-                    >
-                      <Icon name="logout" size={18} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <Link className="home-btn" to="/login">
-                  Log in
-                </Link>
-                <Link className="home-btn home-btn-primary" to="/register">
-                  Sign up
-                </Link>
-              </>
-            )}
+              {isAccountMenuOpen && (
+                <div className="account-dropdown" role="menu">
+                  <Link
+                    className="account-menu-item"
+                    role="menuitem"
+                    to={isAdmin ? "/admin/dashboard" : dashboardPath}
+                  >
+                    <Icon name="dashboard" size={18} />
+                    <span>Dashboard</span>
+                  </Link>
+                  <Link className="account-menu-item" role="menuitem" to="/profile">
+                    <Icon name="user" size={18} />
+                    <span>Profile</span>
+                  </Link>
+                  <button
+                    className="account-menu-item account-menu-logout"
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    <Icon name="logout" size={18} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
