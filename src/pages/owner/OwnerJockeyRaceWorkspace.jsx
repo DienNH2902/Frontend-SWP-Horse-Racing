@@ -226,7 +226,7 @@ export default function OwnerJockeyRaceWorkspace() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 

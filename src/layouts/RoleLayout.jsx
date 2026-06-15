@@ -1,4 +1,4 @@
-import { Avatar, Button, Layout, Menu, Space, Typography } from "antd";
+import { Avatar, Button, ConfigProvider, Layout, Menu, Space, Typography } from "antd";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 import { getDisplayName, getInitials } from "../utils/roles";
@@ -12,6 +12,19 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
     const user = session?.user || { fullName: role || "GoldenHoof User", role };
     const displayName = getDisplayName(user);
     const initials = getInitials(displayName);
+    const isOwnerRole = String(role).toLowerCase().includes("owner");
+    const ownerTheme = isOwnerRole
+        ? {
+            token: {
+                colorPrimary: "#69f8dd",
+                colorPrimaryHover: "#4fe9cf",
+                colorPrimaryActive: "#25ceb5",
+                colorLink: "#087a6d",
+                colorLinkHover: "#065f55",
+                controlOutline: "rgba(105, 248, 221, 0.28)",
+            },
+        }
+        : undefined;
 
     const selectedKey =
         [...navItems]
@@ -24,44 +37,10 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
     }
 
     return (
-        <Layout style={{ minHeight: "100dvh", background: "#f6fbfa" }}>
-            <style>{`
-        .role-sider {
-          background: linear-gradient(180deg, #052a26 0%, #021b19 100%) !important;
-          border-right: 1px solid rgba(105, 248, 221, 0.12);
-        }
-        .role-brand {
-          height: 72px;
-          display: flex;
-          align-items: center;
-          padding: 0 20px;
-          color: #f4fffb;
-          font-weight: 900;
-          letter-spacing: .2px;
-        }
-        .role-menu {
-          background: transparent !important;
-          border-inline-end: 0 !important;
-        }
-        .role-menu .ant-menu-item {
-          height: 44px;
-          line-height: 44px;
-          color: rgba(244, 255, 251, 0.76) !important;
-          border-radius: 10px;
-          margin: 8px 12px !important;
-        }
-        .role-menu .ant-menu-item-selected {
-          background: rgba(105, 248, 221, 0.12) !important;
-          color: #69f8dd !important;
-        }
-        .role-link {
-          color: inherit;
-          text-decoration: none;
-          display: block;
-          width: 100%;
-        }
-      `}</style>
-
+        <ConfigProvider theme={ownerTheme}>
+            <Layout
+                className={`role-layout${isOwnerRole ? " owner-role-layout" : ""}`}
+            >
             <Sider width={250} className="role-sider">
                 <div className="role-brand">GoldenHoof</div>
 
@@ -77,27 +56,17 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
             </Sider>
 
             <Layout>
-                <Header
-                    style={{
-                        background: "#fff",
-                        padding: "0 24px",
-                        height: 72,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        borderBottom: "1px solid #e7efed",
-                    }}
-                >
+                <Header className="role-header">
                     <Space direction="vertical" size={0}>
                         <Typography.Text type="secondary">{subtitle}</Typography.Text>
-                        <Typography.Title level={4} style={{ margin: 0 }}>
+                        <Typography.Title level={4} className="role-title">
                             {title}
                         </Typography.Title>
                     </Space>
 
                     <Space>
                         <Button onClick={() => navigate("/home")}>Home</Button>
-                        <Avatar style={{ background: "#06332e", color: "#69f8dd", fontWeight: 800 }}>
+                        <Avatar className="role-avatar">
                             {initials}
                         </Avatar>
                         <span>{displayName}</span>
@@ -105,10 +74,11 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
                     </Space>
                 </Header>
 
-                <Content style={{ padding: 24 }}>
+                <Content className="role-content">
                     <Outlet />
                 </Content>
             </Layout>
         </Layout>
+        </ConfigProvider>
     );
 }

@@ -99,7 +99,7 @@ export default function OwnerRaceResults() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space direction="vertical" size={16} className="owner-page-stack">
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
       <Row gutter={[16, 16]}>
@@ -172,12 +172,6 @@ export default function OwnerRaceResults() {
           rowClassName={(record) => (record.owner === "Golden Hoof Stable" ? "owner-highlight-row" : "")}
         />
       </Card>
-
-      <style>{`
-        .owner-highlight-row td {
-          background: #effffb !important;
-        }
-      `}</style>
     </Space>
   );
 }
