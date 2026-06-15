@@ -1,18 +1,15 @@
+import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
+
+const JOCKEY_INVITATIONS_STORAGE_KEY = "goldenhoof_jockey_invitations";
+const JOCKEY_PROFILE_STORAGE_KEY = "goldenhoof_jockey_profile";
 
 const profileStats = [
   { label: "Win Rate", value: "24%", note: "18 wins this season" },
   { label: "Career Wins", value: "120", note: "426 career starts" },
   { label: "Season Rank", value: "#7", note: "National jockey board" },
   { label: "Prize Money", value: "$420K", note: "Season earnings" },
-];
-
-const physicalProfile = [
-  ["Height", "168 cm"],
-  ["Weight", "52 kg"],
-  ["Preferred Surface", "Turf"],
-  ["Racing License", "Active - Pro Class"],
 ];
 
 const achievements = [
@@ -42,6 +39,54 @@ const raceHistory = [
     prize: "$5,500",
   },
 ];
+
+const defaultCurrentAssignments = [
+  {
+    inviteId: "skyline-emerald-dream",
+    status: "Accepted",
+    race: "Golden Mile Cup",
+    horse: "Emerald Dream",
+    venue: "Sunshine Racecourse",
+    time: "Today, 15:15",
+  },
+];
+
+function getCurrentAssignments() {
+  try {
+    const stored = window.localStorage.getItem(JOCKEY_INVITATIONS_STORAGE_KEY);
+    const invitations = stored ? JSON.parse(stored) : defaultCurrentAssignments;
+
+    return invitations.filter((invitation) => invitation.status === "Accepted");
+  } catch {
+    return defaultCurrentAssignments;
+  }
+}
+
+function createDefaultJockeyProfile(user) {
+  return {
+    fullName: user.fullName || user.name || user.email || "GoldenHoof Jockey",
+    professionalTitle: "Active professional jockey",
+    experience: "12 years experience",
+    height: "168 cm",
+    weight: "52 kg",
+    preferredSurface: "Turf",
+    racingLicense: "Active - Pro Class",
+    homeTrack: "Royal Turf Club",
+    specialty: "Turf specialist",
+    bio:
+      "Focused on controlled starts, efficient pacing, and fast final furlong execution across premium turf events.",
+  };
+}
+
+function getStoredJockeyProfile(user) {
+  try {
+    const stored = window.localStorage.getItem(JOCKEY_PROFILE_STORAGE_KEY);
+
+    return stored ? JSON.parse(stored) : createDefaultJockeyProfile(user);
+  } catch {
+    return createDefaultJockeyProfile(user);
+  }
+}
 
 function Icon({ name, size = 22 }) {
   const common = {
@@ -99,6 +144,11 @@ export default function JockeyProfile() {
   const navigate = useNavigate();
   const authSession = getAuthSession();
   const user = authSession?.user || {};
+  const currentAssignments = getCurrentAssignments();
+  const [isEditing, setIsEditing] = useState(false);
+  const [jockeyProfile, setJockeyProfile] = useState(() =>
+    getStoredJockeyProfile(user),
+  );
 
   if (!authSession) {
     return <Navigate to="/login" replace />;
@@ -108,11 +158,40 @@ export default function JockeyProfile() {
     return <Navigate to="/" replace />;
   }
 
-  const displayName = user.fullName || user.name || user.email || "GoldenHoof Jockey";
+  const displayName = jockeyProfile.fullName || "GoldenHoof Jockey";
+  const physicalProfile = [
+    ["Height", jockeyProfile.height],
+    ["Weight", jockeyProfile.weight],
+    ["Preferred Surface", jockeyProfile.preferredSurface],
+    ["Racing License", jockeyProfile.racingLicense],
+  ];
 
   function handleLogout() {
     clearAuthSession();
     navigate("/", { replace: true });
+  }
+
+  function handleProfileChange(event) {
+    const { name, value } = event.target;
+
+    setJockeyProfile((currentProfile) => ({
+      ...currentProfile,
+      [name]: value,
+    }));
+  }
+
+  function handleSaveProfile(event) {
+    event.preventDefault();
+    window.localStorage.setItem(
+      JOCKEY_PROFILE_STORAGE_KEY,
+      JSON.stringify(jockeyProfile),
+    );
+    setIsEditing(false);
+  }
+
+  function handleCancelEdit() {
+    setJockeyProfile(getStoredJockeyProfile(user));
+    setIsEditing(false);
   }
 
   return (
@@ -198,6 +277,12 @@ export default function JockeyProfile() {
           background: #69f8dd;
         }
 
+        .jockey-profile-btn-danger {
+          border-color: rgba(255, 255, 255, 0.18);
+          color: #f4fffb;
+          background: rgba(255, 255, 255, 0.02);
+        }
+
         .jockey-profile-hero {
           display: grid;
           grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
@@ -250,6 +335,70 @@ export default function JockeyProfile() {
           background: rgba(0, 45, 40, 0.86);
           backdrop-filter: blur(16px);
           box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+        }
+
+        .jockey-profile-edit {
+          padding: 22px;
+          margin-bottom: 22px;
+        }
+
+        .jockey-profile-form {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+        }
+
+        .jockey-profile-field {
+          display: grid;
+          gap: 8px;
+        }
+
+        .jockey-profile-field-wide {
+          grid-column: 1 / -1;
+        }
+
+        .jockey-profile-field label {
+          color: rgba(244, 255, 251, 0.82);
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .jockey-profile-input,
+        .jockey-profile-textarea {
+          width: 100%;
+          border: 1px solid rgba(105, 248, 221, 0.28);
+          border-radius: 8px;
+          color: #f4fffb;
+          background: rgba(255, 255, 255, 0.055);
+          outline: none;
+          font: inherit;
+          font-weight: 850;
+        }
+
+        .jockey-profile-input {
+          min-height: 44px;
+          padding: 0 13px;
+        }
+
+        .jockey-profile-textarea {
+          min-height: 104px;
+          resize: vertical;
+          padding: 12px 13px;
+          line-height: 1.5;
+        }
+
+        .jockey-profile-input:focus,
+        .jockey-profile-textarea:focus {
+          border-color: #69f8dd;
+          box-shadow: 0 0 0 3px rgba(105, 248, 221, 0.14);
+        }
+
+        .jockey-profile-form-actions {
+          grid-column: 1 / -1;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 4px;
         }
 
         .jockey-profile-summary {
@@ -346,6 +495,7 @@ export default function JockeyProfile() {
         }
 
         .jockey-profile-info-list,
+        .jockey-profile-assignments,
         .jockey-profile-achievements,
         .jockey-profile-table {
           display: grid;
@@ -385,6 +535,30 @@ export default function JockeyProfile() {
         .jockey-profile-achievements {
           padding: 0;
           margin: 0;
+        }
+
+        .jockey-profile-assignment {
+          padding: 14px;
+          border-radius: 8px;
+          color: #06332e;
+          background: #d9fbf4;
+        }
+
+        .jockey-profile-assignment strong,
+        .jockey-profile-assignment span {
+          display: block;
+        }
+
+        .jockey-profile-assignment strong {
+          font-size: 16px;
+          font-weight: 950;
+        }
+
+        .jockey-profile-assignment span {
+          margin-top: 5px;
+          color: rgba(6, 51, 46, 0.72);
+          font-size: 13px;
+          font-weight: 850;
         }
 
         .jockey-profile-race-row {
@@ -434,8 +608,13 @@ export default function JockeyProfile() {
             font-size: clamp(36px, 12vw, 52px);
           }
           .jockey-profile-race-row,
-          .jockey-profile-info {
+          .jockey-profile-info,
+          .jockey-profile-form {
             grid-template-columns: 1fr;
+          }
+          .jockey-profile-field-wide,
+          .jockey-profile-form-actions {
+            grid-column: auto;
           }
         }
       `}</style>
@@ -464,8 +643,12 @@ export default function JockeyProfile() {
               achievements, and performance history from one dedicated workspace.
             </p>
             <div className="jockey-profile-actions" style={{ marginTop: 26 }}>
-              <button className="jockey-profile-btn jockey-profile-btn-primary" type="button">
-                Edit Profile
+              <button
+                className="jockey-profile-btn jockey-profile-btn-primary"
+                type="button"
+                onClick={() => setIsEditing(true)}
+              >
+                {isEditing ? "Editing Profile" : "Edit Profile"}
               </button>
               <Link className="jockey-profile-btn" to="/jockey">
                 Back to Dashboard
@@ -484,13 +667,156 @@ export default function JockeyProfile() {
               </div>
               <h2>{displayName}</h2>
               <div className="jockey-profile-muted">{user.email}</div>
+              <p className="jockey-profile-muted" style={{ marginTop: 14 }}>
+                {jockeyProfile.bio}
+              </p>
             </div>
             <div className="jockey-profile-license">
-              <div>Active professional jockey</div>
-              <div>Turf specialist - Royal Turf Club</div>
+              <div>{jockeyProfile.professionalTitle}</div>
+              <div>
+                {jockeyProfile.specialty} - {jockeyProfile.homeTrack}
+              </div>
             </div>
           </Card>
         </section>
+
+        {isEditing && (
+          <Card className="jockey-profile-edit">
+            <div className="jockey-profile-title-row">
+              <span className="jockey-profile-icon">
+                <Icon name="user" />
+              </span>
+              <h2>Edit Professional Profile</h2>
+            </div>
+            <form className="jockey-profile-form" onSubmit={handleSaveProfile}>
+              <div className="jockey-profile-field">
+                <label htmlFor="fullName">Full Name</label>
+                <input
+                  className="jockey-profile-input"
+                  id="fullName"
+                  name="fullName"
+                  value={jockeyProfile.fullName}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field">
+                <label htmlFor="professionalTitle">Professional Title</label>
+                <input
+                  className="jockey-profile-input"
+                  id="professionalTitle"
+                  name="professionalTitle"
+                  value={jockeyProfile.professionalTitle}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field">
+                <label htmlFor="experience">Experience</label>
+                <input
+                  className="jockey-profile-input"
+                  id="experience"
+                  name="experience"
+                  value={jockeyProfile.experience}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field">
+                <label htmlFor="racingLicense">Racing License</label>
+                <input
+                  className="jockey-profile-input"
+                  id="racingLicense"
+                  name="racingLicense"
+                  value={jockeyProfile.racingLicense}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field">
+                <label htmlFor="height">Height</label>
+                <input
+                  className="jockey-profile-input"
+                  id="height"
+                  name="height"
+                  value={jockeyProfile.height}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field">
+                <label htmlFor="weight">Weight</label>
+                <input
+                  className="jockey-profile-input"
+                  id="weight"
+                  name="weight"
+                  value={jockeyProfile.weight}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field">
+                <label htmlFor="preferredSurface">Preferred Surface</label>
+                <input
+                  className="jockey-profile-input"
+                  id="preferredSurface"
+                  name="preferredSurface"
+                  value={jockeyProfile.preferredSurface}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field">
+                <label htmlFor="homeTrack">Home Track</label>
+                <input
+                  className="jockey-profile-input"
+                  id="homeTrack"
+                  name="homeTrack"
+                  value={jockeyProfile.homeTrack}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field jockey-profile-field-wide">
+                <label htmlFor="specialty">Specialty</label>
+                <input
+                  className="jockey-profile-input"
+                  id="specialty"
+                  name="specialty"
+                  value={jockeyProfile.specialty}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-field jockey-profile-field-wide">
+                <label htmlFor="bio">Profile Bio</label>
+                <textarea
+                  className="jockey-profile-textarea"
+                  id="bio"
+                  name="bio"
+                  value={jockeyProfile.bio}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              <div className="jockey-profile-form-actions">
+                <button
+                  className="jockey-profile-btn jockey-profile-btn-primary"
+                  type="submit"
+                >
+                  Save Changes
+                </button>
+                <button
+                  className="jockey-profile-btn jockey-profile-btn-danger"
+                  type="button"
+                  onClick={handleCancelEdit}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </Card>
+        )}
 
         <section className="jockey-profile-stats" aria-label="Jockey career statistics">
           {profileStats.map((stat) => (
@@ -507,6 +833,26 @@ export default function JockeyProfile() {
             <Card className="jockey-profile-panel">
               <div className="jockey-profile-title-row">
                 <span className="jockey-profile-icon">
+                  <Icon name="chart" />
+                </span>
+                <h2>Current Race Assignments</h2>
+              </div>
+              <div className="jockey-profile-assignments">
+                {currentAssignments.map((assignment) => (
+                  <article className="jockey-profile-assignment" key={assignment.inviteId}>
+                    <strong>{assignment.race}</strong>
+                    <span>
+                      {assignment.horse} - {assignment.venue}
+                    </span>
+                    <span>{assignment.time}</span>
+                  </article>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="jockey-profile-panel" style={{ marginTop: 22 }}>
+              <div className="jockey-profile-title-row">
+                <span className="jockey-profile-icon">
                   <Icon name="user" />
                 </span>
                 <h2>Physical Information</h2>
@@ -518,6 +864,10 @@ export default function JockeyProfile() {
                     <span>{value}</span>
                   </div>
                 ))}
+              </div>
+              <div className="jockey-profile-info" style={{ marginTop: 10 }}>
+                <span>Experience</span>
+                <span>{jockeyProfile.experience}</span>
               </div>
             </Card>
 
