@@ -495,7 +495,9 @@ function Profile() {
       <section className="profile-shell">
         <div className="profile-topbar">
           <Link className="profile-brand" to="/home">
-            <span className="profile-brand-mark">GH</span>
+            <span className="profile-brand-mark">
+              <img className="brand-logo-img" src="/goldenhoof-logo.png" alt="" />
+            </span>
             <span>GoldenHoof</span>
           </Link>
           <Space>

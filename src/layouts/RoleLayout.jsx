@@ -42,7 +42,10 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
                 className={`role-layout${isOwnerRole ? " owner-role-layout" : ""}`}
             >
             <Sider width={250} className="role-sider">
-                <div className="role-brand">GoldenHoof</div>
+                <div className="role-brand">
+                    <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
+                    <span>GoldenHoof</span>
+                </div>
 
                 <Menu
                     mode="inline"

@@ -667,7 +667,7 @@ export default function RegisterForm() {
           <div className="gr-topbar">
             <div className="gr-brand">
               <div className="gr-brand-icon">
-                <Icon name="logo" size={38} />
+                <img className="brand-logo-img" src="/goldenhoof-logo.png" alt="" />
               </div>
               <div>GoldenHoof</div>
             </div>

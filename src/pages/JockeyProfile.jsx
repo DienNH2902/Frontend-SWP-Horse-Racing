@@ -443,7 +443,7 @@ export default function JockeyProfile() {
       <div className="jockey-profile-shell">
         <header className="jockey-profile-topbar">
           <Link className="jockey-profile-brand" to="/home">
-            <Icon name="logo" size={32} />
+            <img className="jockey-profile-brand-logo" src="/goldenhoof-logo.png" alt="" />
             <span>GoldenHoof</span>
           </Link>
           <nav className="jockey-profile-nav" aria-label="Jockey profile navigation">

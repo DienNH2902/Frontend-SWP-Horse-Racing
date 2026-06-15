@@ -1092,7 +1092,7 @@ function Home() {
       <header className="home-nav">
         <div className="home-container home-nav-inner">
           <a className="home-brand" href="#top" aria-label="GoldenHoof home">
-            <img className="home-brand-logo" src="/navbar-logo.png" alt="" />
+            <img className="home-brand-logo" src="/goldenhoof-logo.png" alt="" />
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
@@ -1409,7 +1409,7 @@ function Home() {
         <div className="home-container footer-grid">
           <div>
             <a className="home-footer-brand" href="#top">
-              <Icon name="logo" size={32} />
+              <img className="home-footer-brand-logo" src="/goldenhoof-logo.png" alt="" />
               <span>GoldenHoof</span>
             </a>
             <p>

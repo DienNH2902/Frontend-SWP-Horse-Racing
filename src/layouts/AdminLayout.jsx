@@ -113,7 +113,7 @@ function AdminLayout({ children }) {
       <Sider className="admin-sidebar" width={290}>
         <div className="admin-sidebar-inner">
           <Link className="admin-brand" to="/admin/dashboard">
-            <img className="admin-brand-logo" src="/navbar-logo.png" alt="" />
+            <img className="admin-brand-logo" src="/goldenhoof-logo.png" alt="" />
             <span>GoldenHoof</span>
           </Link>
           <Link className="admin-nav-item" to="/admin/users">

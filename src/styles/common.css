@@ -12,10 +12,30 @@
   height: 72px;
   display: flex;
   align-items: center;
+  gap: 10px;
   padding: 0 20px;
   color: #f4fffb;
   font-weight: 900;
   letter-spacing: 0;
+}
+
+.role-layout .role-brand-logo,
+.landing-brand-logo,
+.jockey-profile-brand-logo,
+.home-footer-brand-logo {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: block;
+  object-fit: contain;
+}
+
+.role-dashboard-page .role-brand-logo {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: block;
+  object-fit: contain;
 }
 
 .role-menu {
@@ -162,4 +182,48 @@
 .auth-status-message {
   text-align: center;
   padding: 50px;
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.gh-page .gh-ant-input input:-webkit-autofill,
+.gh-page .gh-ant-input input:-webkit-autofill:hover,
+.gh-page .gh-ant-input input:-webkit-autofill:focus,
+.gh-page .gh-ant-input .ant-input:-webkit-autofill,
+.gh-page .gh-ant-input .ant-input:-webkit-autofill:hover,
+.gh-page .gh-ant-input .ant-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f4fffb !important;
+  caret-color: #f4fffb;
+  box-shadow: 0 0 0 1000px rgba(20, 73, 65, 0.96) inset !important;
+  border-radius: 0;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.gh-page .gh-login-btn {
+  display: grid !important;
+  position: relative;
+  overflow: hidden;
+  line-height: 1;
+}
+
+.gh-page .gh-login-btn > span:not(.ant-btn-loading-icon) {
+  width: 100%;
+}
+
+.gh-page .gh-login-btn .ant-btn-loading-icon {
+  display: none !important;
+}
+
+.gh-page .gh-login-btn.ant-btn-loading {
+  pointer-events: none;
+}
+
+.gh-page .gh-login-btn.ant-btn-loading > span:not(.ant-btn-loading-icon),
+.gh-page .gh-login-btn.ant-btn-loading svg {
+  transform: none !important;
 }
