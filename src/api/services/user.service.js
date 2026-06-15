@@ -103,6 +103,7 @@ export async function updateUserAccount(id, role, payload) {
       endpoint = USER_ENDPOINTS.UPDATE_REFEREE(id);
       break;
     case "horseowner":
+    case "horse owner":
     case "horse-owner":
     case "horse_owner":
       endpoint = USER_ENDPOINTS.UPDATE_HORSE_OWNER(id);
@@ -115,6 +116,35 @@ export async function updateUserAccount(id, role, payload) {
   const response = await apiClient.put(endpoint, payload, {
     includeAuth: true,
   });
+
+  return response.data;
+}
+
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post(
+    USER_ENDPOINTS.UPLOAD_AVATAR,
+    formData,
+    {
+      includeAuth: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+  return response.data;
+}
+
+export async function changePassword(payload) {
+  const response = await apiClient.put(
+    USER_ENDPOINTS.CHANGE_PASSWORD,
+    payload,
+    {
+      includeAuth: true,
+    },
+  );
 
   return response.data;
 }
