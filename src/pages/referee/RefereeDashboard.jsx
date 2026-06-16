@@ -1,182 +1,202 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Card, Col, Empty, Row, Skeleton, Space, Statistic, Table, Tag, Typography } from "antd";
+import {
+  Alert,
+  Card,
+  Col,
+  Empty,
+  Row,
+  Skeleton,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
 import { Link } from "react-router-dom";
-const mockRaces = [
-  {
-    id: 1,
-    code: "RC001",
-    name: "Golden Cup",
-    track: "Track A",
-    time: "09:00",
-    status: "Live",
-    entrants: [1, 2, 3],
-  },
-];
+import { getTournaments } from "../../api/services/tournament.service";
 
-const mockHorses = [
-  { id: 1, name: "Thunder" },
-  { id: 2, name: "Storm" },
-];
 
-const mockOwners = [
-  { id: 1, name: "Owner A" },
-  { id: 2, name: "Owner B" },
-];
 
 function statusColor(status) {
-  const value = String(status || "").toLowerCase();
+  switch (status) {
+    case "Preparing":
+      return "blue";
 
-  if (value.includes("live")) return "red";
-  if (value.includes("finished") || value.includes("official")) return "green";
-  if (value.includes("cancel")) return "default";
-  return "blue";
-}
+    case "Canceled":
+      return "red";
 
-function collectionFrom(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.content)) return payload.content;
-  return [];
+    default:
+      return "default";
+  }
 }
 
 export default function RefereeDashboard() {
-  const [races, setRaces] = useState([]);
-  const [horses, setHorses] = useState([]);
-  const [owners, setOwners] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      setLoading(true);
-      setErrorMessage("");
-
-      setRaces(mockRaces);
-      setHorses(mockHorses);
-      setOwners(mockOwners);
-      setLoading(false);
-
-      if (!mounted) return;
-
-      if (raceResult.status === "fulfilled") setRaces(raceResult.value);
-      if (horseResult.status === "fulfilled") setHorses(collectionFrom(horseResult.value));
-      if (ownerResult.status === "fulfilled") setOwners(collectionFrom(ownerResult.value));
-
-      const rejected = [raceResult, horseResult, ownerResult].find(
-        (result) => result.status === "rejected",
-      );
-      if (rejected) {
-        setErrorMessage(rejected.reason?.message || "Some referee dashboard data could not be loaded.");
-      }
-
-      setLoading(false);
-    }
-
-    load();
-    return () => {
-      mounted = false;
-    };
+    loadTournaments();
   }, []);
 
+  async function loadTournaments() {
+    try {
+      setLoading(true);
+
+      const data = await getTournaments();
+
+      setTournaments(
+        Array.isArray(data)
+          ? data
+          : data?.data || []
+      );
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const stats = useMemo(() => {
-    const live = races.filter((race) => String(race.status).toLowerCase().includes("live")).length;
-    const waitingResult = races.filter((race) => {
-      const status = String(race.status).toLowerCase();
-      return status.includes("live") || status.includes("scheduled");
-    }).length;
-    const finished = races.filter((race) => String(race.status).toLowerCase().includes("finished")).length;
+    const preparing = tournaments.filter(
+      (item) => item.status === "Preparing"
+    ).length;
 
-    return { live, waitingResult, finished };
-  }, [races]);
+    const canceled = tournaments.filter(
+      (item) => item.status === "Canceled"
+    ).length;
 
-  const nextRaces = useMemo(() => races.slice(0, 5), [races]);
+    return {
+      preparing,
+      canceled,
+    };
+  }, [tournaments]);
 
   const columns = [
     {
-      title: "Race",
-      dataIndex: "name",
-      render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          <Link to={`/referee/races/${record.id}`}>{value}</Link>
-          <Typography.Text type="secondary">{record.code}</Typography.Text>
-        </Space>
+      title: "Tournament",
+      dataIndex: "title",
+
+      render: (_, record) => (
+        <Link
+          to={`/referee/tournaments/${record._id}`}
+        >
+          {record.title}
+        </Link>
       ),
     },
-    { title: "Track", dataIndex: "track", responsive: ["md"] },
-    { title: "Time", dataIndex: "time" },
+
+    {
+      title: "Location",
+      dataIndex: "location",
+    },
+
+    {
+      title: "Start Date",
+      dataIndex: "startDate",
+    },
+
     {
       title: "Status",
       dataIndex: "status",
-      render: (value) => <Tag color={statusColor(value)}>{value}</Tag>,
-    },
-    {
-      title: "Entrants",
-      dataIndex: "entrants",
-      render: (value) => value?.length || 0,
-      responsive: ["lg"],
-    },
+      render: (status) => {
+        const label =
+          status === "Preparing"
+            ? "Preparing"
+            : status === "Canceled"
+              ? "Canceled"
+              : status;
+
+        return (
+          <Tag color={statusColor(status)}>
+            {label}
+          </Tag>
+        );
+      },
+    }
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
+    <Space
+      direction="vertical"
+      size={16}
+      style={{ width: "100%" }}
+    >
+      {errorMessage && (<Alert
+        type="warning"
+        showIcon
+        message={errorMessage}
+      />
+      )}
 
+      ```
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={24} sm={12} xl={8}>
           <Card>
-            <Statistic title="Races assigned" value={races.length} />
+            <Statistic
+              title="Total Tournaments"
+              value={tournaments.length}
+            />
           </Card>
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+
+        <Col xs={24} sm={12} xl={8}>
           <Card>
-            <Statistic title="Live races" value={stats.live} />
+            <Statistic
+              title="Preparing"
+              value={stats.preparing}
+            />
           </Card>
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+
+        <Col xs={24} sm={12} xl={8}>
           <Card>
-            <Statistic title="Awaiting result" value={stats.waitingResult} />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic title="Registered horses" value={horses.length} />
+            <Statistic
+              title="Canceled"
+              value={stats.canceled}
+            />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
-          <Card title="Live and upcoming races" extra={<Link to="/referee/races">View all</Link>}>
-            {loading ? (
-              <Skeleton active paragraph={{ rows: 5 }} />
-            ) : nextRaces.length === 0 ? (
-              <Empty description="No races available" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <Table
-                rowKey="id"
-                columns={columns}
-                dataSource={nextRaces}
-                pagination={false}
-              />
-            )}
-          </Card>
-        </Col>
+      <Card
+        title="Tournament List"
+        extra={
+          <Typography.Text type="secondary">
+            Select a tournament to view races
+          </Typography.Text>
+        }
+      >
+        {loading ? (
+          <Skeleton
+            active
+            paragraph={{ rows: 6 }}
+          />
+        ) : tournaments.length === 0 ? (
+          <Empty description="No tournaments found" />
+        ) : (
+          <Table
+            rowKey="_id"
+            columns={columns}
+            dataSource={tournaments}
+            pagination={false}
+          />
+        )}
+      </Card>
 
-        <Col xs={24} xl={8}>
-          <Card title="Referee workload">
-            <Space direction="vertical" size={12} style={{ width: "100%" }}>
-              <Statistic title="Finished races" value={stats.finished} />
-              <Statistic title="Horse owners" value={owners.length} />
-              <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                Open a race to review entrants and submit the official result.
-              </Typography.Paragraph>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+      <Card title="Referee Workspace">
+        <Typography.Paragraph
+          type="secondary"
+          style={{ marginBottom: 0 }}
+        >
+          Choose a tournament, open a race,
+          review participants, record violations,
+          and confirm official race results.
+        </Typography.Paragraph>
+      </Card>
     </Space>
+
+
   );
 }
