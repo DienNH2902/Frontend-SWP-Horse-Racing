@@ -6,6 +6,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Select,
   Space,
   Table,
   Tag,
@@ -13,7 +14,11 @@ import {
   message,
 } from "antd";
 import "antd/dist/reset.css";
-import { deleteUser, getUsers, updateUserAccount } from "../../api/services/user.service";
+import {
+  deleteUser,
+  getUsers,
+  updateUserAccount,
+} from "../../api/services/user.service";
 
 const { Text, Title } = Typography;
 
@@ -56,14 +61,30 @@ function normalizeUser(user, index) {
   return {
     key: id,
     id,
-    avatarUrl: pick(user, ["avatarUrl", "avatar", "imageUrl", "photoUrl"], ""),
+    avatarUrl: pick(user, ["avatar", "avatarUrl", "imageUrl", "photoUrl"], ""),
     email: pick(user, ["email", "mail"], "N/A"),
-    fullName: pick(user, ["fullName", "name", "displayName", "username"], "Unnamed User"),
-    dob: pick(user, ["dob", "dateOfBirth", "birthDate"], ""),
+    fullName: pick(
+      user,
+      ["fullName", "name", "displayName", "username"],
+      "Unnamed User",
+    ),
+    dob: pick(user, ["dateOfBirth", "dob", "birthDate"], ""),
     phoneNumber: pick(user, ["phoneNumber", "phone", "mobile"], "N/A"),
     address: pick(user, ["address", "location"], "N/A"),
-    role: pick(user, ["role", "roleName", "type"], "User"),
-    status: typeof status === "boolean" ? (status ? "Active" : "Disabled") : status,
+    gender:
+      user?.gender !== undefined && user?.gender !== null
+        ? Number(user.gender)
+        : 1,
+    role: pick(user, ["role", "roleName", "type"], "Spectator"),
+    status:
+      typeof status === "boolean" ? (status ? "Active" : "Disabled") : status,
+    // Lưu trữ các thuộc tính bổ sung nếu có để tránh mất mát dữ liệu khi submit lại
+    weight: user?.weight,
+    height: user?.height,
+    experienceYears: user?.experienceYears,
+    certification: user?.certification,
+    stableName: user?.stableName,
+    stableAddress: user?.stableAddress,
   };
 }
 
@@ -119,13 +140,19 @@ function UserManagement() {
     setEditingUser(user);
     form.setFieldsValue({
       avatarUrl: user.avatarUrl,
-      email: user.email,
       fullName: user.fullName,
       dob: user.dob,
       phoneNumber: user.phoneNumber,
       address: user.address,
+      gender: user.gender,
       role: user.role,
-      status: user.status,
+      // Đổ các trường dữ liệu động mở rộng vào form
+      weight: user.weight,
+      height: user.height,
+      experienceYears: user.experienceYears,
+      certification: user.certification,
+      stableName: user.stableName,
+      stableAddress: user.stableAddress,
     });
   }
 
@@ -134,12 +161,46 @@ function UserManagement() {
     setIsUpdating(true);
 
     try {
-      await updateUserAccount(editingUser.id, values);
+      const targetRole = values.role || editingUser.role;
+
+      // Loại bỏ các trường cấm gửi đi và map lại cấu trúc đúng với API
+      const payload = {
+        fullName: values.fullName,
+        phoneNumber: values.phoneNumber,
+        address: values.address,
+        dateOfBirth: values.dob,
+        avatar: values.avatarUrl,
+        gender: Number(values.gender),
+      };
+
+      // Đính kèm các trường đặc thù tùy theo nhóm phân quyền Role
+      const normalizedRoleLower = String(targetRole).toLowerCase();
+      if (normalizedRoleLower.includes("jockey")) {
+        payload.weight = values.weight ? Number(values.weight) : undefined;
+        payload.height = values.height ? Number(values.height) : undefined;
+      } else if (normalizedRoleLower.includes("referee")) {
+        payload.experienceYears = values.experienceYears
+          ? Number(values.experienceYears)
+          : undefined;
+        payload.certification = values.certification;
+      } else if (
+        normalizedRoleLower.includes("owner") ||
+        normalizedRoleLower.includes("horse") ||
+        normalizedRoleLower.includes("horse owner")
+      ) {
+        payload.stableName = values.stableName;
+        payload.stableAddress = values.stableAddress;
+      }
+
+      await updateUserAccount(editingUser.id, targetRole, payload);
       message.success("User updated");
+
       setUsers((currentUsers) =>
         currentUsers.map((user) =>
-          user.id === editingUser.id ? { ...user, ...values } : user
-        )
+          user.id === editingUser.id
+            ? { ...user, ...values, gender: Number(values.gender) }
+            : user,
+        ),
       );
       setEditingUser(null);
     } catch (error) {
@@ -155,13 +216,66 @@ function UserManagement() {
       message.success("Account disabled");
       setUsers((currentUsers) =>
         currentUsers.map((item) =>
-          item.id === user.id ? { ...item, status: "Disabled" } : item
-        )
+          item.id === user.id ? { ...item, status: "Disabled" } : item,
+        ),
       );
     } catch (error) {
       message.error(error?.message || "Unable to disable account");
     }
   }
+
+  const renderDynamicFields = () => {
+    return (
+      <Form.Item
+        noStyle
+        shouldUpdate={(prevValues, currentValues) =>
+          prevValues.role !== currentValues.role
+        }
+      >
+        {({ getFieldValue }) => {
+          const currentRole = String(getFieldValue("role") || "").toLowerCase();
+
+          if (currentRole.includes("jockey")) {
+            return (
+              <>
+                <Form.Item label="Cân nặng (kg)" name="weight">
+                  <Input type="number" />
+                </Form.Item>
+                <Form.Item label="Chiều cao (cm)" name="height">
+                  <Input type="number" />
+                </Form.Item>
+              </>
+            );
+          }
+          if (currentRole.includes("referee")) {
+            return (
+              <>
+                <Form.Item label="Số năm kinh nghiệm" name="experienceYears">
+                  <Input type="number" />
+                </Form.Item>
+                <Form.Item label="Chứng chỉ trọng tài" name="certification">
+                  <Input />
+                </Form.Item>
+              </>
+            );
+          }
+          if (currentRole.includes("owner") || currentRole.includes("horse") || currentRole.includes("horse owner")) {
+            return (
+              <>
+                <Form.Item label="Tên trang trại ngựa" name="stableName">
+                  <Input />
+                </Form.Item>
+                <Form.Item label="Địa chỉ trang trại" name="stableAddress">
+                  <Input />
+                </Form.Item>
+              </>
+            );
+          }
+          return null;
+        }}
+      </Form.Item>
+    );
+  };
 
   const columns = useMemo(
     () => [
@@ -219,7 +333,9 @@ function UserManagement() {
         title: "Status",
         dataIndex: "status",
         width: 120,
-        render: (status) => <Tag color={statusColor(status)}>{String(status)}</Tag>,
+        render: (status) => (
+          <Tag color={statusColor(status)}>{String(status)}</Tag>
+        ),
       },
       {
         title: "Actions",
@@ -228,7 +344,11 @@ function UserManagement() {
         width: 180,
         render: (_, record) => (
           <Space>
-            <Button className="user-management-link-btn" size="small" onClick={() => openEditModal(record)}>
+            <Button
+              className="user-management-link-btn"
+              size="small"
+              onClick={() => openEditModal(record)}
+            >
               Edit
             </Button>
             <Popconfirm
@@ -246,7 +366,7 @@ function UserManagement() {
         ),
       },
     ],
-    []
+    [],
   );
 
   return (
@@ -376,7 +496,7 @@ function UserManagement() {
           <Form.Item label="Ảnh đại diện" name="avatarUrl">
             <Input placeholder="Avatar URL" />
           </Form.Item>
-          <Form.Item
+          {/* <Form.Item
             label="Email"
             name="email"
             rules={[
@@ -385,7 +505,7 @@ function UserManagement() {
             ]}
           >
             <Input />
-          </Form.Item>
+          </Form.Item> */}
           <Form.Item
             label="Tên"
             name="fullName"
@@ -402,12 +522,21 @@ function UserManagement() {
           <Form.Item label="Địa chỉ" name="address">
             <Input />
           </Form.Item>
-          <Form.Item label="Role" name="role">
-            <Input />
+
+          <Form.Item
+            label="Giới tính"
+            name="gender"
+            rules={[{ required: true, message: "Gender is required" }]}
+          >
+            <Select placeholder="Chọn giới tính">
+              <Select.Option value={1}>Nam</Select.Option>
+              <Select.Option value={2}>Nữ</Select.Option>
+              <Select.Option value={0}>Khác Lạ Lắm</Select.Option>
+            </Select>
           </Form.Item>
-          <Form.Item label="Status" name="status">
-            <Input />
-          </Form.Item>
+
+          {/* Render các trường mở rộng tương ứng với từng loại Role cụ thể */}
+          {renderDynamicFields()}
         </Form>
       </Modal>
     </section>
