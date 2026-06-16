@@ -12,6 +12,7 @@ import {
   Tag,
   Typography,
   message,
+  DatePicker,
 } from "antd";
 import "antd/dist/reset.css";
 import {
@@ -19,6 +20,10 @@ import {
   getUsers,
   updateUserAccount,
 } from "../../api/services/user.service";
+import dayjs from "dayjs";
+
+import customParseFormat from "dayjs/plugin/customParseFormat";
+dayjs.extend(customParseFormat);
 
 const { Text, Title } = Typography;
 
@@ -147,10 +152,19 @@ function UserManagement() {
 
   function openEditModal(user) {
     setEditingUser(user);
+
+    let datejsValue = null;
+    if (user.dateOfBirth) {
+      // Thử parse định dạng DD/MM/YYYY trước, nếu thất bại sẽ fallback theo ISO chuẩn
+      datejsValue = dayjs(user.dateOfBirth, "DD/MM/YYYY").isValid()
+        ? dayjs(user.dateOfBirth, "DD/MM/YYYY")
+        : dayjs(user.dateOfBirth);
+    }
+
     form.setFieldsValue({
       avatar: user.avatar,
       fullName: user.fullName,
-      dateOfBirth: user.dateOfBirth,
+      dateOfBirth: datejsValue && datejsValue.isValid() ? datejsValue : null,
       phoneNumber: user.phoneNumber,
       address: user.address,
       gender: user.gender,
@@ -172,12 +186,16 @@ function UserManagement() {
       // Giữ vững quyền gốc của tài khoản để gọi chính xác endpoint tương ứng
       const currentRole = editingUser.role;
 
+      const apiFormattedDate = values.dateOfBirth
+        ? values.dateOfBirth.format("DD/MM/YYYY")
+        : "";
+
       // Khởi tạo Payload gốc dùng chung cho mọi cấu trúc DTO
       const payload = {
         fullName: values.fullName,
         phoneNumber: values.phoneNumber,
         address: values.address,
-        dateOfBirth: values.dateOfBirth,
+        dateOfBirth: apiFormattedDate,
         avatar: values.avatar,
         gender: Number(values.gender),
       };
@@ -212,6 +230,7 @@ function UserManagement() {
       const updatedData = {
         ...editingUser,
         ...values,
+        dateOfBirth: apiFormattedDate,
         gender: Number(values.gender),
         weight: values.weight ? Number(values.weight) : editingUser.weight,
         height: values.height ? Number(values.height) : editingUser.height,
@@ -489,6 +508,10 @@ function UserManagement() {
           border-radius: 8px;
         }
 
+        .user-management-datepicker {
+          width: 100%
+        }
+
         @media (max-width: 920px) {
           .user-management-header {
             align-items: flex-start;
@@ -544,7 +567,11 @@ function UserManagement() {
             <Input />
           </Form.Item>
           <Form.Item label="Ngày sinh" name="dateOfBirth">
-            <Input placeholder="DD/MM/YYYY" />
+            <DatePicker
+              className="user-management-datepicker"
+              format="DD/MM/YYYY"
+              placeholder="Chọn ngày sinh"
+            />
           </Form.Item>
           <Form.Item label="Số điện thoại" name="phoneNumber">
             <Input />
