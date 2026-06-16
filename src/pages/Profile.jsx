@@ -27,7 +27,7 @@ import {
   uploadAvatar,
 } from "../api/services/user.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
-import dayjs from "dayjs"; // 2. Import thêm dayjs tại đây
+import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat"; // Hỗ trợ parse định dạng chuỗi VN
 
 dayjs.extend(customParseFormat);

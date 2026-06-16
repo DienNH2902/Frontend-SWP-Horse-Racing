@@ -6,14 +6,24 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Select,
   Space,
   Table,
   Tag,
   Typography,
   message,
+  DatePicker,
 } from "antd";
 import "antd/dist/reset.css";
-import { deleteUser, getUsers, updateUserAccount } from "../../api/services/user.service";
+import {
+  deleteUser,
+  getUsers,
+  updateUserAccount,
+} from "../../api/services/user.service";
+import dayjs from "dayjs";
+
+import customParseFormat from "dayjs/plugin/customParseFormat";
+dayjs.extend(customParseFormat);
 
 const { Text, Title } = Typography;
 
@@ -23,7 +33,6 @@ function pick(source, keys, fallback = "") {
       return source[key];
     }
   }
-
   return fallback;
 }
 
@@ -38,8 +47,12 @@ function resolveList(response) {
 function formatDate(value) {
   if (!value) return "N/A";
 
-  const date = new Date(value);
+  // Nếu định dạng trả về dạng DD/MM/YYYY (như Swagger mô tả) thay vì ISO string
+  if (typeof value === "string" && value.includes("/")) {
+    return value;
+  }
 
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
   return new Intl.DateTimeFormat("en-GB", {
@@ -52,33 +65,57 @@ function formatDate(value) {
 function normalizeUser(user, index) {
   const id = pick(user, ["id", "_id", "userId"], `user-${index}`);
   const status = pick(user, ["status", "accountStatus", "isActive"], "Active");
+  const rawRole = pick(user, ["role", "roleName", "type"], "Spectator");
+
+  // Chuẩn hóa tên role theo đúng định dạng chuỗi route của Swagger API
+  let normalizedRole = "Spectator";
+  const lowerRole = rawRole.toLowerCase();
+  if (lowerRole.includes("jockey")) normalizedRole = "Jockey";
+  else if (lowerRole.includes("referee")) normalizedRole = "Referee";
+  else if (lowerRole.includes("owner") || lowerRole.includes("horse"))
+    normalizedRole = "Horse-Owner";
 
   return {
     key: id,
     id,
-    avatarUrl: pick(user, ["avatarUrl", "avatar", "imageUrl", "photoUrl"], ""),
+    avatar: pick(user, ["avatar", "avatarUrl", "imageUrl", "photoUrl"], ""),
     email: pick(user, ["email", "mail"], "N/A"),
-    fullName: pick(user, ["fullName", "name", "displayName", "username"], "Unnamed User"),
-    dob: pick(user, ["dob", "dateOfBirth", "birthDate"], ""),
+    fullName: pick(
+      user,
+      ["fullName", "name", "displayName", "username"],
+      "Unnamed User",
+    ),
+    dateOfBirth: pick(user, ["dateOfBirth", "dob", "birthDate"], ""),
     phoneNumber: pick(user, ["phoneNumber", "phone", "mobile"], "N/A"),
     address: pick(user, ["address", "location"], "N/A"),
-    role: pick(user, ["role", "roleName", "type"], "User"),
-    status: typeof status === "boolean" ? (status ? "Active" : "Disabled") : status,
+    gender:
+      user?.gender !== undefined && user?.gender !== null
+        ? Number(user.gender)
+        : 1,
+    role: normalizedRole,
+    status:
+      typeof status === "boolean" ? (status ? "Active" : "Disabled") : status,
+    weight: user?.weight,
+    height: user?.height,
+    experienceYears: user?.experienceYears,
+    certification: user?.certification,
+    stableName: user?.stableName,
+    stableAddress: user?.stableAddress,
   };
 }
 
 function roleColor(role) {
   const normalizedRole = String(role).toLowerCase();
-
   if (normalizedRole.includes("admin")) return "cyan";
   if (normalizedRole.includes("jockey")) return "gold";
-  if (normalizedRole.includes("owner")) return "purple";
+  if (normalizedRole.includes("owner") || normalizedRole.includes("horse"))
+    return "purple";
+  if (normalizedRole.includes("referee")) return "blue";
   return "green";
 }
 
 function statusColor(status) {
   const normalizedStatus = String(status).toLowerCase();
-
   if (
     normalizedStatus.includes("disable") ||
     normalizedStatus.includes("delete") ||
@@ -86,7 +123,6 @@ function statusColor(status) {
   ) {
     return "red";
   }
-
   if (normalizedStatus.includes("pending")) return "orange";
   return "green";
 }
@@ -100,7 +136,6 @@ function UserManagement() {
 
   async function loadUsers() {
     setIsLoading(true);
-
     try {
       const response = await getUsers();
       setUsers(resolveList(response).map(normalizeUser));
@@ -117,15 +152,29 @@ function UserManagement() {
 
   function openEditModal(user) {
     setEditingUser(user);
+
+    let datejsValue = null;
+    if (user.dateOfBirth) {
+      // Thử parse định dạng DD/MM/YYYY trước, nếu thất bại sẽ fallback theo ISO chuẩn
+      datejsValue = dayjs(user.dateOfBirth, "DD/MM/YYYY").isValid()
+        ? dayjs(user.dateOfBirth, "DD/MM/YYYY")
+        : dayjs(user.dateOfBirth);
+    }
+
     form.setFieldsValue({
-      avatarUrl: user.avatarUrl,
-      email: user.email,
+      avatar: user.avatar,
       fullName: user.fullName,
-      dob: user.dob,
+      dateOfBirth: datejsValue && datejsValue.isValid() ? datejsValue : null,
       phoneNumber: user.phoneNumber,
       address: user.address,
+      gender: user.gender,
       role: user.role,
-      status: user.status,
+      weight: user.weight,
+      height: user.height,
+      experienceYears: user.experienceYears,
+      certification: user.certification,
+      stableName: user.stableName,
+      stableAddress: user.stableAddress,
     });
   }
 
@@ -134,12 +183,75 @@ function UserManagement() {
     setIsUpdating(true);
 
     try {
-      await updateUserAccount(editingUser.id, values);
+      // Giữ vững quyền gốc của tài khoản để gọi chính xác endpoint tương ứng
+      const currentRole = editingUser.role;
+
+      const apiFormattedDate = values.dateOfBirth
+        ? values.dateOfBirth.format("DD/MM/YYYY")
+        : "";
+
+      // Khởi tạo Payload gốc dùng chung cho mọi cấu trúc DTO
+      const payload = {
+        fullName: values.fullName,
+        phoneNumber: values.phoneNumber,
+        address: values.address,
+        dateOfBirth: apiFormattedDate,
+        avatar: values.avatar,
+        gender: Number(values.gender),
+      };
+
+      const normalizedRoleLower = currentRole.toLowerCase();
+
+      if (normalizedRoleLower.includes("jockey")) {
+        payload.weight = values.weight ? Number(values.weight) : undefined;
+        payload.height = values.height ? Number(values.height) : undefined;
+      } else if (normalizedRoleLower.includes("referee")) {
+        payload.experienceYears = values.experienceYears
+          ? Number(values.experienceYears)
+          : undefined;
+        payload.certification = values.certification || undefined;
+      } else if (
+        normalizedRoleLower.includes("owner") ||
+        normalizedRoleLower.includes("horse")
+      ) {
+        payload.stableName = values.stableName || undefined;
+        payload.stableAddress = values.stableAddress || undefined;
+      }
+
+      // Thực thi request lên API dựa theo đúng cấu trúc endpoint phân loại quyền
+      const apiResponse = await updateUserAccount(
+        editingUser.id,
+        currentRole,
+        payload,
+      );
       message.success("User updated");
+
+      // Trộn cấu trúc dữ liệu mới từ Form cùng dữ liệu cũ nhằm đồng bộ giao diện local chuẩn xác
+      const updatedData = {
+        ...editingUser,
+        ...values,
+        dateOfBirth: apiFormattedDate,
+        gender: Number(values.gender),
+        weight: values.weight ? Number(values.weight) : editingUser.weight,
+        height: values.height ? Number(values.height) : editingUser.height,
+        experienceYears: values.experienceYears
+          ? Number(values.experienceYears)
+          : editingUser.experienceYears,
+        certification: values.certification || editingUser.certification,
+        stableName: values.stableName || editingUser.stableName,
+        stableAddress: values.stableAddress || editingUser.stableAddress,
+      };
+
+      // Ưu tiên ghi đè bằng Object sạch trả về từ API (nếu Backend có trả về dữ liệu mới)
+      const finalUserData = normalizeUser(
+        apiResponse?.data || apiResponse || updatedData,
+        users.length,
+      );
+
       setUsers((currentUsers) =>
         currentUsers.map((user) =>
-          user.id === editingUser.id ? { ...user, ...values } : user
-        )
+          user.id === editingUser.id ? { ...user, ...finalUserData } : user,
+        ),
       );
       setEditingUser(null);
     } catch (error) {
@@ -155,30 +267,89 @@ function UserManagement() {
       message.success("Account disabled");
       setUsers((currentUsers) =>
         currentUsers.map((item) =>
-          item.id === user.id ? { ...item, status: "Disabled" } : item
-        )
+          item.id === user.id ? { ...item, status: "Disabled" } : item,
+        ),
       );
     } catch (error) {
       message.error(error?.message || "Unable to disable account");
     }
   }
 
+  const renderDynamicFields = () => {
+    return (
+      <Form.Item
+        noStyle
+        shouldUpdate={(prevValues, currentValues) =>
+          prevValues.role !== currentValues.role
+        }
+      >
+        {({ getFieldValue }) => {
+          const currentRole = String(getFieldValue("role") || "").toLowerCase();
+
+          if (currentRole.includes("jockey")) {
+            return (
+              <>
+                <Form.Item label="Cân nặng (kg)" name="weight">
+                  <Input type="number" />
+                </Form.Item>
+                <Form.Item label="Chiều cao (cm)" name="height">
+                  <Input type="number" />
+                </Form.Item>
+              </>
+            );
+          }
+          if (currentRole.includes("referee")) {
+            return (
+              <>
+                <Form.Item label="Số năm kinh nghiệm" name="experienceYears">
+                  <Input type="number" />
+                </Form.Item>
+                <Form.Item label="Chứng chỉ trọng tài" name="certification">
+                  <Input />
+                </Form.Item>
+              </>
+            );
+          }
+          if (currentRole.includes("owner") || currentRole.includes("horse")) {
+            return (
+              <>
+                <Form.Item label="Tên trang trại ngựa" name="stableName">
+                  <Input />
+                </Form.Item>
+                <Form.Item label="Địa chỉ trang trại" name="stableAddress">
+                  <Input />
+                </Form.Item>
+              </>
+            );
+          }
+          return null;
+        }}
+      </Form.Item>
+    );
+  };
+
   const columns = useMemo(
     () => [
       {
         title: "Avatar",
-        dataIndex: "avatarUrl",
+        dataIndex: "avatar",
         fixed: "left",
         width: 88,
-        render: (avatarUrl, record) => (
-          <Avatar className="user-management-avatar" size={44} src={avatarUrl}>
-            {record.fullName
-              .split(" ")
-              .map((part) => part[0])
-              .join("")
-              .slice(0, 2)}
-          </Avatar>
-        ),
+        render: (avatar, record) => {
+          const cleanSrc = avatar && avatar.trim() !== "" ? avatar : null;
+          return (
+            <Avatar className="user-management-avatar" size={44} src={cleanSrc}>
+              {record.fullName
+                ? record.fullName
+                    .split(" ")
+                    .map((part) => part[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()
+                : "?"}
+            </Avatar>
+          );
+        },
       },
       {
         title: "Email",
@@ -194,7 +365,7 @@ function UserManagement() {
       },
       {
         title: "Date of Birth",
-        dataIndex: "dob",
+        dataIndex: "dateOfBirth",
         width: 130,
         render: formatDate,
       },
@@ -219,7 +390,9 @@ function UserManagement() {
         title: "Status",
         dataIndex: "status",
         width: 120,
-        render: (status) => <Tag color={statusColor(status)}>{String(status)}</Tag>,
+        render: (status) => (
+          <Tag color={statusColor(status)}>{String(status)}</Tag>
+        ),
       },
       {
         title: "Actions",
@@ -228,7 +401,11 @@ function UserManagement() {
         width: 180,
         render: (_, record) => (
           <Space>
-            <Button className="user-management-link-btn" size="small" onClick={() => openEditModal(record)}>
+            <Button
+              className="user-management-link-btn"
+              size="small"
+              onClick={() => openEditModal(record)}
+            >
               Edit
             </Button>
             <Popconfirm
@@ -246,7 +423,7 @@ function UserManagement() {
         ),
       },
     ],
-    []
+    [],
   );
 
   return (
@@ -293,6 +470,7 @@ function UserManagement() {
 
         .user-management-table.ant-table-wrapper .ant-table-tbody > tr > td {
           color: #0d2321;
+          background: #fff;
         }
 
         .user-management-avatar.ant-avatar {
@@ -305,6 +483,7 @@ function UserManagement() {
           border-color: #bdeee5;
           color: #006755;
           font-weight: 850;
+          background: #fff;
         }
 
         .user-management-link-btn.ant-btn:hover {
@@ -327,6 +506,10 @@ function UserManagement() {
 
         .user-management-edit-modal .ant-modal-content {
           border-radius: 8px;
+        }
+
+        .user-management-datepicker {
+          width: 100%
         }
 
         @media (max-width: 920px) {
@@ -373,18 +556,8 @@ function UserManagement() {
         onOk={handleUpdate}
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="Ảnh đại diện" name="avatarUrl">
+          <Form.Item label="Ảnh đại diện" name="avatar">
             <Input placeholder="Avatar URL" />
-          </Form.Item>
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: "Email is required" },
-              { type: "email", message: "Email is invalid" },
-            ]}
-          >
-            <Input />
           </Form.Item>
           <Form.Item
             label="Tên"
@@ -393,8 +566,12 @@ function UserManagement() {
           >
             <Input />
           </Form.Item>
-          <Form.Item label="DOB" name="dob">
-            <Input placeholder="YYYY-MM-DD" />
+          <Form.Item label="Ngày sinh" name="dateOfBirth">
+            <DatePicker
+              className="user-management-datepicker"
+              format="DD/MM/YYYY"
+              placeholder="Chọn ngày sinh"
+            />
           </Form.Item>
           <Form.Item label="Số điện thoại" name="phoneNumber">
             <Input />
@@ -402,12 +579,24 @@ function UserManagement() {
           <Form.Item label="Địa chỉ" name="address">
             <Input />
           </Form.Item>
-          <Form.Item label="Role" name="role">
-            <Input />
+
+          <Form.Item
+            label="Giới tính"
+            name="gender"
+            rules={[{ required: true, message: "Gender is required" }]}
+          >
+            <Select placeholder="Chọn giới tính">
+              <Select.Option value={1}>Nam</Select.Option>
+              <Select.Option value={2}>Nữ</Select.Option>
+              <Select.Option value={0}>Khác</Select.Option>
+            </Select>
           </Form.Item>
-          <Form.Item label="Status" name="status">
-            <Input />
+
+          <Form.Item label="Quyền (Role)" name="role">
+            <Input disabled placeholder="Quyền hạn gốc" />
           </Form.Item>
+
+          {renderDynamicFields()}
         </Form>
       </Modal>
     </section>
