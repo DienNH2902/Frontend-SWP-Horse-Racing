@@ -32,12 +32,12 @@ export default function OwnerHorseRegister() {
   }
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
 
       <Card>
         <Space direction="vertical" size={4}>
-          <Typography.Title level={3} style={{ margin: 0 }}>
+          <Typography.Title level={3} className="owner-section-title">
             Register new horse
           </Typography.Title>
           <Typography.Text type="secondary">
@@ -81,7 +81,7 @@ export default function OwnerHorseRegister() {
                 name="age"
                 rules={[{ required: true, message: "Enter age" }]}
               >
-                <InputNumber min={0} max={40} style={{ width: "100%" }} />
+                <InputNumber min={0} max={40} className="owner-input-full" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} lg={6}>
@@ -91,12 +91,12 @@ export default function OwnerHorseRegister() {
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Form.Item label="Height (m)" name="height">
-                <InputNumber min={0} precision={2} style={{ width: "100%" }} />
+                <InputNumber min={0} precision={2} className="owner-input-full" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Form.Item label="Weight (kg)" name="weight">
-                <InputNumber min={0} precision={1} style={{ width: "100%" }} />
+                <InputNumber min={0} precision={1} className="owner-input-full" />
               </Form.Item>
             </Col>
           </Row>

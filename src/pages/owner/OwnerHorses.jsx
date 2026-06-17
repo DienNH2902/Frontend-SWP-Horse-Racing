@@ -202,7 +202,7 @@ export default function OwnerHorses() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
 
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
@@ -214,14 +214,14 @@ export default function OwnerHorses() {
             <Input.Search
               allowClear
               placeholder="Search horse"
-              style={{ width: 220 }}
+              className="owner-filter-search"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
               onSearch={setKeyword}
             />
             <Select
               value={statusFilter}
-              style={{ width: 150 }}
+              className="owner-status-select"
               onChange={setStatusFilter}
               options={[
                 { value: "all", label: "All status" },
@@ -272,21 +272,21 @@ export default function OwnerHorses() {
             <Input placeholder="Thoroughbred" />
           </Form.Item>
 
-          <Space size={12} style={{ width: "100%" }} align="start">
-            <Form.Item label="Age" name="age" style={{ flex: 1 }}>
-              <InputNumber min={0} max={40} style={{ width: "100%" }} />
+          <Space size={12} className="owner-form-row" align="start">
+            <Form.Item label="Age" name="age" className="owner-form-col">
+              <InputNumber min={0} max={40} className="owner-input-full" />
             </Form.Item>
-            <Form.Item label="Gender" name="gender" style={{ flex: 1 }}>
+            <Form.Item label="Gender" name="gender" className="owner-form-col">
               <Select allowClear options={GENDER_OPTIONS} />
             </Form.Item>
           </Space>
 
-          <Space size={12} style={{ width: "100%" }} align="start">
-            <Form.Item label="Height (m)" name="height" style={{ flex: 1 }}>
-              <InputNumber min={0} precision={2} style={{ width: "100%" }} />
+          <Space size={12} className="owner-form-row" align="start">
+            <Form.Item label="Height (m)" name="height" className="owner-form-col">
+              <InputNumber min={0} precision={2} className="owner-input-full" />
             </Form.Item>
-            <Form.Item label="Weight (kg)" name="weight" style={{ flex: 1 }}>
-              <InputNumber min={0} precision={1} style={{ width: "100%" }} />
+            <Form.Item label="Weight (kg)" name="weight" className="owner-form-col">
+              <InputNumber min={0} precision={1} className="owner-input-full" />
             </Form.Item>
           </Space>
 

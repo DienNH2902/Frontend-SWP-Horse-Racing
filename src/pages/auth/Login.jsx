@@ -138,6 +138,7 @@ export default function GoldenHoofLogin() {
           line-height: 1;
           white-space: nowrap;
           overflow: visible;
+          text-decoration: none !important;
         }
 
         .gh-brand-icon {
@@ -524,12 +525,12 @@ export default function GoldenHoofLogin() {
 
       <section className="gh-shell">
         <aside className="gh-form-panel">
-          <div className="gh-brand">
+          <a href="/" className="gh-brand">
             <span className="gh-brand-icon">
               <Icon name="logo" size={38} />
             </span>
             <span>GoldenHoof</span>
-          </div>
+          </a>
 
           <div className="gh-form-wrap">
             <h1 className="gh-title">

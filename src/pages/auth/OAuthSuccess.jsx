@@ -55,7 +55,7 @@ export default function OAuthSuccess() {
   }, [searchParams, navigate]);
 
   return (
-    <div style={{ textAlign: "center", padding: "50px" }}>
+    <div className="auth-status-message">
       Đang hoàn tất đăng nhập bằng Google...
     </div>
   );
