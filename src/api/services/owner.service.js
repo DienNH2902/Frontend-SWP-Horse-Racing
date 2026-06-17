@@ -20,6 +20,8 @@ function unwrapCollection(response) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.items)) return data.items;
   if (Array.isArray(data?.horses)) return data.horses;
+  if (Array.isArray(data?.invitations)) return data.invitations;
+  if (Array.isArray(data?.jockeyInvitations)) return data.jockeyInvitations;
   if (Array.isArray(data?.content)) return data.content;
   if (Array.isArray(data?.records)) return data.records;
 
@@ -27,64 +29,6 @@ function unwrapCollection(response) {
 }
 
 let jockeyWorkspace = {
-  horses: [
-    { id: 1, name: "Thunder", status: "Active" },
-    { id: 2, name: "Storm", status: "Training" },
-    { id: 3, name: "Midnight Arrow", status: "Active" },
-  ],
-  jockeys: [
-    {
-      id: 11,
-      name: "Liam O'Connor",
-      specialty: "Sprint",
-      winRate: 24,
-      rating: 96,
-      fee: 3200,
-      status: "Available",
-    },
-    {
-      id: 12,
-      name: "Sophia Martinez",
-      specialty: "Turf",
-      winRate: 21,
-      rating: 93,
-      fee: 2800,
-      status: "Available",
-    },
-    {
-      id: 13,
-      name: "Noah Henderson",
-      specialty: "Long distance",
-      winRate: 19,
-      rating: 90,
-      fee: 2400,
-      status: "Busy",
-    },
-  ],
-  invitations: [
-    {
-      id: 101,
-      horseId: 1,
-      jockeyId: 11,
-      raceId: 201,
-      horse: "Thunder",
-      jockey: "Liam O'Connor",
-      race: "Emerald Stakes",
-      status: "Accepted",
-      sentAt: "2026-06-09",
-    },
-    {
-      id: 102,
-      horseId: 2,
-      jockeyId: 12,
-      raceId: 202,
-      horse: "Storm",
-      jockey: "Sophia Martinez",
-      race: "Golden Mile Cup",
-      status: "Pending",
-      sentAt: "2026-06-10",
-    },
-  ],
   contracts: [
     {
       id: 501,
@@ -229,33 +173,12 @@ export async function sendJockeyInvitation(payload) {
   return unwrapData(response);
 }
 
-export async function sendMockJockeyInvitation({ horseId, jockeyId, raceId }) {
-  const horse = jockeyWorkspace.horses.find((item) => item.id === horseId);
-  const jockey = jockeyWorkspace.jockeys.find((item) => item.id === jockeyId);
-  const race = jockeyWorkspace.schedules.find((item) => item.id === raceId);
+export async function getSentJockeyInvitations() {
+  const response = await apiClient.get(JOCKEY_INVITATION_ENDPOINTS.SENT, {
+    includeAuth: true,
+  });
 
-  if (!horse || !jockey || !race) {
-    throw new Error("Missing horse, jockey, or race.");
-  }
-
-  const invitation = {
-    id: Date.now(),
-    horseId,
-    jockeyId,
-    raceId,
-    horse: horse.name,
-    jockey: jockey.name,
-    race: race.race,
-    status: "Pending",
-    sentAt: new Date().toISOString().slice(0, 10),
-  };
-
-  jockeyWorkspace = {
-    ...jockeyWorkspace,
-    invitations: [invitation, ...jockeyWorkspace.invitations],
-  };
-
-  return delay(invitation);
+  return unwrapCollection(response);
 }
 
 export async function confirmJockeyForRace(contractId) {

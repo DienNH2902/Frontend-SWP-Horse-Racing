@@ -91,6 +91,9 @@ export default function OwnerDashboard() {
             <Link to="/owner/horses/register">
               <Button type="primary">Register horse</Button>
             </Link>
+            <Link to="/owner/tournaments">
+              <Button>Tournaments</Button>
+            </Link>
           </Space>
         }
       >

@@ -17,6 +17,7 @@ import OwnerHorseRegister from "../pages/owner/OwnerHorseRegister";
 import OwnerHorses from "../pages/owner/OwnerHorses";
 import OwnerJockeyRaceWorkspace from "../pages/owner/OwnerJockeyRaceWorkspace";
 import OwnerRaceResults from "../pages/owner/OwnerRaceResults";
+import OwnerTournaments from "../pages/owner/OwnerTournaments";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeRaces from "../pages/referee/RefereeRaces";
@@ -37,6 +38,7 @@ const OWNER_NAV = [
     to: "/owner/jockey-races",
     label: "Jockey & entries",
   },
+  { key: "owner-tournaments", to: "/owner/tournaments", label: "Tournaments" },
   { key: "owner-results", to: "/owner/race-results", label: "Race results" },
 ];
 
@@ -106,6 +108,7 @@ export default function AppRoutes() {
             path="owner/jockey-races"
             element={<OwnerJockeyRaceWorkspace />}
           />
+          <Route path="owner/tournaments" element={<OwnerTournaments />} />
           <Route path="owner/race-results" element={<OwnerRaceResults />} />
         </Route>
       </Route>

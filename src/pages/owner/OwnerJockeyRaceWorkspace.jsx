@@ -22,9 +22,11 @@ import {
   confirmHorseRaceEntry,
   confirmJockeyForRace,
   getOwnerJockeyWorkspace,
+  getSentJockeyInvitations,
   registerContractToTournament,
   sendJockeyInvitation,
 } from "../../api/services/owner.service";
+import { getTournaments } from "../../api/services/tournament.service";
 
 const contractColor = {
   Active: "green",
@@ -56,6 +58,40 @@ function normalizeHorse(horse) {
     ...horse,
     id: pickFirstValue(horse, ["id", "_id", "horseId"]),
     name: pickFirstValue(horse, ["name", "horseName"], "Unnamed horse"),
+  };
+}
+
+function normalizeTournament(tournament) {
+  return {
+    ...tournament,
+    id: pickFirstValue(tournament, ["id", "_id", "tournamentId"]),
+    title: pickFirstValue(tournament, ["title", "name"], "Unnamed tournament"),
+    status: pickFirstValue(tournament, ["status"], "N/A"),
+    availableSlot: pickFirstValue(tournament, ["availableSlot"], 0),
+  };
+}
+
+function normalizeInvitation(invitation) {
+  const horse = invitation?.horse || invitation?.horseInfo || {};
+  const jockey = invitation?.jockey || invitation?.jockeyInfo || {};
+  const tournament = invitation?.tournament || invitation?.tournamentInfo || {};
+
+  return {
+    ...invitation,
+    id: pickFirstValue(invitation, ["id", "_id", "invitationId"]),
+    horse: pickFirstValue(invitation, ["horseName"], pickFirstValue(horse, ["name", "horseName"], "N/A")),
+    jockey: pickFirstValue(
+      invitation,
+      ["jockeyName", "jockeyFullName"],
+      pickFirstValue(jockey, ["fullName", "name"], "N/A"),
+    ),
+    tournament: pickFirstValue(
+      invitation,
+      ["tournamentTitle", "tournamentName"],
+      pickFirstValue(tournament, ["title", "name"], "N/A"),
+    ),
+    status: pickFirstValue(invitation, ["status", "invitationStatus"], "Pending"),
+    sentAt: pickFirstValue(invitation, ["sentAt", "createdAt", "createdDate"], ""),
   };
 }
 
@@ -95,10 +131,15 @@ export default function OwnerJockeyRaceWorkspace() {
     invitations: [],
     contracts: [],
     schedules: [],
+    tournaments: [],
   });
   const [loading, setLoading] = useState(true);
+  const [invitationLoading, setInvitationLoading] = useState(true);
+  const [tournamentLoading, setTournamentLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
+  const [tournamentErrorMessage, setTournamentErrorMessage] = useState("");
   const [licenseJockey, setLicenseJockey] = useState(null);
 
   async function loadWorkspace() {
@@ -107,11 +148,13 @@ export default function OwnerJockeyRaceWorkspace() {
 
     try {
       const data = await getOwnerJockeyWorkspace();
-      setWorkspace({
-        ...data,
+      setWorkspace((current) => ({
+        ...current,
+        contracts: data.contracts || [],
+        schedules: data.schedules || [],
         horses: (data.horses || []).map(normalizeHorse),
         jockeys: (data.jockeys || []).map(normalizeJockey),
-      });
+      }));
     } catch (error) {
       setErrorMessage(error.message || "Could not load jockey workspace.");
     } finally {
@@ -119,13 +162,60 @@ export default function OwnerJockeyRaceWorkspace() {
     }
   }
 
+  async function loadSentInvitations() {
+    setInvitationLoading(true);
+    setInvitationErrorMessage("");
+
+    try {
+      const invitations = await getSentJockeyInvitations();
+      setWorkspace((current) => ({
+        ...current,
+        invitations: (invitations || []).map(normalizeInvitation),
+      }));
+    } catch (error) {
+      setWorkspace((current) => ({ ...current, invitations: [] }));
+      setInvitationErrorMessage(error.message || "Could not load sent invitations.");
+    } finally {
+      setInvitationLoading(false);
+    }
+  }
+
+  async function loadTournaments() {
+    setTournamentLoading(true);
+    setTournamentErrorMessage("");
+
+    try {
+      const tournaments = await getTournaments();
+      setWorkspace((current) => ({
+        ...current,
+        tournaments: (tournaments || []).map(normalizeTournament),
+      }));
+    } catch (error) {
+      setWorkspace((current) => ({ ...current, tournaments: [] }));
+      setTournamentErrorMessage(error.message || "Could not load tournaments.");
+    } finally {
+      setTournamentLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadWorkspace();
+    loadSentInvitations();
+    loadTournaments();
   }, []);
 
   const horseOptions = useMemo(
     () => workspace.horses.map((horse) => ({ value: horse.id, label: horse.name })),
     [workspace.horses],
+  );
+
+  const tournamentOptions = useMemo(
+    () =>
+      workspace.tournaments.map((tournament) => ({
+        value: tournament.id,
+        label: `${tournament.title} - ${tournament.status} - ${tournament.availableSlot} slots`,
+      })),
+    [workspace.tournaments],
   );
 
   async function handleInvite(values) {
@@ -135,7 +225,7 @@ export default function OwnerJockeyRaceWorkspace() {
       await sendJockeyInvitation(values);
       messageApi.success("Invitation sent to jockey");
       form.resetFields();
-      await loadWorkspace();
+      await Promise.all([loadWorkspace(), loadSentInvitations()]);
     } catch (error) {
       messageApi.error(error.message || "Could not send invitation.");
     } finally {
@@ -157,24 +247,31 @@ export default function OwnerJockeyRaceWorkspace() {
     {
       title: "Jockey",
       dataIndex: "fullName",
+      width: 260,
       render: (value, record) => (
-        <Space>
-          <Avatar src={record.avatar}>{String(value).charAt(0)}</Avatar>
-          <Space direction="vertical" size={0}>
-            <Typography.Text strong>{value}</Typography.Text>
-            <Typography.Text type="secondary">{record.email}</Typography.Text>
+        <Space align="center" style={{ minWidth: 0 }}>
+          <Avatar size={44} src={record.avatar}>
+            {String(value || "?").charAt(0)}
+          </Avatar>
+          <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
+            <Typography.Text strong ellipsis style={{ maxWidth: 170 }}>
+              {value}
+            </Typography.Text>
+            <Typography.Text type="secondary" ellipsis style={{ maxWidth: 170 }}>
+              {record.email}
+            </Typography.Text>
           </Space>
         </Space>
       ),
     },
-    { title: "Phone", dataIndex: "phoneNumber", responsive: ["lg"] },
-    { title: "Weight", dataIndex: "weight", responsive: ["md"] },
-    { title: "Height", dataIndex: "height", responsive: ["md"] },
+    { title: "Phone", dataIndex: "phoneNumber", width: 130 },
+    { title: "Weight", dataIndex: "weight", width: 90 },
+    { title: "Height", dataIndex: "height", width: 90 },
     {
       title: "Win rate",
       dataIndex: "winRate",
       render: formatRate,
-      responsive: ["md"],
+      width: 90,
     },
     {
       title: "License",
@@ -188,12 +285,13 @@ export default function OwnerJockeyRaceWorkspace() {
           View more
         </Button>
       ),
-      responsive: ["lg"],
+      width: 130,
     },
     {
       title: "Status",
       dataIndex: "jockeyStatus",
       render: (value) => <Tag color={value === "Available" ? "green" : "default"}>{value}</Tag>,
+      width: 110,
     },
     {
       title: "Action",
@@ -202,13 +300,15 @@ export default function OwnerJockeyRaceWorkspace() {
           Invite
         </Button>
       ),
+      width: 100,
     },
   ];
 
   const invitationColumns = [
     { title: "Horse", dataIndex: "horse" },
     { title: "Jockey", dataIndex: "jockey" },
-    { title: "Race", dataIndex: "race", responsive: ["md"] },
+    { title: "Tournament", dataIndex: "tournament", responsive: ["md"] },
+    { title: "Sent at", dataIndex: "sentAt", responsive: ["lg"] },
     {
       title: "Status",
       dataIndex: "status",
@@ -305,6 +405,12 @@ export default function OwnerJockeyRaceWorkspace() {
     <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
+      {invitationErrorMessage && (
+        <Alert type="warning" showIcon message={invitationErrorMessage} />
+      )}
+      {tournamentErrorMessage && (
+        <Alert type="warning" showIcon message={tournamentErrorMessage} />
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={9}>
@@ -323,11 +429,20 @@ export default function OwnerJockeyRaceWorkspace() {
               }}
             >
               <Form.Item
-                label="Tournament ID"
+                label="Tournament"
                 name="tournamentId"
-                rules={[{ required: true, message: "Enter tournament id" }]}
+                rules={[{ required: true, message: "Choose tournament" }]}
               >
-                <Input placeholder="6650a1b2c3d4e5f6a7b8c9d0" />
+                <Select
+                  loading={tournamentLoading}
+                  options={tournamentOptions}
+                  placeholder="Select tournament"
+                  showSearch
+                  optionFilterProp="label"
+                  notFoundContent={
+                    tournamentLoading ? "Loading tournaments..." : "No tournaments found"
+                  }
+                />
               </Form.Item>
               <Form.Item
                 label="Horse"
@@ -413,7 +528,8 @@ export default function OwnerJockeyRaceWorkspace() {
               loading={loading}
               columns={jockeyColumns}
               dataSource={workspace.jockeys}
-              pagination={false}
+              pagination={{ pageSize: 5, showSizeChanger: false }}
+              scroll={{ x: 1000 }}
             />
           </Card>
         </Col>
@@ -422,10 +538,10 @@ export default function OwnerJockeyRaceWorkspace() {
       <Card title="Jockey invitations">
         <Table
           rowKey="id"
-          loading={loading}
+          loading={invitationLoading}
           columns={invitationColumns}
           dataSource={workspace.invitations}
-          pagination={false}
+          pagination={{ pageSize: 5, showSizeChanger: false }}
         />
       </Card>
 

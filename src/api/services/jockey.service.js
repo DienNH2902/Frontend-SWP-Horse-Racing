@@ -1,7 +1,29 @@
+import { apiClient } from "../client";
+import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
+
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
     window.setTimeout(() => resolve(structuredClone(value)), ms);
   });
+
+function unwrapData(response) {
+  const data = response?.data;
+
+  return data?.data || data?.result || data?.invitation || data?.contract || data;
+}
+
+function unwrapCollection(response) {
+  const data = unwrapData(response);
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.invitations)) return data.invitations;
+  if (Array.isArray(data?.jockeyInvitations)) return data.jockeyInvitations;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.records)) return data.records;
+
+  return [];
+}
 
 let jockeyData = {
   profile: {
@@ -185,11 +207,28 @@ let jockeyData = {
 };
 
 export async function getJockeyDashboard() {
-  return delay(jockeyData);
+  const invitations = await getJockeyInvitations();
+
+  return {
+    ...structuredClone(jockeyData),
+    invitations,
+  };
 }
 
 export async function getJockeyInvitations() {
-  return delay(jockeyData.invitations);
+  const response = await apiClient.get(JOCKEY_INVITATION_ENDPOINTS.MY_INVITATIONS, {
+    includeAuth: true,
+  });
+
+  return unwrapCollection(response);
+}
+
+export async function getJockeyInvitationById(invitationId) {
+  const response = await apiClient.get(JOCKEY_INVITATION_ENDPOINTS.DETAIL(invitationId), {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
 }
 
 export async function respondToJockeyInvitation(invitationId, status) {
@@ -197,14 +236,21 @@ export async function respondToJockeyInvitation(invitationId, status) {
     throw new Error("Invalid invitation response.");
   }
 
-  jockeyData = {
-    ...jockeyData,
-    invitations: jockeyData.invitations.map((invitation) =>
-      invitation.id === invitationId ? { ...invitation, status } : invitation,
-    ),
-  };
+  const response = await apiClient.patch(
+    JOCKEY_INVITATION_ENDPOINTS.RESPOND(invitationId),
+    { status },
+    { includeAuth: true },
+  );
 
-  return delay({ success: true });
+  return unwrapData(response);
+}
+
+export async function getJockeyInvitationContract(invitationId) {
+  const response = await apiClient.get(JOCKEY_INVITATION_ENDPOINTS.RESPOND(invitationId), {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
 }
 
 export async function getJockeyRaceSchedule() {

@@ -1,0 +1,32 @@
+import { apiClient } from "../client";
+import { TOURNAMENT_ENDPOINTS } from "../endpoints/tournament.endpoint";
+
+function unwrapData(response) {
+  const data = response?.data;
+
+  return data?.data || data?.result || data?.tournament || data;
+}
+
+function unwrapCollection(response) {
+  const data = unwrapData(response);
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.tournaments)) return data.tournaments;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.records)) return data.records;
+
+  return [];
+}
+
+export async function getTournaments() {
+  const response = await apiClient.get(TOURNAMENT_ENDPOINTS.ROOT, {
+    includeAuth: true,
+  });
+
+  return unwrapCollection(response).filter((tournament) => {
+    const status = String(tournament?.status || "").toLowerCase();
+
+    return status !== "canceled";
+  });
+}

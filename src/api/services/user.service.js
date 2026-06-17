@@ -54,14 +54,22 @@ export async function searchUsersByName(fullName) {
 export async function getUsersByRole(role) {
   const response = await apiClient.get(USER_ENDPOINTS.BY_ROLE, {
     includeAuth: true,
-    headers: { role },
+    params: { role },
   });
 
   return unwrapCollection(response);
 }
 
 export async function getAvailableJockeys() {
-  const jockeys = await getUsersByRole("Jockey");
+  const response = await apiClient.get(USER_ENDPOINTS.BY_ROLE, {
+    includeAuth: true,
+    params: {
+      role: "Jockey",
+      jockeyStatus: "Available",
+    },
+  });
+
+  const jockeys = unwrapCollection(response);
 
   return jockeys.filter((jockey) => jockey?.jockeyStatus === "Available");
 }
