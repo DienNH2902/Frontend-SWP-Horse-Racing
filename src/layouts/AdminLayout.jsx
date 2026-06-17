@@ -119,6 +119,9 @@ function AdminLayout({ children }) {
           <Link className="admin-nav-item" to="/admin/users">
             User Management
           </Link>
+          <Link className="admin-nav-item" to="/admin/tournaments">
+            Tournament Management
+          </Link>
           <Button className="admin-home-btn" onClick={() => navigate("/home")}>
             Quay lại Home
           </Button>

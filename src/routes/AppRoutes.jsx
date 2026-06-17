@@ -24,6 +24,7 @@ import RefereeRaces from "../pages/referee/RefereeRaces";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
+import TournamentManagement from "../pages/admin/TournamentManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -64,6 +65,14 @@ function AdminUsersPage() {
   );
 }
 
+function AdminTournamentsPage() {
+  return (
+    <AdminLayout>
+      <TournamentManagement />
+    </AdminLayout>
+  );
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -84,6 +93,7 @@ export default function AppRoutes() {
         <Route path="/admin" element={<AdminUsersPage />} />
         <Route path="/admin/dashboard" element={<AdminUsersPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/tournaments" element={<AdminTournamentsPage />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Horse Owner"]} />}>
