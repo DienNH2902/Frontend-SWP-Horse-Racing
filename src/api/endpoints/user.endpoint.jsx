@@ -8,4 +8,5 @@ export const USER_ENDPOINTS = {
   SEARCH: "/users/search/by-name",
   UPLOAD_AVATAR: "/upload/avatar",
   CHANGE_PASSWORD: "/users/change-password",
+  UPDATE_STATUS: (id) => `/users/${id}/status`,
 };

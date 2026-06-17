@@ -19,6 +19,7 @@ import {
   deleteUser,
   getUsers,
   searchUsersByName,
+  updateAccountStatus,
   updateUserAccount,
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
@@ -136,6 +137,7 @@ function UserManagement() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchKey, setSearchKey] = useState("");
+  const [statusChangingId, setStatusChangingId] = useState(null);
 
   async function loadUsers() {
     setIsLoading(true);
@@ -166,6 +168,25 @@ function UserManagement() {
       message.error(error?.message || "Tìm kiếm thất bại");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleStatusChange(id, nextStatus) {
+    setStatusChangingId(id);
+    try {
+      await updateAccountStatus(id, nextStatus);
+      message.success(`Đã cập nhật trạng thái sang ${nextStatus}`);
+
+      // Đồng bộ trạng thái mới vào danh sách đang hiển thị ở client
+      setUsers((currentUsers) =>
+        currentUsers.map((user) =>
+          user.id === id ? { ...user, status: nextStatus } : user,
+        ),
+      );
+    } catch (error) {
+      message.error(error?.message || "Cập nhật trạng thái thất bại");
+    } finally {
+      setStatusChangingId(null);
     }
   }
 
@@ -412,9 +433,29 @@ function UserManagement() {
       {
         title: "Status",
         dataIndex: "status",
-        width: 120,
-        render: (status) => (
-          <Tag color={statusColor(status)}>{String(status)}</Tag>
+        width: 140,
+        render: (status, record) => (
+          <Select
+            value={status}
+            size="small"
+            style={{ width: 110 }}
+            loading={statusChangingId === record.id}
+            onChange={(nextValue) => handleStatusChange(record.id, nextValue)}
+            options={[
+              {
+                value: "Active",
+                label: <span style={{ color: "green" }}>Active</span>,
+              },
+              {
+                value: "Inactive",
+                label: <span style={{ color: "red" }}>Inactive</span>,
+              },
+              {
+                value: "Banned",
+                label: <span style={{ color: "orange" }}>Banned</span>,
+              },
+            ]}
+          />
         ),
       },
       {
@@ -446,7 +487,7 @@ function UserManagement() {
         ),
       },
     ],
-    [],
+    [statusChangingId],
   );
 
   return (
