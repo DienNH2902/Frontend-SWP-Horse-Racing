@@ -34,7 +34,7 @@ export default function OwnerDashboard() {
     {
       title: "Horse",
       dataIndex: "name",
-      render: (value) => (
+      render: (value, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
           <Typography.Text type="secondary">{record.breed}</Typography.Text>

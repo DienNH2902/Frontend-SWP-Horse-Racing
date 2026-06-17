@@ -1,7 +1,30 @@
+import { apiClient } from "../client";
+import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
+import { HORSE_ENDPOINTS } from "../endpoints/horse.endpoint";
+import { getAvailableJockeys } from "./user.service";
+
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
     window.setTimeout(() => resolve(structuredClone(value)), ms);
   });
+
+function unwrapData(response) {
+  const data = response?.data;
+
+  return data?.data || data?.result || data?.horse || data;
+}
+
+function unwrapCollection(response) {
+  const data = unwrapData(response);
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.horses)) return data.horses;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.records)) return data.records;
+
+  return [];
+}
 
 let jockeyWorkspace = {
   horses: [
@@ -184,10 +207,29 @@ const raceCenter = {
 };
 
 export async function getOwnerJockeyWorkspace() {
-  return delay(jockeyWorkspace);
+  const [horsesResponse, jockeys] = await Promise.all([
+    apiClient.get(HORSE_ENDPOINTS.MY_HORSES, { includeAuth: true }),
+    getAvailableJockeys(),
+  ]);
+
+  return {
+    ...jockeyWorkspace,
+    horses: unwrapCollection(horsesResponse),
+    jockeys,
+  };
 }
 
-export async function sendJockeyInvitation({ horseId, jockeyId, raceId }) {
+export async function sendJockeyInvitation(payload) {
+  const response = await apiClient.post(
+    JOCKEY_INVITATION_ENDPOINTS.ROOT,
+    payload,
+    { includeAuth: true },
+  );
+
+  return unwrapData(response);
+}
+
+export async function sendMockJockeyInvitation({ horseId, jockeyId, raceId }) {
   const horse = jockeyWorkspace.horses.find((item) => item.id === horseId);
   const jockey = jockeyWorkspace.jockeys.find((item) => item.id === jockeyId);
   const race = jockeyWorkspace.schedules.find((item) => item.id === raceId);
