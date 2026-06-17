@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Avatar,
   Button,
   Card,
   Form,
@@ -23,19 +24,12 @@ import {
 } from "../../api/services/horse.service";
 import {
   getHorseStatusColor,
+  HORSE_STATUS_OPTIONS,
   horseCollectionFrom,
   normalizeHorse,
   toHorseFormValues,
   toHorsePayload,
 } from "./horseViewModel";
-
-const STATUS_OPTIONS = [
-  { value: "IDLE", label: "IDLE" },
-  { value: "TRAINING", label: "TRAINING" },
-  { value: "RACING", label: "RACING" },
-  { value: "INJURED", label: "INJURED" },
-  { value: "RETIRED", label: "RETIRED" },
-];
 
 export default function OwnerHorses() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -148,13 +142,30 @@ export default function OwnerHorses() {
       title: "Horse",
       dataIndex: "name",
       render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.breed}</Typography.Text>
+        <Space>
+          <Avatar shape="square" size={48} src={record.imageUrl}>
+            {String(value || "?").charAt(0)}
+          </Avatar>
+          <Space direction="vertical" size={0}>
+            <Typography.Text strong>{value}</Typography.Text>
+            <Typography.Text type="secondary">{record.breed}</Typography.Text>
+          </Space>
         </Space>
       ),
     },
     { title: "Color", dataIndex: "color", responsive: ["lg"] },
+    {
+      title: "Height",
+      dataIndex: "height",
+      render: (value) => `${value || 0} m`,
+      responsive: ["md"],
+    },
+    {
+      title: "Weight",
+      dataIndex: "weight",
+      render: (value) => `${value || 0} kg`,
+      responsive: ["md"],
+    },
     {
       title: "Status",
       dataIndex: "status",
@@ -217,7 +228,7 @@ export default function OwnerHorses() {
               onChange={setStatusFilter}
               options={[
                 { value: "all", label: "All status" },
-                ...STATUS_OPTIONS,
+                ...HORSE_STATUS_OPTIONS,
               ]}
             />
             <Button onClick={loadHorses}>Refresh</Button>
@@ -292,7 +303,7 @@ export default function OwnerHorses() {
           </Form.Item>
 
           <Form.Item label="Status" name="horseStatus">
-            <Select options={STATUS_OPTIONS} />
+            <Select options={HORSE_STATUS_OPTIONS} />
           </Form.Item>
 
         </Form>

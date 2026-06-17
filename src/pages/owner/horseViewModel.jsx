@@ -1,23 +1,30 @@
+export const HORSE_STATUS_OPTIONS = [
+    { value: "IDLE", label: "IDLE" },
+    { value: "INJURED", label: "INJURED" },
+    { value: "REGISTERED", label: "REGISTERED" },
+    { value: "RACING", label: "RACING" },
+    { value: "SUSPENDED", label: "SUSPENDED" },
+];
+
 export function horseCollectionFrom(data) {
     if (Array.isArray(data)) return data;
     return [];
 }
 
 export function isActiveHorse(horse) {
-    return String(horse?.horseStatus || horse?.status || "")
-        .toLowerCase()
-        .includes("active") || String(horse?.horseStatus || horse?.status || "").toLowerCase() === "idle";
+    const status = String(horse?.horseStatus || horse?.status || "").toLowerCase();
+
+    return status === "idle" || status === "registered" || status === "racing";
 }
 
 export function getHorseStatusColor(status) {
     const value = String(status || "").toLowerCase();
 
     if (value.includes("idle")) return "cyan";
-    if (value.includes("active")) return "green";
-    if (value.includes("training")) return "blue";
+    if (value.includes("registered")) return "green";
     if (value.includes("racing")) return "purple";
     if (value.includes("injured")) return "orange";
-    if (value.includes("retired")) return "default";
+    if (value.includes("suspended")) return "red";
 
     return "default";
 }
@@ -68,7 +75,7 @@ export function toHorsePayload(values = {}) {
         imageUrl: values.imageUrl || "",
         height: values.height,
         weight: values.weight,
-        horseStatus: values.horseStatus,
+        horseStatus: values.horseStatus || "IDLE",
     };
 }
 
@@ -79,5 +86,6 @@ export function toHorseCreatePayload(values = {}) {
         imageUrl: values.imageUrl || "",
         height: values.height,
         weight: values.weight,
+        horseStatus: values.horseStatus || "IDLE",
     };
 }

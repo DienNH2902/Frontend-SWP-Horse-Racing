@@ -1,7 +1,7 @@
-import { Button, Card, Col, Form, Input, InputNumber, Row, Space, Typography, message } from "antd";
+import { Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Typography, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { createHorse } from "../../api/services/horse.service";
-import { toHorseCreatePayload } from "./horseViewModel";
+import { HORSE_STATUS_OPTIONS, toHorseCreatePayload } from "./horseViewModel";
 
 export default function OwnerHorseRegister() {
   const [form] = Form.useForm();
@@ -38,7 +38,7 @@ export default function OwnerHorseRegister() {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ imageUrl: "" }}
+          initialValues={{ horseStatus: "IDLE", imageUrl: "" }}
           onFinish={handleSubmit}
         >
           <Row gutter={16}>
@@ -85,6 +85,10 @@ export default function OwnerHorseRegister() {
 
           <Form.Item label="Image URL" name="imageUrl">
             <Input placeholder="https://example.com/horse.png" />
+          </Form.Item>
+
+          <Form.Item label="Status" name="horseStatus">
+            <Select options={HORSE_STATUS_OPTIONS} />
           </Form.Item>
 
           <Space wrap>

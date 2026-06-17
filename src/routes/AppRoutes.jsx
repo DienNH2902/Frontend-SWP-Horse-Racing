@@ -13,7 +13,6 @@ import JockeyDashboard from "../pages/jockey/JockeyDashboard";
 import JockeyInvitations from "../pages/jockey/JockeyInvitations";
 import JockeyRaceSchedule from "../pages/jockey/JockeyRaceSchedule";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
-import OwnerHorseDetail from "../pages/owner/OwnerHorseDetail";
 import OwnerHorseRegister from "../pages/owner/OwnerHorseRegister";
 import OwnerHorses from "../pages/owner/OwnerHorses";
 import OwnerJockeyRaceWorkspace from "../pages/owner/OwnerJockeyRaceWorkspace";
@@ -103,7 +102,6 @@ export default function AppRoutes() {
             path="owner/horses/register"
             element={<OwnerHorseRegister />}
           />
-          <Route path="owner/horses/:id" element={<OwnerHorseDetail />} />
           <Route
             path="owner/jockey-races"
             element={<OwnerJockeyRaceWorkspace />}
