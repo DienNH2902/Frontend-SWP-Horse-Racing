@@ -18,6 +18,8 @@ import "antd/dist/reset.css";
 import {
   deleteUser,
   getUsers,
+  searchUsersByName,
+  updateAccountStatus,
   updateUserAccount,
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
@@ -26,6 +28,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 dayjs.extend(customParseFormat);
 
 const { Text, Title } = Typography;
+const { Search } = Input;
 
 function pick(source, keys, fallback = "") {
   for (const key of keys) {
@@ -133,16 +136,57 @@ function UserManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [searchKey, setSearchKey] = useState("");
+  const [statusChangingId, setStatusChangingId] = useState(null);
 
   async function loadUsers() {
     setIsLoading(true);
     try {
       const response = await getUsers();
       setUsers(resolveList(response).map(normalizeUser));
+      setSearchKey("");
     } catch (error) {
       message.error(error?.message || "Unable to load users");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleSearch(value) {
+    setSearchKey(value);
+
+    // Nếu thanh tìm kiếm bị xóa trống, tự động quay về tải lại toàn bộ data gốc
+    if (!value || value.trim() === "") {
+      return loadUsers();
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await searchUsersByName(value.trim());
+      setUsers(resolveList(response).map(normalizeUser));
+    } catch (error) {
+      message.error(error?.message || "Tìm kiếm thất bại");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleStatusChange(id, nextStatus) {
+    setStatusChangingId(id);
+    try {
+      await updateAccountStatus(id, nextStatus);
+      message.success(`Đã cập nhật trạng thái sang ${nextStatus}`);
+
+      // Đồng bộ trạng thái mới vào danh sách đang hiển thị ở client
+      setUsers((currentUsers) =>
+        currentUsers.map((user) =>
+          user.id === id ? { ...user, status: nextStatus } : user,
+        ),
+      );
+    } catch (error) {
+      message.error(error?.message || "Cập nhật trạng thái thất bại");
+    } finally {
+      setStatusChangingId(null);
     }
   }
 
@@ -389,9 +433,29 @@ function UserManagement() {
       {
         title: "Status",
         dataIndex: "status",
-        width: 120,
-        render: (status) => (
-          <Tag color={statusColor(status)}>{String(status)}</Tag>
+        width: 140,
+        render: (status, record) => (
+          <Select
+            value={status}
+            size="small"
+            style={{ width: 110 }}
+            loading={statusChangingId === record.id}
+            onChange={(nextValue) => handleStatusChange(record.id, nextValue)}
+            options={[
+              {
+                value: "Active",
+                label: <span style={{ color: "green" }}>Active</span>,
+              },
+              {
+                value: "Inactive",
+                label: <span style={{ color: "red" }}>Inactive</span>,
+              },
+              {
+                value: "Banned",
+                label: <span style={{ color: "orange" }}>Banned</span>,
+              },
+            ]}
+          />
         ),
       },
       {
@@ -423,7 +487,7 @@ function UserManagement() {
         ),
       },
     ],
-    [],
+    [statusChangingId],
   );
 
   return (
@@ -435,6 +499,13 @@ function UserManagement() {
           justify-content: space-between;
           gap: 20px;
           margin-bottom: 22px;
+        }
+
+        .user-management-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 20%;
         }
 
         .user-management-kicker {
@@ -525,9 +596,22 @@ function UserManagement() {
           <div className="user-management-kicker">Admin dashboard</div>
           <Title level={1}>User Management</Title>
         </div>
-        <Button className="user-management-refresh" onClick={loadUsers}>
-          Refresh
-        </Button>
+        <div className="user-management-actions">
+          <Search
+            className="user-management-search-input"
+            placeholder="Search users..."
+            allowClear
+            enterButton="Search"
+            size="middle"
+            value={searchKey}
+            onChange={(e) => setSearchKey(e.target.value)}
+            onSearch={handleSearch}
+            loading={isLoading}
+          />
+          <Button className="user-management-refresh" onClick={loadUsers}>
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="user-management-card">
