@@ -22,6 +22,17 @@ export async function getUserById(id) {
   return response.data;
 }
 
+export async function searchUsersByName(fullName) {
+  const response = await apiClient.get(USER_ENDPOINTS.SEARCH, {
+    includeAuth: true,
+    params: {
+      fullName: fullName,
+    },
+  });
+
+  return response.data;
+}
+
 export async function deleteUser(id) {
   const response = await apiClient.delete(USER_ENDPOINTS.DETAIL(id), {
     includeAuth: true,

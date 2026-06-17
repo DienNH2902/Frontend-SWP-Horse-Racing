@@ -18,6 +18,7 @@ import "antd/dist/reset.css";
 import {
   deleteUser,
   getUsers,
+  searchUsersByName,
   updateUserAccount,
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
@@ -26,6 +27,7 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 dayjs.extend(customParseFormat);
 
 const { Text, Title } = Typography;
+const { Search } = Input;
 
 function pick(source, keys, fallback = "") {
   for (const key of keys) {
@@ -133,14 +135,35 @@ function UserManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [searchKey, setSearchKey] = useState("");
 
   async function loadUsers() {
     setIsLoading(true);
     try {
       const response = await getUsers();
       setUsers(resolveList(response).map(normalizeUser));
+      setSearchKey("");
     } catch (error) {
       message.error(error?.message || "Unable to load users");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleSearch(value) {
+    setSearchKey(value);
+
+    // Nếu thanh tìm kiếm bị xóa trống, tự động quay về tải lại toàn bộ data gốc
+    if (!value || value.trim() === "") {
+      return loadUsers();
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await searchUsersByName(value.trim());
+      setUsers(resolveList(response).map(normalizeUser));
+    } catch (error) {
+      message.error(error?.message || "Tìm kiếm thất bại");
     } finally {
       setIsLoading(false);
     }
@@ -437,6 +460,13 @@ function UserManagement() {
           margin-bottom: 22px;
         }
 
+        .user-management-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 20%;
+        }
+
         .user-management-kicker {
           color: #007a68;
           font-size: 13px;
@@ -525,9 +555,22 @@ function UserManagement() {
           <div className="user-management-kicker">Admin dashboard</div>
           <Title level={1}>User Management</Title>
         </div>
-        <Button className="user-management-refresh" onClick={loadUsers}>
-          Refresh
-        </Button>
+        <div className="user-management-actions">
+          <Search
+            className="user-management-search-input"
+            placeholder="Search users..."
+            allowClear
+            enterButton="Search"
+            size="middle"
+            value={searchKey}
+            onChange={(e) => setSearchKey(e.target.value)}
+            onSearch={handleSearch}
+            loading={isLoading}
+          />
+          <Button className="user-management-refresh" onClick={loadUsers}>
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <div className="user-management-card">
