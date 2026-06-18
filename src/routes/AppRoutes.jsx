@@ -6,6 +6,8 @@ import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
+import TournamentManagement from "../pages/admin/TournamentManagement";
+import RegistrationManagement from "../pages/admin/RegistrationManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
@@ -24,7 +26,6 @@ import RefereeRaces from "../pages/referee/RefereeRaces";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
-import TournamentManagement from "../pages/admin/TournamentManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -73,6 +74,14 @@ function AdminTournamentsPage() {
   );
 }
 
+function AdminRegistrationsPage() {
+  return (
+    <AdminLayout>
+      <RegistrationManagement />
+    </AdminLayout>
+  );
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -80,9 +89,7 @@ export default function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-
       <Route path="/forgot-password" element={<ForgotPassword />} />
-
       <Route path="/oauth-success" element={<OAuthSuccess />} />
 
       <Route element={<ProtectedRoute />}>
@@ -94,6 +101,10 @@ export default function AppRoutes() {
         <Route path="/admin/dashboard" element={<AdminUsersPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
         <Route path="/admin/tournaments" element={<AdminTournamentsPage />} />
+        <Route
+          path="/admin/registrations"
+          element={<AdminRegistrationsPage />}
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Horse Owner"]} />}>
@@ -161,8 +172,10 @@ export default function AppRoutes() {
           <Route path="/jockey/invitations" element={<JockeyInvitations />} />
           <Route path="/jockey/schedule" element={<JockeyRaceSchedule />} />
         </Route>
+
         <Route path="/jockey/profile" element={<JockeyProfile />} />
       </Route>
+
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
