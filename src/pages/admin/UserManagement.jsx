@@ -138,6 +138,8 @@ function UserManagement() {
   const [editingUser, setEditingUser] = useState(null);
   const [searchKey, setSearchKey] = useState("");
   const [statusChangingId, setStatusChangingId] = useState(null);
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(null);
 
   async function loadUsers() {
     setIsLoading(true);
@@ -151,6 +153,16 @@ function UserManagement() {
       setIsLoading(false);
     }
   }
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const matchRole = selectedRole ? user.role === selectedRole : true;
+      const matchStatus = selectedStatus
+        ? user.status === selectedStatus
+        : true;
+      return matchRole && matchStatus;
+    });
+  }, [users, selectedRole, selectedStatus]);
 
   async function handleSearch(value) {
     setSearchKey(value);
@@ -505,7 +517,7 @@ function UserManagement() {
           display: flex;
           align-items: center;
           gap: 12px;
-          width: 20%;
+          width: auto;
         }
 
         .user-management-kicker {
@@ -597,6 +609,29 @@ function UserManagement() {
           <Title level={1}>User Management</Title>
         </div>
         <div className="user-management-actions">
+          <Select
+            placeholder="Filter by Role"
+            allowClear
+            style={{ width: 140 }}
+            onChange={(val) => setSelectedRole(val)}
+          >
+            <Select.Option value="Spectator">Spectator</Select.Option>
+            <Select.Option value="Jockey">Jockey</Select.Option>
+            <Select.Option value="Referee">Referee</Select.Option>
+            <Select.Option value="Horse-Owner">Horse-Owner</Select.Option>
+          </Select>
+
+          <Select
+            placeholder="Filter by Status"
+            allowClear
+            style={{ width: 140 }}
+            onChange={(val) => setSelectedStatus(val)}
+          >
+            <Select.Option value="Active">Active</Select.Option>
+            <Select.Option value="Inactive">Inactive</Select.Option>
+            <Select.Option value="Banned">Banned</Select.Option>
+            <Select.Option value="Disabled">Disabled</Select.Option>
+          </Select>
           <Search
             className="user-management-search-input"
             placeholder="Search users..."
@@ -618,7 +653,7 @@ function UserManagement() {
         <Table
           className="user-management-table"
           columns={columns}
-          dataSource={users}
+          dataSource={filteredUsers}
           loading={isLoading}
           pagination={{
             pageSize: 10,

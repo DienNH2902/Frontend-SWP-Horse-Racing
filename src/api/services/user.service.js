@@ -60,6 +60,20 @@ export async function getUsersByRole(role) {
   return unwrapCollection(response);
 }
 
+export async function getJockeysWithLicenses(jockeyStatus = "") {
+  const params = { role: "Jockey" };
+  if (jockeyStatus) {
+    params.jockeyStatus = jockeyStatus;
+  }
+
+  const response = await apiClient.get(USER_ENDPOINTS.BY_ROLE, {
+    includeAuth: true,
+    params,
+  });
+
+  return unwrapCollection(response);
+}
+
 export async function getAvailableJockeys() {
   const response = await apiClient.get(USER_ENDPOINTS.BY_ROLE, {
     includeAuth: true,
