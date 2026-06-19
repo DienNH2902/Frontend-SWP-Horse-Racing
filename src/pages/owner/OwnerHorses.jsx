@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Avatar,
   Button,
   Card,
   Form,
@@ -23,24 +24,12 @@ import {
 } from "../../api/services/horse.service";
 import {
   getHorseStatusColor,
+  HORSE_STATUS_OPTIONS,
   horseCollectionFrom,
   normalizeHorse,
   toHorseFormValues,
   toHorsePayload,
 } from "./horseViewModel";
-
-const STATUS_OPTIONS = [
-  { value: "Active", label: "Active" },
-  { value: "Training", label: "Training" },
-  { value: "Inactive", label: "Inactive" },
-  { value: "Injured", label: "Injured" },
-];
-
-const GENDER_OPTIONS = [
-  { value: "Male", label: "Male" },
-  { value: "Female", label: "Female" },
-  { value: "Gelding", label: "Gelding" },
-];
 
 export default function OwnerHorses() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -153,15 +142,30 @@ export default function OwnerHorses() {
       title: "Horse",
       dataIndex: "name",
       render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.breed}</Typography.Text>
+        <Space>
+          <Avatar shape="square" size={48} src={record.imageUrl}>
+            {String(value || "?").charAt(0)}
+          </Avatar>
+          <Space direction="vertical" size={0}>
+            <Typography.Text strong>{value}</Typography.Text>
+            <Typography.Text type="secondary">{record.breed}</Typography.Text>
+          </Space>
         </Space>
       ),
     },
-    { title: "Age", dataIndex: "age", responsive: ["md"] },
-    { title: "Gender", dataIndex: "gender", responsive: ["lg"] },
     { title: "Color", dataIndex: "color", responsive: ["lg"] },
+    {
+      title: "Height",
+      dataIndex: "height",
+      render: (value) => `${value || 0} m`,
+      responsive: ["md"],
+    },
+    {
+      title: "Weight",
+      dataIndex: "weight",
+      render: (value) => `${value || 0} kg`,
+      responsive: ["md"],
+    },
     {
       title: "Status",
       dataIndex: "status",
@@ -178,10 +182,9 @@ export default function OwnerHorses() {
     {
       title: "Action",
       key: "action",
-      width: 210,
+      width: 150,
       render: (_, record) => (
         <Space wrap>
-          <Link to={`/owner/horses/${record.id}`}>Detail</Link>
           <Button size="small" onClick={() => openEditModal(record)}>
             Edit
           </Button>
@@ -225,7 +228,7 @@ export default function OwnerHorses() {
               onChange={setStatusFilter}
               options={[
                 { value: "all", label: "All status" },
-                ...STATUS_OPTIONS,
+                ...HORSE_STATUS_OPTIONS,
               ]}
             />
             <Button onClick={loadHorses}>Refresh</Button>
@@ -258,7 +261,7 @@ export default function OwnerHorses() {
           layout="vertical"
           form={form}
           onFinish={handleSubmit}
-          initialValues={{ horseStatus: "Active" }}
+          initialValues={{ horseStatus: "IDLE", imageUrl: "" }}
         >
           <Form.Item
             label="Horse name"
@@ -268,39 +271,41 @@ export default function OwnerHorses() {
             <Input placeholder="Midnight Arrow" />
           </Form.Item>
 
-          <Form.Item label="Breed" name="breed">
-            <Input placeholder="Thoroughbred" />
+          <Form.Item
+            label="Color"
+            name="color"
+            rules={[{ required: true, message: "Enter horse color" }]}
+          >
+            <Input placeholder="Đỏ hạt dẻ" />
           </Form.Item>
 
           <Space size={12} className="owner-form-row" align="start">
-            <Form.Item label="Age" name="age" className="owner-form-col">
-              <InputNumber min={0} max={40} className="owner-input-full" />
-            </Form.Item>
-            <Form.Item label="Gender" name="gender" className="owner-form-col">
-              <Select allowClear options={GENDER_OPTIONS} />
-            </Form.Item>
-          </Space>
-
-          <Space size={12} className="owner-form-row" align="start">
-            <Form.Item label="Height (m)" name="height" className="owner-form-col">
+            <Form.Item
+              label="Height (m)"
+              name="height"
+              className="owner-form-col"
+              rules={[{ required: true, message: "Enter height" }]}
+            >
               <InputNumber min={0} precision={2} className="owner-input-full" />
             </Form.Item>
-            <Form.Item label="Weight (kg)" name="weight" className="owner-form-col">
+            <Form.Item
+              label="Weight (kg)"
+              name="weight"
+              className="owner-form-col"
+              rules={[{ required: true, message: "Enter weight" }]}
+            >
               <InputNumber min={0} precision={1} className="owner-input-full" />
             </Form.Item>
           </Space>
 
-          <Form.Item label="Color" name="color">
-            <Input placeholder="Bay" />
+          <Form.Item label="Image URL" name="imageUrl">
+            <Input placeholder="https://example.com/horse.png" />
           </Form.Item>
 
           <Form.Item label="Status" name="horseStatus">
-            <Select options={STATUS_OPTIONS} />
+            <Select options={HORSE_STATUS_OPTIONS} />
           </Form.Item>
 
-          <Form.Item label="Description" name="description">
-            <Input.TextArea rows={3} placeholder="Notes for this horse" />
-          </Form.Item>
         </Form>
       </Modal>
     </Space>

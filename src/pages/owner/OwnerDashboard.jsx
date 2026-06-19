@@ -36,7 +36,7 @@ export default function OwnerDashboard() {
       dataIndex: "name",
       render: (value, record) => (
         <Space direction="vertical" size={0}>
-          <Link to={`/owner/horses/${record.id}`}>{value}</Link>
+          <Typography.Text strong>{value}</Typography.Text>
           <Typography.Text type="secondary">{record.breed}</Typography.Text>
         </Space>
       ),
@@ -46,7 +46,6 @@ export default function OwnerDashboard() {
       dataIndex: "status",
       render: (value) => <Tag color={getHorseStatusColor(value)}>{value}</Tag>,
     },
-    { title: "Age", dataIndex: "age", responsive: ["md"] },
     { title: "Wins", dataIndex: "totalWin", responsive: ["md"] },
     {
       title: "Win rate",
@@ -92,6 +91,9 @@ export default function OwnerDashboard() {
             <Link to="/owner/horses/register">
               <Button type="primary">Register horse</Button>
             </Link>
+            <Link to="/owner/tournaments">
+              <Button>Tournaments</Button>
+            </Link>
           </Space>
         }
       >
@@ -125,11 +127,9 @@ export default function OwnerDashboard() {
               extra={<Tag color={getHorseStatusColor(horse.status)}>{horse.status}</Tag>}
             >
               <Space direction="vertical" size={6}>
-                <Typography.Text>Breed: {horse.breed}</Typography.Text>
                 <Typography.Text>Owner: {horse.ownerName}</Typography.Text>
                 <Typography.Text>Wins: {horse.totalWin}</Typography.Text>
                 <Typography.Text>Rating: {horse.rating}</Typography.Text>
-                <Link to={`/owner/horses/${horse.id}`}>Open detail</Link>
               </Space>
             </Card>
           </Col>

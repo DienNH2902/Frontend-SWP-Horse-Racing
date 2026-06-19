@@ -13,7 +13,9 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
     const displayName = getDisplayName(user);
     const initials = getInitials(displayName);
     const isOwnerRole = String(role).toLowerCase().includes("owner");
-    const ownerTheme = isOwnerRole
+    const isJockeyRole = String(role).toLowerCase().includes("jockey");
+    const usesGreenActionTheme = isOwnerRole || isJockeyRole;
+    const actionTheme = usesGreenActionTheme
         ? {
             token: {
                 colorPrimary: "#69f8dd",
@@ -37,12 +39,15 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
     }
 
     return (
-        <ConfigProvider theme={ownerTheme}>
+        <ConfigProvider theme={actionTheme}>
             <Layout
-                className={`role-layout${isOwnerRole ? " owner-role-layout" : ""}`}
+                className={`role-layout${isOwnerRole ? " owner-role-layout" : ""}${isJockeyRole ? " jockey-role-layout" : ""}`}
             >
             <Sider width={250} className="role-sider">
-                <div className="role-brand">GoldenHoof</div>
+                <div className="role-brand">
+                    <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
+                    <span>GoldenHoof</span>
+                </div>
 
                 <Menu
                     mode="inline"

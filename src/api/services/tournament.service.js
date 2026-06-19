@@ -1,6 +1,24 @@
 import { apiClient } from "../client";
 import { TOURNAMENT_ENDPOINTS } from "../endpoints/tournament.endpoint";
 
+function unwrapData(response) {
+    const data = response?.data;
+
+    return data?.data || data?.result || data?.tournament || data;
+}
+
+function unwrapCollection(response) {
+    const data = unwrapData(response);
+
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray(data?.tournaments)) return data.tournaments;
+    if (Array.isArray(data?.content)) return data.content;
+    if (Array.isArray(data?.records)) return data.records;
+
+    return [];
+}
+
 export async function getTournaments() {
     const response = await apiClient.get(
         TOURNAMENT_ENDPOINTS.ROOT,
@@ -9,7 +27,11 @@ export async function getTournaments() {
         }
     );
 
-    return response.data;
+    return unwrapCollection(response).filter((tournament) => {
+        const status = String(tournament?.status || "").toLowerCase();
+
+        return status !== "canceled";
+    });
 }
 
 export async function getTournamentById(id) {
@@ -20,7 +42,7 @@ export async function getTournamentById(id) {
         }
     );
 
-    return response.data;
+    return unwrapData(response);
 }
 
 export async function createTournament(payload) {
@@ -32,7 +54,7 @@ export async function createTournament(payload) {
         }
     );
 
-    return response.data;
+    return unwrapData(response);
 }
 
 export async function updateTournament(id, payload) {
@@ -44,7 +66,7 @@ export async function updateTournament(id, payload) {
         }
     );
 
-    return response.data;
+    return unwrapData(response);
 }
 
 export async function deleteTournament(id) {
@@ -55,19 +77,17 @@ export async function deleteTournament(id) {
         }
     );
 
-    return response.data;
+    return unwrapData(response);
 }
 
 export async function updateTournamentStatus(id, status) {
     const response = await apiClient.patch(
         TOURNAMENT_ENDPOINTS.STATUS(id),
-        {
-            status,
-        },
+        { status },
         {
             includeAuth: true,
         }
     );
 
-    return response.data;
+    return unwrapData(response);
 }

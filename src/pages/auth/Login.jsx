@@ -527,7 +527,7 @@ export default function GoldenHoofLogin() {
         <aside className="gh-form-panel">
           <a href="/" className="gh-brand">
             <span className="gh-brand-icon">
-              <Icon name="logo" size={38} />
+              <img className="brand-logo-img" src="/goldenhoof-logo.png" alt="" />
             </span>
             <span>GoldenHoof</span>
           </a>

@@ -595,7 +595,7 @@ export default function RoleHome({ allowedRole }) {
       <div className="role-shell">
         <header className="role-topbar">
           <Link className="role-brand" to="/home">
-            <Icon name="logo" size={32} />
+            <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
             <span>GoldenHoof</span>
           </Link>
           <nav className="role-user-nav" aria-label="Role navigation">

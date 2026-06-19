@@ -6,6 +6,7 @@ export const USER_ENDPOINTS = {
   UPDATE_HORSE_OWNER: (id) => `/users/horse-owner/${id}`,
   UPDATE_REFEREE: (id) => `/users/referee/${id}`,
   SEARCH: "/users/search/by-name",
+  BY_ROLE: "/users/role",
   UPLOAD_AVATAR: "/upload/avatar",
   CHANGE_PASSWORD: "/users/change-password",
   UPDATE_STATUS: (id) => `/users/${id}/status`,

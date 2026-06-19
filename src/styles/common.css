@@ -12,10 +12,30 @@
   height: 72px;
   display: flex;
   align-items: center;
+  gap: 10px;
   padding: 0 20px;
   color: #f4fffb;
   font-weight: 900;
   letter-spacing: 0;
+}
+
+.role-layout .role-brand-logo,
+.landing-brand-logo,
+.jockey-profile-brand-logo,
+.home-footer-brand-logo {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: block;
+  object-fit: contain;
+}
+
+.role-dashboard-page .role-brand-logo {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: block;
+  object-fit: contain;
 }
 
 .role-menu {
@@ -67,7 +87,8 @@
   padding: 24px;
 }
 
-.owner-role-layout .ant-btn {
+.owner-role-layout .ant-btn,
+.jockey-role-layout .ant-btn {
   border-radius: 8px;
   font-weight: 800;
   transition:
@@ -77,21 +98,25 @@
     box-shadow 0.18s ease;
 }
 
-.owner-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) {
+.owner-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
+.jockey-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) {
   border-color: rgba(8, 122, 109, 0.28);
   color: #06332e;
   background: #ffffff;
 }
 
 .owner-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):hover,
-.owner-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):focus-visible {
+.owner-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):focus-visible,
+.jockey-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):hover,
+.jockey-role-layout .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):focus-visible {
   border-color: #69f8dd !important;
   color: #065f55 !important;
   background: #effffb !important;
   box-shadow: 0 0 0 3px rgba(105, 248, 221, 0.18);
 }
 
-.owner-role-layout .ant-btn-primary {
+.owner-role-layout .ant-btn-primary,
+.jockey-role-layout .ant-btn-primary {
   border-color: transparent;
   color: #062724;
   background: #69f8dd;
@@ -99,20 +124,25 @@
 }
 
 .owner-role-layout .ant-btn-primary:hover,
-.owner-role-layout .ant-btn-primary:focus-visible {
+.owner-role-layout .ant-btn-primary:focus-visible,
+.jockey-role-layout .ant-btn-primary:hover,
+.jockey-role-layout .ant-btn-primary:focus-visible {
   border-color: transparent !important;
   color: #062724 !important;
   background: #4fe9cf !important;
   box-shadow: 0 12px 28px rgba(8, 122, 109, 0.2);
 }
 
-.owner-role-layout .ant-btn-primary:active {
+.owner-role-layout .ant-btn-primary:active,
+.jockey-role-layout .ant-btn-primary:active {
   color: #062724 !important;
   background: #25ceb5 !important;
 }
 
 .owner-role-layout .ant-btn[disabled],
-.owner-role-layout .ant-btn.ant-btn-disabled {
+.owner-role-layout .ant-btn.ant-btn-disabled,
+.jockey-role-layout .ant-btn[disabled],
+.jockey-role-layout .ant-btn.ant-btn-disabled {
   color: rgba(6, 39, 36, 0.38) !important;
   border-color: #d7ebe7 !important;
   background: #f4fbf9 !important;
@@ -120,12 +150,16 @@
 }
 
 .owner-role-layout a,
-.owner-role-layout .ant-typography a {
+.owner-role-layout .ant-typography a,
+.jockey-role-layout a,
+.jockey-role-layout .ant-typography a {
   color: #087a6d;
 }
 
 .owner-role-layout a:hover,
-.owner-role-layout .ant-typography a:hover {
+.owner-role-layout .ant-typography a:hover,
+.jockey-role-layout a:hover,
+.jockey-role-layout .ant-typography a:hover {
   color: #065f55;
 }
 
@@ -162,4 +196,48 @@
 .auth-status-message {
   text-align: center;
   padding: 50px;
+}
+
+.brand-logo-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.gh-page .gh-ant-input input:-webkit-autofill,
+.gh-page .gh-ant-input input:-webkit-autofill:hover,
+.gh-page .gh-ant-input input:-webkit-autofill:focus,
+.gh-page .gh-ant-input .ant-input:-webkit-autofill,
+.gh-page .gh-ant-input .ant-input:-webkit-autofill:hover,
+.gh-page .gh-ant-input .ant-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f4fffb !important;
+  caret-color: #f4fffb;
+  box-shadow: 0 0 0 1000px rgba(20, 73, 65, 0.96) inset !important;
+  border-radius: 0;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.gh-page .gh-login-btn {
+  display: grid !important;
+  position: relative;
+  overflow: hidden;
+  line-height: 1;
+}
+
+.gh-page .gh-login-btn > span:not(.ant-btn-loading-icon) {
+  width: 100%;
+}
+
+.gh-page .gh-login-btn .ant-btn-loading-icon {
+  display: none !important;
+}
+
+.gh-page .gh-login-btn.ant-btn-loading {
+  pointer-events: none;
+}
+
+.gh-page .gh-login-btn.ant-btn-loading > span:not(.ant-btn-loading-icon),
+.gh-page .gh-login-btn.ant-btn-loading svg {
+  transform: none !important;
 }

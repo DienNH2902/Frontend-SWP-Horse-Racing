@@ -1,6 +1,24 @@
 import { apiClient } from "../client";
 import { USER_ENDPOINTS } from "../endpoints/user.endpoint";
 
+function unwrapData(response) {
+  const data = response?.data;
+
+  return data?.data || data?.result || data?.user || data;
+}
+
+function unwrapCollection(response) {
+  const data = unwrapData(response);
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data?.users)) return data.users;
+  if (Array.isArray(data?.content)) return data.content;
+  if (Array.isArray(data?.records)) return data.records;
+
+  return [];
+}
+
 export async function createUser(payload) {
   const response = await apiClient.post(USER_ENDPOINTS.ROOT, payload);
   return response.data;
@@ -31,6 +49,43 @@ export async function searchUsersByName(fullName) {
   });
 
   return response.data;
+}
+
+export async function getUsersByRole(role) {
+  const response = await apiClient.get(USER_ENDPOINTS.BY_ROLE, {
+    includeAuth: true,
+    params: { role },
+  });
+
+  return unwrapCollection(response);
+}
+
+export async function getJockeysWithLicenses(jockeyStatus = "") {
+  const params = { role: "Jockey" };
+  if (jockeyStatus) {
+    params.jockeyStatus = jockeyStatus;
+  }
+
+  const response = await apiClient.get(USER_ENDPOINTS.BY_ROLE, {
+    includeAuth: true,
+    params,
+  });
+
+  return unwrapCollection(response);
+}
+
+export async function getAvailableJockeys() {
+  const response = await apiClient.get(USER_ENDPOINTS.BY_ROLE, {
+    includeAuth: true,
+    params: {
+      role: "Jockey",
+      jockeyStatus: "Available",
+    },
+  });
+
+  const jockeys = unwrapCollection(response);
+
+  return jockeys.filter((jockey) => jockey?.jockeyStatus === "Available");
 }
 
 export async function updateAccountStatus(id, accountStatus) {
