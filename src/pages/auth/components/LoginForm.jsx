@@ -68,7 +68,21 @@ function GoogleLogo() {
 
 export default function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Bắt lỗi Redirect từ Google Login gửi về URL Query Parameter
+  useEffect(() => {
+    const errorMsg = searchParams.get("error");
+    if (errorMsg) {
+      // Hiển thị thông báo lỗi bằng Antd Message
+      message.error(errorMsg);
+
+      // Xóa tham số error khỏi URL để tránh lặp lại thông báo khi người dùng F5 trang
+      searchParams.delete("error");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   async function handleFinish(values) {
     setIsSubmitting(true);
