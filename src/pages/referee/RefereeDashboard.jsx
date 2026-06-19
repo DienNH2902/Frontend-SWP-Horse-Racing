@@ -11,16 +11,32 @@ import {
   Table,
   Tag,
   Typography,
+  Button,
 } from "antd";
+import {
+  TrophyOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FlagOutlined,
+} from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { getTournaments } from "../../api/services/tournament.service";
-
-
+import { getMyRaces } from "../../api/services/race.service";
+import { getRaceCourseById }
+  from "../../api/services/race-course.service";
 
 function statusColor(status) {
   switch (status) {
     case "Preparing":
       return "blue";
+
+    case "Ready":
+      return "gold";
+
+    case "InProgress":
+      return "processing";
+
+    case "Finished":
+      return "green";
 
     case "Canceled":
       return "red";
@@ -31,90 +47,148 @@ function statusColor(status) {
 }
 
 export default function RefereeDashboard() {
-  const [tournaments, setTournaments] = useState([]);
+  const [races, setRaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    loadTournaments();
+    loadRaces();
   }, []);
 
-  async function loadTournaments() {
+  useEffect(() => {
+    console.log("RACES STATE:", races);
+
+    if (races.length > 0) {
+      console.log(
+        "FIRST RACE:",
+        races[0]
+      );
+    }
+  }, [races]);
+
+  async function loadRaces() {
     try {
       setLoading(true);
 
-      const data = await getTournaments();
+      const data = await getMyRaces();
 
-      setTournaments(
-        Array.isArray(data)
-          ? data
-          : data?.data || []
-      );
+      const raceList = Array.isArray(data)
+        ? data
+        : data?.data || [];
+
+      const racesWithCourse =
+        await Promise.all(
+          raceList.map(async (race) => {
+            try {
+              const raceCourse =
+                await getRaceCourseById(
+                  race.raceCourseId
+                );
+
+              return {
+                ...race,
+                raceCourse,
+              };
+            } catch {
+              return race;
+            }
+          })
+        );
+
+      setRaces(racesWithCourse);
     } catch (error) {
       console.error(error);
-      setErrorMessage(error.message);
+
+      setErrorMessage(
+        error.response?.data?.message ||
+        error.message ||
+        "Cannot load assigned races."
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  const stats = useMemo(() => {
-    const preparing = tournaments.filter(
-      (item) => item.status === "Preparing"
-    ).length;
+  const stats = useMemo(() => ({
+    scheduled: races.filter(
+      race => race.status === "Scheduled"
+    ).length,
 
-    const canceled = tournaments.filter(
-      (item) => item.status === "Canceled"
-    ).length;
+    ready: races.filter(
+      race => race.status === "Ready"
+    ).length,
 
-    return {
-      preparing,
-      canceled,
-    };
-  }, [tournaments]);
+    finished: races.filter(
+      race => race.status === "Finished"
+    ).length,
+
+    inProgress: races.filter(
+      race => race.status === "InProgress"
+    ).length,
+  }), [races]);
 
   const columns = [
     {
+      title: "Race",
+      render: (_, record) =>
+        record.name ||
+        `Race #${record.id}`,
+    },
+
+    {
       title: "Tournament",
-      dataIndex: "title",
+      render: (_, record) =>
+        record.tournamentTitle ||
+        record.tournament?.name ||
+        "-",
+    },
 
+    {
+      title: "Round",
+      render: (_, record) =>
+        record.roundNumber ||
+        record.round ||
+        "-",
+    },
+
+    {
+      title: "Race Course",
       render: (_, record) => (
-        <Link
-          to={`/referee/tournaments/${record._id}`}
-        >
-          {record.title}
-        </Link>
+        <>
+          {console.log(record)}
+          {record.raceCourse?.name ||
+            record.raceCourseName ||
+            record.courseName ||
+            record.raceCourseId ||
+            "-"}
+        </>
       ),
-    },
-
-    {
-      title: "Location",
-      dataIndex: "location",
-    },
-
-    {
-      title: "Start Date",
-      dataIndex: "startDate",
     },
 
     {
       title: "Status",
       dataIndex: "status",
-      render: (status) => {
-        const label =
-          status === "Preparing"
-            ? "Preparing"
-            : status === "Canceled"
-              ? "Canceled"
-              : status;
+      render: (status) => (
+        <Tag color={statusColor(status)}>
+          {status}
+        </Tag>
+      ),
+    },
 
-        return (
-          <Tag color={statusColor(status)}>
-            {label}
-          </Tag>
-        );
-      },
-    }
+    {
+      title: "Action",
+      render: (_, record) => (
+        <Space>
+          <Link
+            to={`/referee/races/${record._id}`}
+          >
+            <Button type="primary">
+              View
+            </Button>
+          </Link>
+        </Space>
+      ),
+    },
   ];
 
   return (
@@ -123,64 +197,79 @@ export default function RefereeDashboard() {
       size={16}
       style={{ width: "100%" }}
     >
-      {errorMessage && (<Alert
-        type="warning"
-        showIcon
-        message={errorMessage}
-      />
+      {errorMessage && (
+        <Alert
+          type="error"
+          showIcon
+          message={errorMessage}
+        />
       )}
 
-      ```
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} xl={8}>
+        <Col xs={24} sm={12} xl={6}>
           <Card>
             <Statistic
-              title="Total Tournaments"
-              value={tournaments.length}
+              title="Assigned Races"
+              value={races.length}
+              prefix={<TrophyOutlined />}
             />
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} xl={8}>
+        <Col xs={24} sm={12} xl={6}>
           <Card>
             <Statistic
               title="Preparing"
               value={stats.preparing}
+              prefix={<ClockCircleOutlined />}
             />
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} xl={8}>
+        <Col xs={24} sm={12} xl={6}>
           <Card>
             <Statistic
-              title="Canceled"
-              value={stats.canceled}
+              title="Ready"
+              value={stats.ready}
+              prefix={<FlagOutlined />}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} xl={6}>
+          <Card>
+            <Statistic
+              title="Finished"
+              value={stats.finished}
+              prefix={<CheckCircleOutlined />}
             />
           </Card>
         </Col>
       </Row>
 
       <Card
-        title="Tournament List"
+        title="My Assigned Races"
         extra={
           <Typography.Text type="secondary">
-            Select a tournament to view races
+            Manage your assigned races
           </Typography.Text>
         }
       >
         {loading ? (
           <Skeleton
             active
-            paragraph={{ rows: 6 }}
+            paragraph={{ rows: 8 }}
           />
-        ) : tournaments.length === 0 ? (
-          <Empty description="No tournaments found" />
+        ) : races.length === 0 ? (
+          <Empty description="No races assigned" />
         ) : (
           <Table
             rowKey="_id"
             columns={columns}
-            dataSource={tournaments}
-            pagination={false}
+            dataSource={races}
+            pagination={{
+              pageSize: 5,
+            }}
           />
         )}
       </Card>
@@ -190,13 +279,14 @@ export default function RefereeDashboard() {
           type="secondary"
           style={{ marginBottom: 0 }}
         >
-          Choose a tournament, open a race,
-          review participants, record violations,
-          and confirm official race results.
+          Review your assigned races,
+          configure race conditions,
+          confirm readiness,
+          run simulations,
+          and submit final reports after
+          each race.
         </Typography.Paragraph>
       </Card>
     </Space>
-
-
   );
 }

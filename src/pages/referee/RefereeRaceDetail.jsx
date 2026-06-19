@@ -1,140 +1,381 @@
 import {
+    Badge,
     Button,
     Card,
+    Col,
     Descriptions,
+    Empty,
     Form,
     Input,
     InputNumber,
-    Select,
+    Row,
     Space,
-    Table,
-    Typography,
     Spin,
+    Statistic,
+    Table,
+    Tag,
+    Timeline,
+    Typography,
     message,
+    Select,
+    Popconfirm,
 } from "antd";
-import { Link, useParams } from "react-router-dom";
+import {
+    CheckCircleOutlined,
+    ClockCircleOutlined,
+    ReloadOutlined,
+    RocketOutlined,
+} from "@ant-design/icons";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-import { getRaceById } from "../../api/services/race.service";
+import {
+    getRaceById,
+    confirmRaceReady,
+} from "../../api/services/race.service";
+
+import {
+    createRaceCondition,
+    getRaceCondition,
+    updateRaceCondition,
+} from "../../api/services/raceCondition.service";
+
+import {
+    runSimulation,
+    getSimulationResult,
+} from "../../api/services/simulation.service";
+
+import {
+    createEndReport,
+} from "../../api/services/refereeReport.service";
+
+import { getUserById } from "../../api/services/user.service";
+import { getRaceCourseById } from "../../api/services/race-course.service";
+
+function statusColor(status) {
+    switch (status) {
+        case "Scheduled":
+            return "blue";
+
+        case "Ready":
+            return "gold";
+
+        case "InProgress":
+            return "processing";
+
+        case "Finished":
+            return "green";
+
+        case "Cancelled":
+            return "red";
+
+        default:
+            return "default";
+    }
+}
+
+function trackConditionColor(condition) {
+    switch (condition) {
+        case "Good":
+            return "green";
+
+        case "Firm":
+            return "blue";
+
+        case "Soft":
+            return "orange";
+
+        case "Heavy":
+            return "red";
+
+        default:
+            return "default";
+    }
+}
 
 export default function RefereeRaceDetail() {
     const { id } = useParams();
+    const navigate = useNavigate();
+
+    const [condition, setCondition] = useState(null);
 
     const [race, setRace] = useState(null);
-    const [loading, setLoading] = useState(true);
 
-    const [violationForm] = Form.useForm();
+    const [referee, setReferee] = useState(null);
+    const [raceCourse, setRaceCourse] = useState(null);
 
-    const participants = [
-        {
-            id: 1,
-            horseId: 1,
-            jockeyId: 1,
-            ownerId: 1,
-            horse: "Thunder",
-            jockey: "John Smith",
-            owner: "Owner A",
-        },
-        {
-            id: 2,
-            horseId: 2,
-            jockeyId: 2,
-            ownerId: 2,
-            horse: "Storm",
-            jockey: "David Lee",
-            owner: "Owner B",
-        },
-        {
-            id: 3,
-            horseId: 3,
-            jockeyId: 3,
-            ownerId: 3,
-            horse: "Lightning",
-            jockey: "Tom Wilson",
-            owner: "Owner C",
-        },
-    ];
+    const [simulation, setSimulation] =
+        useState(null);
+
+    const [loading, setLoading] =
+        useState(true);
+
+    const [savingCondition, setSavingCondition] =
+        useState(false);
+
+    const [runningSimulation, setRunningSimulation] =
+        useState(false);
+
+    const [confirmingReady, setConfirmingReady] =
+        useState(false);
+
+    const [reportLoading, setReportLoading] =
+        useState(false);
+
+
+    const [conditionForm] =
+        Form.useForm();
+
+    const [reportForm] =
+        Form.useForm();
 
     useEffect(() => {
-        async function loadRace() {
-            try {
-                setLoading(true);
-
-                const data = await getRaceById(id);
-
-                console.log("Race Detail:", data);
-
-                setRace(data);
-            } catch (error) {
-                console.error(error);
-
-                message.error("Failed to load race detail");
-            } finally {
-                setLoading(false);
-            }
+        if (id) {
+            loadData();
         }
-
-        loadRace();
     }, [id]);
+
+    async function loadData() {
+        try {
+            setLoading(true);
+
+            const raceData = await getRaceById(id);
+
+            setRace(raceData);
+
+            const promises = [];
+
+            if (raceData.refereeId) {
+                promises.push(
+                    getUserById(raceData.refereeId)
+                );
+            } else {
+                promises.push(
+                    Promise.resolve(null)
+                );
+            }
+
+            if (raceData.raceCourseId) {
+                promises.push(
+                    getRaceCourseById(
+                        raceData.raceCourseId
+                    )
+                );
+            } else {
+                promises.push(
+                    Promise.resolve(null)
+                );
+            }
+
+            promises.push(
+                getRaceCondition(id).catch(
+                    () => null
+                )
+            );
+
+            promises.push(
+                getSimulationResult(id).catch(
+                    () => null
+                )
+            );
+
+            const [
+                refereeData,
+                raceCourseData,
+                conditionData,
+                simulationData,
+            ] = await Promise.all(promises);
+
+            setReferee(refereeData);
+            setRaceCourse(raceCourseData);
+
+            if (conditionData) {
+                setCondition(conditionData);
+
+                conditionForm.setFieldsValue({
+                    weather:
+                        conditionData.weather,
+                    trackCondition:
+                        conditionData.trackCondition,
+                    windSpeed:
+                        conditionData.windSpeed,
+                });
+            }
+
+            setSimulation(simulationData);
+        } catch (error) {
+            console.error(error);
+
+            message.error(
+                "Failed to load race."
+            );
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const participants =
+        race?.horses || [];
 
     const participantColumns = [
         {
             title: "Horse",
             render: (_, record) => (
-                <Link to={`/referee/horses/${record.horseId}`}>
-                    {record.horse}
+                <Link
+                    to={`/referee/horses/${record._id || record.id
+                        }`}
+                >
+                    {record.name ||
+                        record.horseName ||
+                        "-"}
                 </Link>
             ),
         },
         {
-            title: "Jockey",
-            render: (_, record) => (
-                <Link to={`/referee/jockeys/${record.jockeyId}`}>
-                    {record.jockey}
-                </Link>
-            ),
+            title: "Breed",
+            dataIndex: "breed",
         },
         {
-            title: "Owner",
-            render: (_, record) => (
-                <Link to={`/referee/owners/${record.ownerId}`}>
-                    {record.owner}
-                </Link>
+            title: "Age",
+            dataIndex: "age",
+        },
+        {
+            title: "Gender",
+            dataIndex: "gender",
+        },
+        {
+            title: "Status",
+            dataIndex: "status",
+            render: (status) => (
+                <Tag>{status}</Tag>
             ),
         },
     ];
 
-    const resultColumns = [
+    const simulationColumns = [
+        {
+            title: "Rank",
+            dataIndex: "rank",
+        },
         {
             title: "Horse",
-            dataIndex: "horse",
+            dataIndex: "horseName",
         },
         {
             title: "Finish Time",
-            render: () => (
-                <Input placeholder="00:01:35" />
-            ),
-        },
-        {
-            title: "Rank",
-            render: () => (
-                <InputNumber
-                    min={1}
-                    style={{ width: "100%" }}
-                />
-            ),
+            dataIndex: "finishTime",
         },
     ];
 
-    const handleSaveViolation = (values) => {
-        console.log("Violation:", values);
+    const handleSaveCondition =
+        async (values) => {
+            try {
+                setSavingCondition(true);
 
-        message.success("Violation recorded");
-    };
+                if (condition?._id) {
+                    const updated =
+                        await updateRaceCondition(
+                            id,
+                            values
+                        );
 
-    const handleConfirmResult = () => {
-        message.success("Results confirmed");
-    };
+                    setCondition(updated);
+                } else {
+                    const created =
+                        await createRaceCondition({
+                            raceId: id,
+                            ...values,
+                        });
+
+                    setCondition(created);
+                }
+
+                message.success(
+                    "Condition saved."
+                );
+            } catch (error) {
+                message.error(
+                    error.response?.data
+                        ?.message ||
+                    "Cannot save condition."
+                );
+            } finally {
+                setSavingCondition(false);
+            }
+        };
+    const handleConfirmReady =
+        async () => {
+            try {
+                setConfirmingReady(true);
+
+                if (!condition) {
+                    return message.warning(
+                        "Please create race condition first."
+                    );
+                }
+
+                await confirmRaceReady(id);
+
+                message.success(
+                    "Race confirmed ready."
+                );
+
+                loadData();
+            } catch (error) {
+                message.error(
+                    error.response?.data
+                        ?.message ||
+                    "Cannot confirm race."
+                );
+            } finally {
+                setConfirmingReady(false);
+            }
+        };
+
+    const handleRunSimulation =
+        async () => {
+            try {
+                await runSimulation(id);
+
+                await loadData();
+
+                message.success(
+                    "Simulation completed."
+                );
+            } catch (error) {
+                message.error(
+                    error.response?.data
+                        ?.message ||
+                    "Simulation failed."
+                );
+            } finally {
+                setRunningSimulation(false);
+            }
+        };
+
+    const handleSubmitReport =
+        async (values) => {
+            try {
+                setReportLoading(true);
+
+                await createEndReport(
+                    id,
+                    values
+                );
+
+                message.success(
+                    "Report submitted."
+                );
+            } catch (error) {
+                message.error(
+                    error.response?.data
+                        ?.message ||
+                    "Cannot submit report."
+                );
+            } finally {
+                setReportLoading(false);
+            }
+        };
 
     if (loading) {
         return (
@@ -148,7 +389,7 @@ export default function RefereeRaceDetail() {
         return (
             <Card>
                 <Typography.Text>
-                    Race not found
+                    Race not found.
                 </Typography.Text>
             </Card>
         );
@@ -160,120 +401,389 @@ export default function RefereeRaceDetail() {
             size={16}
             style={{ width: "100%" }}
         >
-            <Card title={`Race Detail #${id}`}>
-                <Descriptions bordered column={1}>
-                    <Descriptions.Item label="Race ID">
-                        {race?._id || race?.id}
-                    </Descriptions.Item>
+            <Card>
+                <Space wrap>
+                    <Button
+                        onClick={() =>
+                            navigate(-1)
+                        }
+                    >
+                        Back
+                    </Button>
 
+                    <Button
+                        icon={<ReloadOutlined />}
+                        onClick={loadData}
+                    >
+                        Refresh
+                    </Button>
+
+                    <Button
+                        type="primary"
+                        icon={
+                            <CheckCircleOutlined />
+                        }
+                        loading={
+                            confirmingReady
+                        }
+                        disabled={
+                            race.status !==
+                            "Scheduled"
+                        }
+                        onClick={
+                            handleConfirmReady
+                        }
+                    >
+                        Confirm Ready
+                    </Button>
+
+                    <Popconfirm
+                        title="Run simulation?"
+                        description="This action cannot be undone."
+                        onConfirm={
+                            handleRunSimulation
+                        }
+                        okText="Run"
+                        cancelText="Cancel"
+                    >
+                        <Button
+                            type="primary"
+                            icon={<RocketOutlined />}
+                            loading={runningSimulation}
+                            disabled={
+                                race.status !== "Ready"
+                            }
+                        >
+                            Run Simulation
+                        </Button>
+                    </Popconfirm>
+                </Space>
+            </Card>
+
+            <Card title={race.name}>
+                <Descriptions
+                    bordered
+                    column={2}
+                >
                     <Descriptions.Item label="Status">
-                        {race?.status}
+                        <Tag
+                            color={statusColor(
+                                race.status
+                            )}
+                        >
+                            {race.status}
+                        </Tag>
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Tournament">
-                        {race?.tournamentId}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Race Course">
-                        {race?.raceCourseId}
+                        {race.tournamentTitle}
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Round">
-                        {race?.round}
+                        {race.roundNumber}
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Race Order">
+                        {race.raceOrder}
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Race Course">
+                        {raceCourse ? (
+                            <>
+                                <div>
+                                    {raceCourse.name}
+                                </div>
+
+                                <div>
+                                    {raceCourse.location}
+                                </div>
+
+                                <div>
+                                    {raceCourse.distance}m -{" "}
+                                    {raceCourse.trackType}
+                                </div>
+                            </>
+                        ) : (
+                            "-"
+                        )}
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Referee">
-                        {race?.refereeId}
+                        {referee
+                            ? `${referee.fullName}
+                            (${referee.role})`
+                            : "-"}
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Date">
+                        {new Date(
+                            race.date
+                        ).toLocaleDateString()}
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Start Time">
+                        {new Date(
+                            race.startTime
+                        ).toLocaleString()}
                     </Descriptions.Item>
                 </Descriptions>
             </Card>
 
+            <Row gutter={16}>
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Horses"
+                            value={participants.length}
+                        />
+                    </Card>
+                </Col>
+
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Filled Slots"
+                            value={race.filledSlots ?? 0}
+                        />
+                    </Card>
+                </Col>
+
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Available Slots"
+                            value={race.availableSlots ?? 0}
+                        />
+                    </Card>
+                </Col>
+
+                <Col span={6}>
+                    <Card>
+                        <Statistic
+                            title="Total Bettors"
+                            value={race.totalBettors ?? 0}
+                        />
+                    </Card>
+                </Col>
+            </Row>
+
             <Card title="Participants">
-                <Table
-                    rowKey="id"
-                    pagination={false}
-                    columns={participantColumns}
-                    dataSource={participants}
-                />
+                {participants.length ===
+                    0 ? (
+                    <Empty
+                        description="No horses assigned."
+                    />
+                ) : (
+                    <Table
+                        rowKey={(record) =>
+                            record._id ||
+                            record.id
+                        }
+                        columns={
+                            participantColumns
+                        }
+                        dataSource={
+                            participants
+                        }
+                        pagination={false}
+                    />
+                )}
             </Card>
 
-            <Card title="Race Violations">
+            <Card title="Current Condition">
+                <Descriptions bordered column={3}>
+                    <Descriptions.Item label="Weather">
+                        {condition?.weather || "-"}
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Wind Speed">
+                        {condition?.windSpeed
+                            ? `${condition.windSpeed} km/h`
+                            : "-"}
+                    </Descriptions.Item>
+
+                    <Descriptions.Item label="Track">
+                        {condition?.trackCondition ? (
+                            <Tag
+                                color={trackConditionColor(
+                                    condition.trackCondition
+                                )}
+                            >
+                                {condition.trackCondition}
+                            </Tag>
+                        ) : (
+                            "-"
+                        )}
+                    </Descriptions.Item>
+                </Descriptions>
+            </Card>
+
+            <Card title="Race Condition">
                 <Form
-                    form={violationForm}
+                    form={conditionForm}
                     layout="vertical"
-                    onFinish={handleSaveViolation}
+                    onFinish={
+                        handleSaveCondition
+                    }
                 >
                     <Form.Item
-                        label="Horse"
-                        name="horseId"
-                        rules={[
-                            {
-                                required: true,
-                                message: "Please select a horse",
-                            },
-                        ]}
+                        label="Weather"
+                        name="weather"
                     >
                         <Select
-                            options={participants.map((item) => ({
-                                label: item.horse,
-                                value: item.id,
-                            }))}
+                            options={[
+                                { value: "Sunny" },
+                                { value: "Cloudy" },
+                                { value: "Rainy" },
+                                { value: "Snowy" },
+                            ]}
+                        />
+                    </Form.Item>
+                    <Form.Item
+                        label="Wind Speed"
+                        name="windSpeed"
+                    >
+                        <InputNumber
+                            min={0}
+                            max={100}
+                            addonAfter="km/h"
+                            style={{ width: "100%" }}
                         />
                     </Form.Item>
 
                     <Form.Item
-                        label="Violation Type"
-                        name="type"
-                        rules={[
-                            {
-                                required: true,
-                                message: "Please enter violation type",
-                            },
-                        ]}
+                        label="Track Condition"
+                        name="trackCondition"
                     >
-                        <Input />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Description"
-                        name="description"
-                    >
-                        <Input.TextArea rows={4} />
+                        <Select
+                            options={[
+                                { value: "Good" },
+                                { value: "Muddy" },
+                                { value: "Soft" },
+                                { value: "Heavy" },
+                            ]}
+                        />
                     </Form.Item>
 
                     <Button
                         type="primary"
                         htmlType="submit"
+                        loading={
+                            savingCondition
+                        }
                     >
-                        Save Violation
+                        Save Condition
                     </Button>
                 </Form>
             </Card>
 
-            <Card title="Result Confirmation">
-                <Table
-                    rowKey="id"
-                    pagination={false}
-                    columns={resultColumns}
-                    dataSource={participants}
+            <Card title="Timeline">
+                <Timeline
+                    items={[
+                        {
+                            color: "green",
+                            children: `Created: ${race.createdAt
+                                ? new Date(
+                                    race.createdAt
+                                ).toLocaleString()
+                                : "-"
+                                }`,
+                        },
+                        {
+                            color:
+                                race.refereeConfirmedAt
+                                    ? "green"
+                                    : "gray",
+                            children: `Referee Confirmed: ${race.refereeConfirmedAt
+                                ? new Date(
+                                    race.refereeConfirmedAt
+                                ).toLocaleString()
+                                : "-"
+                                }`,
+                        },
+                        {
+                            color:
+                                race.simulatedAt
+                                    ? "green"
+                                    : "gray",
+                            children: `Simulated: ${race.simulatedAt
+                                ? new Date(
+                                    race.simulatedAt
+                                ).toLocaleString()
+                                : "-"
+                                }`,
+                        },
+                    ]}
                 />
-
-                <Button
-                    type="primary"
-                    style={{ marginTop: 16 }}
-                    onClick={handleConfirmResult}
-                >
-                    Confirm Results
-                </Button>
             </Card>
 
-            <Card>
-                <Typography.Text type="secondary">
-                    Referee is responsible for reviewing race
-                    participants, recording violations and
-                    confirming official race results.
-                </Typography.Text>
+            <Card title="Simulation Result">
+                {!simulation ? (
+                    <Empty
+                        description="Simulation has not been run."
+                    />
+                ) : (
+                    <Table
+                        rowKey={(record) =>
+                            record.rank ||
+                            record.id
+                        }
+                        columns={
+                            simulationColumns
+                        }
+                        dataSource={
+                            simulation.results ||
+                            simulation.rankings ||
+                            simulation.rawResult ||
+                            []
+                        }
+                        pagination={false}
+                    />
+                )}
+            </Card>
+
+            <Card title="End Report">
+                <Form
+                    form={reportForm}
+                    layout="vertical"
+                    onFinish={
+                        handleSubmitReport
+                    }
+                >
+                    <Form.Item
+                        label="Incident"
+                        name="incident"
+                    >
+                        <Input.TextArea
+                            rows={4}
+                        />
+                    </Form.Item>
+
+                    <Form.Item
+                        label="Comment"
+                        name="comment"
+                    >
+                        <Input.TextArea
+                            rows={4}
+                        />
+                    </Form.Item>
+
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={
+                            reportLoading
+                        }
+                        disabled={
+                            race.status !==
+                            "Finished"
+                        }
+                    >
+                        Submit Report
+                    </Button>
+                </Form>
             </Card>
         </Space>
     );
 }
+
