@@ -20,7 +20,10 @@ import OwnerRaceResults from "../pages/owner/OwnerRaceResults";
 import OwnerTournaments from "../pages/owner/OwnerTournaments";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
-import RefereeRaces from "../pages/referee/RefereeRaces";
+import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
+import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
+import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
+import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
@@ -44,8 +47,7 @@ const OWNER_NAV = [
 ];
 
 const REFEREE_NAV = [
-  { key: "referee-dashboard", to: "/referee", label: "Dashboard" },
-  { key: "referee-races", to: "/referee/races", label: "Races" },
+  { key: "referee-dashboard", to: "/referee", label: "Tournaments" },
 ];
 
 const JOCKEY_NAV = [
@@ -157,8 +159,31 @@ export default function AppRoutes() {
           }
         >
           <Route path="referee" element={<RefereeDashboard />} />
-          <Route path="referee/races" element={<RefereeRaces />} />
-          <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
+
+          <Route
+            path="referee/tournaments/:id"
+            element={<RefereeTournamentDetail />}
+          />
+
+          <Route
+            path="referee/races/:id"
+            element={<RefereeRaceDetail />}
+          />
+
+          <Route
+            path="referee/horses/:id"
+            element={<RefereeHorseDetail />}
+          />
+
+          <Route
+            path="referee/jockeys/:id"
+            element={<RefereeJockeyDetail />}
+          />
+
+          <Route
+            path="referee/owners/:id"
+            element={<RefereeOwnerDetail />}
+          />
         </Route>
       </Route>
 
