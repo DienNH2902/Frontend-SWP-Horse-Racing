@@ -425,18 +425,43 @@ function JockeyLicenseManagement() {
           </Text>
         ) : (
           <List
-            itemLayout="horizontal"
+            itemLayout="vertical"
             dataSource={viewingLicensesJockey?.licenses}
             renderItem={(license) => (
               <List.Item
+                key={license.licenseCode}
+                extra={
+                  license.licenseUrl ? (
+                    <div style={{ marginTop: 8, marginBottom: 8 }}>
+                      <img
+                        src={license.licenseUrl}
+                        alt={`Chứng chỉ ${license.licenseCode}`}
+                        style={{
+                          width: "100%",
+                          maxWidth: "220px",
+                          maxHeight: "140px",
+                          objectFit: "cover",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                        }}
+                        onError={(e) => {
+                          // Fallback nếu URL là file PDF không hiển thị trực tiếp bằng thẻ img được
+                          e.target.style.display = "none";
+                        }}
+                      />
+                    </div>
+                  ) : null
+                }
                 actions={[
                   <a
                     href={license.licenseUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     key="view-link"
+                    style={{ fontWeight: 700, color: "#007a68" }}
                   >
-                    View File PDF
+                    Xem file gốc chi tiết
                   </a>,
                 ]}
               >
