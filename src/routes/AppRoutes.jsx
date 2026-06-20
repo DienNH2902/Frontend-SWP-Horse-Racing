@@ -126,6 +126,8 @@ export default function AppRoutes() {
             </AdminLayout>
           }
         />
+        <Route path="/admin/tournaments" element={<AdminTournamentsPage />} />
+        <Route path="/admin/registrations" element={<AdminRegistrationsPage />} />
 
         <Route
           path="/admin/jockey-license"
