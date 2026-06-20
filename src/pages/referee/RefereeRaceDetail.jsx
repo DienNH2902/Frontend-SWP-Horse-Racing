@@ -395,6 +395,7 @@ export default function RefereeRaceDetail() {
         );
     }
 
+    /* Obsolete mock implementation; real API-backed data is defined above.
     const [messageApi, contextHolder] = message.useMessage();
 
     const race = {
@@ -594,6 +595,7 @@ export default function RefereeRaceDetail() {
         },
     ];
 
+    */
     return (
         <Space
             direction="vertical"
