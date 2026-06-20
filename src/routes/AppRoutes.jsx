@@ -9,44 +9,62 @@ import UserManagement from "../pages/admin/UserManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
+import JockeyDashboard from "../pages/jockey/JockeyDashboard";
+import JockeyInvitations from "../pages/jockey/JockeyInvitations";
+import JockeyRaceSchedule from "../pages/jockey/JockeyRaceSchedule";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
-import OwnerHorseDetail from "../pages/owner/OwnerHorseDetail";
+import OwnerHorseRegister from "../pages/owner/OwnerHorseRegister";
 import OwnerHorses from "../pages/owner/OwnerHorses";
+import OwnerJockeyRaceWorkspace from "../pages/owner/OwnerJockeyRaceWorkspace";
+import OwnerRaceResults from "../pages/owner/OwnerRaceResults";
+import OwnerTournaments from "../pages/owner/OwnerTournaments";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
-import RefereeRaces from "../pages/referee/RefereeRaces";
+import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
+import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
+import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
+import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
-import RefereeReports from "../pages/referee/RefereeReports";
-
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
   { key: "owner-horses", to: "/owner/horses", label: "My horses" },
+  {
+    key: "owner-register-horse",
+    to: "/owner/horses/register",
+    label: "Register horse",
+  },
+  {
+    key: "owner-jockey-races",
+    to: "/owner/jockey-races",
+    label: "Jockey & entries",
+  },
+  { key: "owner-tournaments", to: "/owner/tournaments", label: "Tournaments" },
+  { key: "owner-results", to: "/owner/race-results", label: "Race results" },
 ];
 
 const REFEREE_NAV = [
+  { key: "referee-dashboard", to: "/referee", label: "Tournaments" },
+];
+
+const JOCKEY_NAV = [
+  { key: "jockey-dashboard", to: "/jockey", label: "Dashboard" },
   {
-    key: "dashboard",
-    to: "/referee",
-    label: "Dashboard",
+    key: "jockey-invitations",
+    to: "/jockey/invitations",
+    label: "Invitations",
   },
-  {
-    key: "races",
-    to: "/referee/races",
-    label: "Races",
-  },
-  {
-    key: "reports",
-    to: "/referee/reports",
-    label: "Reports",
-  },
+  { key: "jockey-schedule", to: "/jockey/schedule", label: "My race schedule" },
 ];
 
 function AdminUsersPage() {
   return (
     <AdminLayout>
       <UserManagement />
+      <JockeyLicenseManagement />
     </AdminLayout>
   );
 }
@@ -59,6 +77,8 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
       <Route path="/oauth-success" element={<OAuthSuccess />} />
 
       <Route element={<ProtectedRoute />}>
@@ -66,9 +86,39 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
-        <Route path="/admin" element={<AdminUsersPage />} />
-        <Route path="/admin/dashboard" element={<AdminUsersPage />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route
+          path="/admin"
+          element={
+            <AdminLayout>
+              <UserManagement />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <AdminLayout>
+              <UserManagement />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <AdminLayout>
+              <UserManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/jockey-license"
+          element={
+            <AdminLayout>
+              <JockeyLicenseManagement />
+            </AdminLayout>
+          }
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Horse Owner"]} />}>
@@ -84,7 +134,16 @@ export default function AppRoutes() {
         >
           <Route path="owner" element={<OwnerDashboard />} />
           <Route path="owner/horses" element={<OwnerHorses />} />
-          <Route path="owner/horses/:id" element={<OwnerHorseDetail />} />
+          <Route
+            path="owner/horses/register"
+            element={<OwnerHorseRegister />}
+          />
+          <Route
+            path="owner/jockey-races"
+            element={<OwnerJockeyRaceWorkspace />}
+          />
+          <Route path="owner/tournaments" element={<OwnerTournaments />} />
+          <Route path="owner/race-results" element={<OwnerRaceResults />} />
         </Route>
       </Route>
 
@@ -100,9 +159,31 @@ export default function AppRoutes() {
           }
         >
           <Route path="referee" element={<RefereeDashboard />} />
-          <Route path="referee/races" element={<RefereeRaces />} />
-          <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
-          <Route path="referee/reports" element={<RefereeReports />} />
+
+          <Route
+            path="referee/tournaments/:id"
+            element={<RefereeTournamentDetail />}
+          />
+
+          <Route
+            path="referee/races/:id"
+            element={<RefereeRaceDetail />}
+          />
+
+          <Route
+            path="referee/horses/:id"
+            element={<RefereeHorseDetail />}
+          />
+
+          <Route
+            path="referee/jockeys/:id"
+            element={<RefereeJockeyDetail />}
+          />
+
+          <Route
+            path="referee/owners/:id"
+            element={<RefereeOwnerDetail />}
+          />
         </Route>
       </Route>
 
@@ -114,10 +195,23 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
-        <Route path="/jockey" element={<RoleHome allowedRole="Jockey" />} />
+        <Route
+          element={
+            <RoleLayout
+              role="Jockey"
+              title="Jockey workspace"
+              subtitle="Manage invitations, assignments, and race performance"
+              navItems={JOCKEY_NAV}
+            />
+          }
+        >
+          <Route path="/jockey" element={<JockeyDashboard />} />
+          <Route path="/jockey/invitations" element={<JockeyInvitations />} />
+          <Route path="/jockey/schedule" element={<JockeyRaceSchedule />} />
+        </Route>
         <Route path="/jockey/profile" element={<JockeyProfile />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
 }

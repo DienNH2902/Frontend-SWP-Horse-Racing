@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
+import { getRoleHomePath } from "../utils/roles";
 import { clearAuthSession, getAccessToken, getAuthSession } from "../utils/storage";
 
 function Icon({ name, size = 24 }) {
@@ -116,6 +117,13 @@ function Icon({ name, size = 24 }) {
         <rect x="14" y="3" width="7" height="5" rx="1" />
         <rect x="14" y="12" width="7" height="9" rx="1" />
         <rect x="3" y="15" width="7" height="6" rx="1" />
+      </>
+    ),
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+        <path d="M10 20v-6h4v6" />
       </>
     ),
   };
@@ -245,9 +253,15 @@ function Home() {
     pickFirstValue(currentUser, ["role", "roleName"]) ||
     pickFirstValue(tokenClaims, ["role", "roleName", "roles", "authorities"]) ||
     "";
+  const primaryRole = Array.isArray(accountRole) ? accountRole[0] : accountRole;
+  const dashboardPath = getRoleHomePath(primaryRole);
   const isAdmin = Array.isArray(accountRole)
     ? accountRole.some((role) => String(role).toLowerCase().includes("admin"))
     : String(accountRole).toLowerCase().includes("admin");
+
+  if (!authSession) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <main className="home-page">
@@ -1082,7 +1096,7 @@ function Home() {
       <header className="home-nav">
         <div className="home-container home-nav-inner">
           <a className="home-brand" href="#top" aria-label="GoldenHoof home">
-            <img className="home-brand-logo" src="/navbar-logo.png" alt="" />
+            <img className="home-brand-logo" src="/goldenhoof-logo.png" alt="" />
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
@@ -1097,56 +1111,47 @@ function Home() {
             <button className="home-icon-btn" type="button" aria-label="Search">
               <Icon name="search" size={24} />
             </button>
-            {authSession ? (
-              <div className="account-menu">
-                <button
-                  className={`home-btn account-trigger ${
-                    isAccountMenuOpen ? "account-trigger-open" : ""
-                  }`}
-                  type="button"
-                  aria-expanded={isAccountMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => setIsAccountMenuOpen((current) => !current)}
-                >
-                  <Icon name="user" size={20} />
-                  <span className="account-trigger-name">{accountName}</span>
-                  <Icon name="chevron" size={18} />
-                </button>
+            <div className="account-menu">
+              <button
+                className={`home-btn account-trigger ${
+                  isAccountMenuOpen ? "account-trigger-open" : ""
+                }`}
+                type="button"
+                aria-expanded={isAccountMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setIsAccountMenuOpen((current) => !current)}
+              >
+                <Icon name="user" size={20} />
+                <span className="account-trigger-name">{accountName}</span>
+                <Icon name="chevron" size={18} />
+              </button>
 
-                {isAccountMenuOpen && (
-                  <div className="account-dropdown" role="menu">
-                    {isAdmin && (
-                      <Link className="account-menu-item" role="menuitem" to="/admin/dashboard">
-                        <Icon name="dashboard" size={18} />
-                        <span>Dashboard</span>
-                      </Link>
-                    )}
-                    <Link className="account-menu-item" role="menuitem" to="/profile">
-                      <Icon name="user" size={18} />
-                      <span>Profile</span>
-                    </Link>
-                    <button
-                      className="account-menu-item account-menu-logout"
-                      type="button"
-                      role="menuitem"
-                      onClick={handleLogout}
-                    >
-                      <Icon name="logout" size={18} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <Link className="home-btn" to="/login">
-                  Log in
-                </Link>
-                <Link className="home-btn home-btn-primary" to="/register">
-                  Sign up
-                </Link>
-              </>
-            )}
+              {isAccountMenuOpen && (
+                <div className="account-dropdown" role="menu">
+                  <Link
+                    className="account-menu-item"
+                    role="menuitem"
+                    to={isAdmin ? "/admin/dashboard" : dashboardPath}
+                  >
+                    <Icon name="dashboard" size={18} />
+                    <span>Dashboard</span>
+                  </Link>
+                  <Link className="account-menu-item" role="menuitem" to="/profile">
+                    <Icon name="user" size={18} />
+                    <span>Profile</span>
+                  </Link>
+                  <button
+                    className="account-menu-item account-menu-logout"
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    <Icon name="logout" size={18} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1397,7 +1402,7 @@ function Home() {
         <div className="home-container footer-grid">
           <div>
             <a className="home-footer-brand" href="#top">
-              <Icon name="logo" size={32} />
+              <img className="home-footer-brand-logo" src="/goldenhoof-logo.png" alt="" />
               <span>GoldenHoof</span>
             </a>
             <p>

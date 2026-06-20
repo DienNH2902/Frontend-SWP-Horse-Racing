@@ -1,182 +1,292 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Card, Col, Empty, Row, Skeleton, Space, Statistic, Table, Tag, Typography } from "antd";
+import {
+  Alert,
+  Card,
+  Col,
+  Empty,
+  Row,
+  Skeleton,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+  Typography,
+  Button,
+} from "antd";
+import {
+  TrophyOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FlagOutlined,
+} from "@ant-design/icons";
 import { Link } from "react-router-dom";
-const mockRaces = [
-  {
-    id: 1,
-    code: "RC001",
-    name: "Golden Cup",
-    track: "Track A",
-    time: "09:00",
-    status: "Live",
-    entrants: [1, 2, 3],
-  },
-];
-
-const mockHorses = [
-  { id: 1, name: "Thunder" },
-  { id: 2, name: "Storm" },
-];
-
-const mockOwners = [
-  { id: 1, name: "Owner A" },
-  { id: 2, name: "Owner B" },
-];
+import { getMyRaces } from "../../api/services/race.service";
+import { getRaceCourseById }
+  from "../../api/services/race-course.service";
 
 function statusColor(status) {
-  const value = String(status || "").toLowerCase();
+  switch (status) {
+    case "Preparing":
+      return "blue";
 
-  if (value.includes("live")) return "red";
-  if (value.includes("finished") || value.includes("official")) return "green";
-  if (value.includes("cancel")) return "default";
-  return "blue";
-}
+    case "Ready":
+      return "gold";
 
-function collectionFrom(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.content)) return payload.content;
-  return [];
+    case "InProgress":
+      return "processing";
+
+    case "Finished":
+      return "green";
+
+    case "Canceled":
+      return "red";
+
+    default:
+      return "default";
+  }
 }
 
 export default function RefereeDashboard() {
   const [races, setRaces] = useState([]);
-  const [horses, setHorses] = useState([]);
-  const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      setLoading(true);
-      setErrorMessage("");
-
-      setRaces(mockRaces);
-      setHorses(mockHorses);
-      setOwners(mockOwners);
-      setLoading(false);
-
-      if (!mounted) return;
-
-      if (raceResult.status === "fulfilled") setRaces(raceResult.value);
-      if (horseResult.status === "fulfilled") setHorses(collectionFrom(horseResult.value));
-      if (ownerResult.status === "fulfilled") setOwners(collectionFrom(ownerResult.value));
-
-      const rejected = [raceResult, horseResult, ownerResult].find(
-        (result) => result.status === "rejected",
-      );
-      if (rejected) {
-        setErrorMessage(rejected.reason?.message || "Some referee dashboard data could not be loaded.");
-      }
-
-      setLoading(false);
-    }
-
-    load();
-    return () => {
-      mounted = false;
-    };
+    loadRaces();
   }, []);
 
-  const stats = useMemo(() => {
-    const live = races.filter((race) => String(race.status).toLowerCase().includes("live")).length;
-    const waitingResult = races.filter((race) => {
-      const status = String(race.status).toLowerCase();
-      return status.includes("live") || status.includes("scheduled");
-    }).length;
-    const finished = races.filter((race) => String(race.status).toLowerCase().includes("finished")).length;
+  useEffect(() => {
+    console.log("RACES STATE:", races);
 
-    return { live, waitingResult, finished };
+    if (races.length > 0) {
+      console.log(
+        "FIRST RACE:",
+        races[0]
+      );
+    }
   }, [races]);
 
-  const nextRaces = useMemo(() => races.slice(0, 5), [races]);
+  async function loadRaces() {
+    try {
+      setLoading(true);
+
+      const data = await getMyRaces();
+
+      const raceList = Array.isArray(data)
+        ? data
+        : data?.data || [];
+
+      const racesWithCourse =
+        await Promise.all(
+          raceList.map(async (race) => {
+            try {
+              const raceCourse =
+                await getRaceCourseById(
+                  race.raceCourseId
+                );
+
+              return {
+                ...race,
+                raceCourse,
+              };
+            } catch {
+              return race;
+            }
+          })
+        );
+
+      setRaces(racesWithCourse);
+    } catch (error) {
+      console.error(error);
+
+      setErrorMessage(
+        error.response?.data?.message ||
+        error.message ||
+        "Cannot load assigned races."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const stats = useMemo(() => ({
+    scheduled: races.filter(
+      race => race.status === "Scheduled"
+    ).length,
+
+    ready: races.filter(
+      race => race.status === "Ready"
+    ).length,
+
+    finished: races.filter(
+      race => race.status === "Finished"
+    ).length,
+
+    inProgress: races.filter(
+      race => race.status === "InProgress"
+    ).length,
+  }), [races]);
 
   const columns = [
     {
       title: "Race",
-      dataIndex: "name",
-      render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          <Link to={`/referee/races/${record.id}`}>{value}</Link>
-          <Typography.Text type="secondary">{record.code}</Typography.Text>
-        </Space>
+      render: (_, record) =>
+        record.name ||
+        `Race #${record.id}`,
+    },
+
+    {
+      title: "Tournament",
+      render: (_, record) =>
+        record.tournamentTitle ||
+        record.tournament?.name ||
+        "-",
+    },
+
+    {
+      title: "Round",
+      render: (_, record) =>
+        record.roundNumber ||
+        record.round ||
+        "-",
+    },
+
+    {
+      title: "Race Course",
+      render: (_, record) => (
+        <>
+          {console.log(record)}
+          {record.raceCourse?.name ||
+            record.raceCourseName ||
+            record.courseName ||
+            record.raceCourseId ||
+            "-"}
+        </>
       ),
     },
-    { title: "Track", dataIndex: "track", responsive: ["md"] },
-    { title: "Time", dataIndex: "time" },
+
     {
       title: "Status",
       dataIndex: "status",
-      render: (value) => <Tag color={statusColor(value)}>{value}</Tag>,
+      render: (status) => (
+        <Tag color={statusColor(status)}>
+          {status}
+        </Tag>
+      ),
     },
+
     {
-      title: "Entrants",
-      dataIndex: "entrants",
-      render: (value) => value?.length || 0,
-      responsive: ["lg"],
+      title: "Action",
+      render: (_, record) => (
+        <Space>
+          <Link
+            to={`/referee/races/${record._id}`}
+          >
+            <Button type="primary">
+              View
+            </Button>
+          </Link>
+        </Space>
+      ),
     },
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
+    <Space
+      direction="vertical"
+      size={16}
+      style={{ width: "100%" }}
+    >
+      {errorMessage && (
+        <Alert
+          type="error"
+          showIcon
+          message={errorMessage}
+        />
+      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} xl={6}>
           <Card>
-            <Statistic title="Races assigned" value={races.length} />
+            <Statistic
+              title="Assigned Races"
+              value={races.length}
+              prefix={<TrophyOutlined />}
+            />
           </Card>
         </Col>
+
         <Col xs={24} sm={12} xl={6}>
           <Card>
-            <Statistic title="Live races" value={stats.live} />
+            <Statistic
+              title="Preparing"
+              value={stats.preparing}
+              prefix={<ClockCircleOutlined />}
+            />
           </Card>
         </Col>
+
         <Col xs={24} sm={12} xl={6}>
           <Card>
-            <Statistic title="Awaiting result" value={stats.waitingResult} />
+            <Statistic
+              title="Ready"
+              value={stats.ready}
+              prefix={<FlagOutlined />}
+            />
           </Card>
         </Col>
+
         <Col xs={24} sm={12} xl={6}>
           <Card>
-            <Statistic title="Registered horses" value={horses.length} />
+            <Statistic
+              title="Finished"
+              value={stats.finished}
+              prefix={<CheckCircleOutlined />}
+            />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
-          <Card title="Live and upcoming races" extra={<Link to="/referee/races">View all</Link>}>
-            {loading ? (
-              <Skeleton active paragraph={{ rows: 5 }} />
-            ) : nextRaces.length === 0 ? (
-              <Empty description="No races available" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <Table
-                rowKey="id"
-                columns={columns}
-                dataSource={nextRaces}
-                pagination={false}
-              />
-            )}
-          </Card>
-        </Col>
+      <Card
+        title="My Assigned Races"
+        extra={
+          <Typography.Text type="secondary">
+            Manage your assigned races
+          </Typography.Text>
+        }
+      >
+        {loading ? (
+          <Skeleton
+            active
+            paragraph={{ rows: 8 }}
+          />
+        ) : races.length === 0 ? (
+          <Empty description="No races assigned" />
+        ) : (
+          <Table
+            rowKey="_id"
+            columns={columns}
+            dataSource={races}
+            pagination={{
+              pageSize: 5,
+            }}
+          />
+        )}
+      </Card>
 
-        <Col xs={24} xl={8}>
-          <Card title="Referee workload">
-            <Space direction="vertical" size={12} style={{ width: "100%" }}>
-              <Statistic title="Finished races" value={stats.finished} />
-              <Statistic title="Horse owners" value={owners.length} />
-              <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                Open a race to review entrants and submit the official result.
-              </Typography.Paragraph>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+      <Card title="Referee Workspace">
+        <Typography.Paragraph
+          type="secondary"
+          style={{ marginBottom: 0 }}
+        >
+          Review your assigned races,
+          configure race conditions,
+          confirm readiness,
+          run simulations,
+          and submit final reports after
+          each race.
+        </Typography.Paragraph>
+      </Card>
     </Space>
   );
 }

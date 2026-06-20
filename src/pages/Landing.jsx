@@ -271,7 +271,7 @@ export default function Landing() {
       <header className="landing-nav">
         <div className="landing-container landing-nav-inner">
           <Link className="landing-brand" to="/">
-            <Icon name="logo" size={34} />
+            <img className="landing-brand-logo" src="/goldenhoof-logo.png" alt="" />
             <span>GoldenHoof</span>
           </Link>
 
