@@ -170,6 +170,15 @@ function AdminLayout({ children }) {
 
           <Link
             className={`admin-nav-item ${
+              isActive("/admin/jockey-license") ? "active" : ""
+            }`}
+            to="/admin/jockey-license"
+          >
+            Jockey License Management
+          </Link>
+
+          <Link
+            className={`admin-nav-item ${
               isActive("/admin/tournaments") ? "active" : ""
             }`}
             to="/admin/tournaments"
