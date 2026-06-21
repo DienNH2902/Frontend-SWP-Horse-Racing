@@ -70,6 +70,15 @@ function rewardTypeColor(type) {
   return "cyan";
 }
 
+function rewardTypeLabel(type) {
+  const normalized = String(type).toUpperCase();
+  if (normalized === "POINTS") return "POINTS";
+  if (normalized === "AVATAR_FRAME") return "AVATAR FRAME";
+  if (normalized === "BACKGROUND") return "BACKGROUND";
+  if (normalized === "INSURANCE_CARD") return "INSURANCE CARD";
+  return type;
+}
+
 function RewardManagement() {
   const [form] = Form.useForm();
   const [rewards, setRewards] = useState([]);
@@ -86,9 +95,7 @@ function RewardManagement() {
       const response = await getRewards();
       setRewards(resolveList(response).map(normalizeReward));
     } catch (error) {
-      message.error(
-        error?.message || "Không thể tải danh sách cấu hình phần thưởng",
-      );
+      message.error(error?.message || "Failed to load reward configurations");
     } finally {
       setIsLoading(false);
     }
@@ -144,16 +151,16 @@ function RewardManagement() {
 
       if (editingReward) {
         await updateReward(editingReward.id, payload);
-        message.success("Cập nhật phần thưởng thành công");
+        message.success("Reward updated successfully");
       } else {
         await createReward(payload);
-        message.success("Tạo mới phần thưởng thành công");
+        message.success("Reward created successfully");
       }
 
       setIsModalOpen(false);
       loadRewards();
     } catch (error) {
-      message.error(error?.message || "Thao tác thất bại");
+      message.error(error?.message || "Operation failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -162,54 +169,56 @@ function RewardManagement() {
   async function handleDelete(id) {
     try {
       await deleteReward(id);
-      message.success("Xóa cấu hình phần thưởng thành công");
+      message.success("Reward configuration deleted successfully");
       setRewards((current) => current.filter((item) => item.id !== id));
     } catch (error) {
-      message.error(error?.message || "Không thể xóa phần thưởng");
+      message.error(error?.message || "Failed to delete reward");
     }
   }
 
   const columns = useMemo(
     () => [
       {
-        title: "Tên phần thưởng",
+        title: "Reward Title",
         dataIndex: "title",
         fixed: "left",
         width: 220,
         render: (value) => <Text strong>{value}</Text>,
       },
       {
-        title: "Loại điều kiện",
+        title: "Condition Type",
         dataIndex: "conditionType",
         width: 140,
         render: (type) => <Tag color={conditionColor(type)}>{type}</Tag>,
       },
       {
-        title: "Giá trị yêu cầu",
+        title: "Required Value (Points)",
         dataIndex: "requiredValue",
         width: 140,
-        render: (val) => <Text>{val.toLocaleString()}đ</Text>,
+        render: (val) => <Text>{val.toLocaleString()}</Text>,
       },
       {
-        title: "Loại phần quà",
+        title: "Reward Type",
         dataIndex: "rewardType",
-        width: 160,
-        render: (type) => <Tag color={rewardTypeColor(type)}>{type}</Tag>,
+        width: 180,
+        render: (type) => (
+          <Tag color={rewardTypeColor(type)}>{rewardTypeLabel(type)}</Tag>
+        ),
       },
       {
-        title: "Giá trị quà nhận",
+        title: "Reward Value",
         dataIndex: "rewardValue",
         width: 240,
         ellipsis: true,
       },
       {
-        title: "Mô tả cơ chế",
+        title: "Mechanism Description",
         dataIndex: "description",
         width: 280,
         ellipsis: true,
       },
       {
-        title: "Hành động quản trị",
+        title: "Actions",
         key: "actions",
         fixed: "right",
         width: 160,
@@ -223,10 +232,10 @@ function RewardManagement() {
               Edit
             </Button>
             <Popconfirm
-              title="Xóa phần thưởng này?"
-              description="Hành động này sẽ loại bỏ cấu hình khỏi hệ thống."
-              okText="Xóa"
-              cancelText="Hủy"
+              title="Delete this reward?"
+              description="This action will remove the configuration from the system."
+              okText="Delete"
+              cancelText="Cancel"
               onConfirm={() => handleDelete(record.id)}
             >
               <Button danger size="small">
@@ -327,31 +336,29 @@ function RewardManagement() {
         </div>
         <div className="user-management-actions">
           <Select
-            placeholder="Lọc theo điều kiện"
+            placeholder="Filter by condition"
             allowClear
             style={{ width: 170 }}
             onChange={(val) => setSelectedCondition(val)}
           >
-            <Select.Option value="MILESTONE">
-              MILESTONE (Mốc điểm)
-            </Select.Option>
-            <Select.Option value="SHOP">SHOP (Cửa hàng)</Select.Option>
+            <Select.Option value="MILESTONE">MILESTONE</Select.Option>
+            <Select.Option value="SHOP">SHOP</Select.Option>
           </Select>
 
           <Select
-            placeholder="Lọc theo loại quà"
+            placeholder="Filter by reward type"
             allowClear
             style={{ width: 170 }}
             onChange={(val) => setSelectedRewardType(val)}
           >
             <Select.Option value="POINTS">POINTS</Select.Option>
-            <Select.Option value="AVATAR_FRAME">AVATAR_FRAME</Select.Option>
+            <Select.Option value="AVATAR_FRAME">AVATAR FRAME</Select.Option>
             <Select.Option value="BACKGROUND">BACKGROUND</Select.Option>
-            <Select.Option value="INSURANCE_CARD">INSURANCE_CARD</Select.Option>
+            <Select.Option value="INSURANCE_CARD">INSURANCE CARD</Select.Option>
           </Select>
 
           <Button type="primary" onClick={openCreateModal}>
-            Tạo quà tặng mới
+            Create New Reward
           </Button>
           <Button className="user-management-refresh" onClick={loadRewards}>
             Refresh
@@ -368,7 +375,7 @@ function RewardManagement() {
           pagination={{
             pageSize: 10,
             showSizeChanger: false,
-            showTotal: (total) => `${total} cấu hình vật phẩm`,
+            showTotal: (total) => `${total} reward configurations`,
           }}
           scroll={{ x: 1300 }}
         />
@@ -376,93 +383,93 @@ function RewardManagement() {
 
       <Modal
         title={
-          editingReward
-            ? "Chỉnh sửa cấu hình phần thưởng"
-            : "Tạo mới phần thưởng hệ thống"
+          editingReward ? "Edit Reward Configuration" : "Create System Reward"
         }
         open={isModalOpen}
-        okText={editingReward ? "Cập nhật" : "Tạo mới"}
-        cancelText="Hủy"
+        okText={editingReward ? "Update" : "Create"}
+        cancelText="Cancel"
         confirmLoading={isSubmitting}
         onCancel={() => setIsModalOpen(false)}
         onOk={handleSave}
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            label="Tên phần thưởng / vật phẩm"
+            label="Reward / Item Title"
             name="title"
             rules={[
-              { required: true, message: "Vui lòng nhập tên phần thưởng" },
+              { required: true, message: "Please input the reward title" },
             ]}
           >
-            <Input placeholder="Ví dụ: Thẻ Bảo Hiểm Cược Thua 2" />
+            <Input placeholder="e.g., Bet Loss Insurance Card Level 2" />
           </Form.Item>
 
           <Form.Item
-            label="Loại điều kiện"
+            label="Condition Type"
             name="conditionType"
             rules={[
-              { required: true, message: "Vui lòng chọn loại điều kiện" },
+              { required: true, message: "Please select the condition type" },
             ]}
           >
-            <Select placeholder="Chọn loại điều kiện">
+            <Select placeholder="Select condition type">
               <Select.Option value="MILESTONE">
-                MILESTONE (Đạt mốc tổng tích lũy)
+                MILESTONE (Reach cumulative points milestone)
               </Select.Option>
               <Select.Option value="SHOP">
-                SHOP (Mua bằng ví pointBalance)
+                SHOP (Purchase using point balance wallet)
               </Select.Option>
             </Select>
           </Form.Item>
 
           <Form.Item
-            label="Giá trị yêu cầu (Mốc điểm / Giá tiền ví)"
+            label="Required Value (Points / Wallet Price)"
             name="requiredValue"
             rules={[
               {
                 required: true,
-                message: "Vui lòng nhập giá trị tích lũy yêu cầu",
+                message: "Please input the required value",
               },
             ]}
           >
-            <Input type="number" min={0} placeholder="Ví dụ: 500" />
+            <Input type="number" min={0} placeholder="e.g., 500" />
           </Form.Item>
 
           <Form.Item
-            label="Thể loại phần quà"
+            label="Reward Category Type"
             name="rewardType"
-            rules={[{ required: true, message: "Vui lòng chọn thể loại quà" }]}
+            rules={[
+              { required: true, message: "Please select the reward type" },
+            ]}
           >
-            <Select placeholder="Chọn thể loại quà tác động">
+            <Select placeholder="Select effect reward type">
               <Select.Option value="POINTS">
-                POINTS (Cộng điểm trực tiếp)
+                POINTS (Directly add points)
               </Select.Option>
               <Select.Option value="AVATAR_FRAME">
-                AVATAR_FRAME (Khung ảnh)
+                AVATAR_FRAME (Avatar asset frame)
               </Select.Option>
               <Select.Option value="BACKGROUND">
-                BACKGROUND (Hình nền)
+                BACKGROUND (Profile wallpaper background)
               </Select.Option>
               <Select.Option value="INSURANCE_CARD">
-                INSURANCE_CARD (Thẻ bảo hiểm cược)
+                INSURANCE_CARD (Bet safeguard insurance card)
               </Select.Option>
             </Select>
           </Form.Item>
 
           <Form.Item
-            label="Giá trị quà nhận (Số điểm cộng / Đường dẫn URL hình ảnh / Mã cấu hình)"
+            label="Reward Received Value (Added Points / Image Asset Link URL / Config Code)"
             name="rewardValue"
             rules={[
-              { required: true, message: "Vui lòng nhập giá trị của quà nhận" },
+              { required: true, message: "Please input the reward value" },
             ]}
           >
-            <Input placeholder="Ví dụ: INSURANCE_LVL1 hoặc URL khung ảnh" />
+            <Input placeholder="e.g., INSURANCE_LVL1 or avatar frame asset URL" />
           </Form.Item>
 
-          <Form.Item label="Mô tả chi tiết vật phẩm" name="description">
+          <Form.Item label="Detailed Item Description" name="description">
             <Input.TextArea
               rows={3}
-              placeholder="Nhập mô tả tác dụng của vật phẩm..."
+              placeholder="Provide item effects or mechanical context details..."
             />
           </Form.Item>
         </Form>
