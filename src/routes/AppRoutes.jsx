@@ -30,6 +30,7 @@ import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
+import RewardManagement from "../pages/admin/RewardManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -135,6 +136,33 @@ export default function AppRoutes() {
             </AdminLayout>
           }
         />
+
+        <Route
+          path="/admin/reward"
+          element={
+            <AdminLayout>
+              <RewardManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/tournaments"
+          element={
+            <AdminLayout>
+              <TournamentManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/registrations"
+          element={
+            <AdminLayout>
+              <RegistrationManagement />
+            </AdminLayout>
+          }
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Horse Owner"]} />}>
@@ -181,25 +209,13 @@ export default function AppRoutes() {
             element={<RefereeTournamentDetail />}
           />
 
-          <Route
-            path="referee/races/:id"
-            element={<RefereeRaceDetail />}
-          />
+          <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
 
-          <Route
-            path="referee/horses/:id"
-            element={<RefereeHorseDetail />}
-          />
+          <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
 
-          <Route
-            path="referee/jockeys/:id"
-            element={<RefereeJockeyDetail />}
-          />
+          <Route path="referee/jockeys/:id" element={<RefereeJockeyDetail />} />
 
-          <Route
-            path="referee/owners/:id"
-            element={<RefereeOwnerDetail />}
-          />
+          <Route path="referee/owners/:id" element={<RefereeOwnerDetail />} />
         </Route>
       </Route>
 
