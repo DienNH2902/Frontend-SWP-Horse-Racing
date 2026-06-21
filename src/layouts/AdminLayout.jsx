@@ -179,6 +179,15 @@ function AdminLayout({ children }) {
 
           <Link
             className={`admin-nav-item ${
+              isActive("/admin/reward") ? "active" : ""
+            }`}
+            to="/admin/reward"
+          >
+            Reward Management
+          </Link>
+
+          <Link
+            className={`admin-nav-item ${
               isActive("/admin/tournaments") ? "active" : ""
             }`}
             to="/admin/tournaments"

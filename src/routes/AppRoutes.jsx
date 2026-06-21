@@ -30,6 +30,7 @@ import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
+import RewardManagement from "../pages/admin/RewardManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -132,6 +133,15 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <JockeyLicenseManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/reward"
+          element={
+            <AdminLayout>
+              <RewardManagement />
             </AdminLayout>
           }
         />
