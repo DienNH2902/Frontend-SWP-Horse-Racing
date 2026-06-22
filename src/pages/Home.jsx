@@ -1096,11 +1096,24 @@ function Home() {
       <header className="home-nav">
         <div className="home-container home-nav-inner">
           <a className="home-brand" href="#top" aria-label="GoldenHoof home">
-            <img className="home-brand-logo" src="/goldenhoof-logo.png" alt="" />
+            <img
+              className="home-brand-logo"
+              src="/goldenhoof-logo.png"
+              alt=""
+            />
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {["Races", "Horses", "Jockeys", "Results", "Rankings", "Predictions", "News", "About"].map((item) => (
+            {[
+              "Races",
+              "Horses",
+              "Jockeys",
+              "Results",
+              "Rankings",
+              "Predictions",
+              "News",
+              "About",
+            ].map((item) => (
               <a href={`#${item.toLowerCase()}`} key={item}>
                 {item}
               </a>
@@ -1136,9 +1149,21 @@ function Home() {
                     <Icon name="dashboard" size={18} />
                     <span>Dashboard</span>
                   </Link>
-                  <Link className="account-menu-item" role="menuitem" to="/profile">
+                  <Link
+                    className="account-menu-item"
+                    role="menuitem"
+                    to="/profile"
+                  >
                     <Icon name="user" size={18} />
                     <span>Profile</span>
+                  </Link>
+                  <Link
+                    className="account-menu-item"
+                    role="menuitem"
+                    to="/spectator/points-transaction"
+                  >
+                    <Icon name="user" size={18} />
+                    <span>Transaction</span>
                   </Link>
                   <button
                     className="account-menu-item account-menu-logout"
@@ -1204,7 +1229,9 @@ function Home() {
                 {homeData.races.map((race) => (
                   <article className="race-card" key={race.id}>
                     <div className="race-meta">
-                      <span className={`pill ${race.status ? "pill-live" : ""}`}>
+                      <span
+                        className={`pill ${race.status ? "pill-live" : ""}`}
+                      >
                         {race.status || race.time}
                       </span>
                       <span>Race {race.id}</span>
@@ -1221,7 +1248,9 @@ function Home() {
                         {race.surface}
                       </span>
                     </div>
-                    {race.status && <img src={race.image} alt={`${race.name} race`} />}
+                    {race.status && (
+                      <img src={race.image} alt={`${race.name} race`} />
+                    )}
                     <button className="card-action" type="button">
                       {race.status ? "Watch Live" : "View Details"}
                     </button>
@@ -1292,7 +1321,11 @@ function Home() {
           <div className="lower-grid">
             <section className="panel" id="rankings">
               <SectionTitle title="Leaderboard" />
-              <div className="tabs" role="tablist" aria-label="Leaderboard views">
+              <div
+                className="tabs"
+                role="tablist"
+                aria-label="Leaderboard views"
+              >
                 <button type="button">Horses</button>
                 <button type="button">Jockeys</button>
                 <button type="button">Owners</button>
@@ -1314,7 +1347,11 @@ function Home() {
                       <td>{row.id}</td>
                       <td>
                         <span className="horse-name-cell">
-                          <img className="mini-thumb" src="/goldenhoof-hero.png" alt="" />
+                          <img
+                            className="mini-thumb"
+                            src="/goldenhoof-hero.png"
+                            alt=""
+                          />
                           {row.horse}
                         </span>
                       </td>
@@ -1370,8 +1407,8 @@ function Home() {
             <div>
               <h2>Make Your Predictions</h2>
               <p>
-                Predict race winners and compete with fans around the world.
-                Win points and unlock exclusive rewards.
+                Predict race winners and compete with fans around the world. Win
+                points and unlock exclusive rewards.
               </p>
               <a className="home-btn home-btn-primary" href="#predictions">
                 Start Predicting
@@ -1402,7 +1439,11 @@ function Home() {
         <div className="home-container footer-grid">
           <div>
             <a className="home-footer-brand" href="#top">
-              <img className="home-footer-brand-logo" src="/goldenhoof-logo.png" alt="" />
+              <img
+                className="home-footer-brand-logo"
+                src="/goldenhoof-logo.png"
+                alt=""
+              />
               <span>GoldenHoof</span>
             </a>
             <p>
@@ -1444,7 +1485,11 @@ function Home() {
             <h3>Stay Updated</h3>
             <p>Subscribe to our newsletter</p>
             <div className="newsletter">
-              <input type="email" placeholder="Enter your email" aria-label="Email address" />
+              <input
+                type="email"
+                placeholder="Enter your email"
+                aria-label="Email address"
+              />
               <button type="button" aria-label="Subscribe">
                 <Icon name="mail" size={18} />
               </button>
