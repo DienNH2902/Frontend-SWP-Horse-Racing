@@ -8,13 +8,19 @@ import {
   message,
   Spin,
   Empty,
+  Space,
 } from "antd";
 import {
   getRewardsDashboard,
   getMyAssets,
   claimReward,
 } from "../../api/services/reward.service";
-import { ArrowLeftOutlined, LockOutlined } from "@ant-design/icons";
+import { getProfile } from "../../api/services/auth.service";
+import {
+  ArrowLeftOutlined,
+  LockOutlined,
+  WalletOutlined,
+} from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 const { Text, Title, Paragraph } = Typography;
@@ -24,18 +30,23 @@ export default function SpectatorRewards() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dashboardItems, setDashboardItems] = useState([]);
   const [myAssets, setMyAssets] = useState(null);
+  const [userBalance, setUserBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingId, setIsSubmittingId] = useState(null);
 
   async function loadInitialData() {
     setIsLoading(true);
     try {
-      const [dashboardData, assetsData] = await Promise.all([
+      const [dashboardData, assetsData, profileData] = await Promise.all([
         getRewardsDashboard(),
         getMyAssets(),
+        getProfile(),
       ]);
       setDashboardItems(Array.isArray(dashboardData) ? dashboardData : []);
       setMyAssets(assetsData);
+      setUserBalance(
+        profileData?.pointBalance || profileData?.pointBalance || 0,
+      );
     } catch (error) {
       message.error(error?.message || "Failed to load rewards data");
     } finally {
@@ -47,16 +58,20 @@ export default function SpectatorRewards() {
     setIsSubmittingId(rewardId);
     try {
       await claimReward(rewardId);
-      message.success("Item claimed successfully");
+      message.success("Item processed successfully");
 
-      const [dashboardData, assetsData] = await Promise.all([
+      const [dashboardData, assetsData, profileData] = await Promise.all([
         getRewardsDashboard(),
         getMyAssets(),
+        getProfile(),
       ]);
       setDashboardItems(Array.isArray(dashboardData) ? dashboardData : []);
       setMyAssets(assetsData);
+      setUserBalance(
+        profileData?.pointBalance || profileData?.pointBalance || 0,
+      );
     } catch (error) {
-      message.error(error?.message || "Failed to claim reward");
+      message.error(error?.message || "Failed to process reward");
     } finally {
       setIsSubmittingId(null);
     }
@@ -66,40 +81,43 @@ export default function SpectatorRewards() {
     loadInitialData();
   }, []);
 
-  function getConditionTag(item) {
+  function getConditionElement(item) {
     if (item.conditionType === "SHOP") {
       return (
-        <Tag
-          color="cyan"
-          style={{ fontSize: "13px", padding: "4px 10px", fontWeight: "700" }}
-        >
-          Shop Item
-        </Tag>
+        <div style={{ marginTop: "4px" }}>
+          <Tag
+            color="cyan"
+            style={{ fontSize: "13px", padding: "4px 10px", fontWeight: "700" }}
+          >
+            SHOP
+          </Tag>
+          <div style={{ marginTop: "6px" }}>
+            <Text
+              style={{ color: "#69f8dd", fontSize: "15px", fontWeight: "800" }}
+            >
+              Price: {item.requiredValue?.toLocaleString()} Points
+            </Text>
+          </div>
+        </div>
       );
     }
     return (
-      <Tag
-        color="gold"
-        style={{ fontSize: "13px", padding: "4px 10px", fontWeight: "700" }}
-      >
-        Milestone: {item.requiredValue} Points
-      </Tag>
+      <div style={{ marginTop: "4px" }}>
+        <Tag
+          color="gold"
+          style={{ fontSize: "13px", padding: "4px 10px", fontWeight: "700" }}
+        >
+          MILESTONE
+        </Tag>
+        <div style={{ marginTop: "6px" }}>
+          <Text
+            style={{ color: "#ffb936", fontSize: "15px", fontWeight: "800" }}
+          >
+            Requires: {item.requiredValue?.toLocaleString()} Points
+          </Text>
+        </div>
+      </div>
     );
-  }
-
-  function getRewardTypeLabel(type) {
-    switch (type) {
-      case "INSURANCE_CARD":
-        return "Insurance Card";
-      case "POINTS":
-        return "Bonus Points";
-      case "BACKGROUND":
-        return "Profile Background";
-      //   case "AVATAR_FRAME":
-      //     return "Avatar Frame";
-      default:
-        return type;
-    }
   }
 
   const insuranceCardImg =
@@ -121,8 +139,17 @@ export default function SpectatorRewards() {
           max-width: 1200px;
           margin: 0 auto;
         }
-        .rewards-header {
+        .rewards-header-wrapper {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 24px;
           margin-bottom: 40px;
+        }
+        .rewards-header {
+          flex: 1;
+          min-width: 300px;
         }
         .rewards-header h1.ant-typography {
           color: #69f8dd;
@@ -137,6 +164,35 @@ export default function SpectatorRewards() {
           line-height: 1.6;
           margin: 0;
           max-width: 800px;
+        }
+        
+        .balance-widget {
+          background: rgba(105, 248, 221, 0.08);
+          border: 2px solid rgba(105, 248, 221, 0.25);
+          border-radius: 12px;
+          padding: 16px 24px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+        .balance-icon {
+          color: #69f8dd;
+          font-size: 24px;
+        }
+        .balance-title {
+          color: #a3c2ba !important;
+          font-size: 13px !important;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin: 0 !important;
+          font-weight: 700;
+        }
+        .balance-amount {
+          color: #ffffff !important;
+          font-size: 24px !important;
+          font-weight: 950 !important;
+          margin: 0 !important;
         }
         
         /* Custom Ant Design Tabs Theme */
@@ -164,7 +220,7 @@ export default function SpectatorRewards() {
           border-radius: 2px;
         }
 
-        /* Grid Layout với chiều cao đồng đều cho các ô */
+        /* Grid Layout */
         .rewards-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -172,7 +228,7 @@ export default function SpectatorRewards() {
           align-items: stretch;
         }
 
-        /* Enhanced Reward Cards có cố định chiều cao tối thiểu và co dãn bằng nhau */
+        /* Enhanced Reward Cards */
         .reward-card {
           background: rgba(0, 68, 60, 0.8) !important;
           border: 2px solid rgba(105, 248, 221, 0.25) !important;
@@ -203,14 +259,14 @@ export default function SpectatorRewards() {
           display: flex;
           flex-direction: column;
           height: 100%;
-          min-height: 480px; /* Tăng min-height để chứa vừa phần media mới */
+          min-height: 520px;
         }
         .reward-meta-top {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
           gap: 16px;
-          margin-bottom: 16px;
+          margin-bottom: 8px;
         }
         .reward-title-container {
           display: flex;
@@ -227,22 +283,11 @@ export default function SpectatorRewards() {
           font-size: 22px !important;
           font-weight: 950 !important;
           margin: 0 !important;
-          height: 50px;
+          height: 54px;
           line-height: 1.3;
         }
-        .reward-type-tag {
-          background: rgba(105, 248, 221, 0.1);
-          border: 1px solid rgba(105, 248, 221, 0.4);
-          color: #69f8dd;
-          font-size: 12px;
-          text-transform: uppercase;
-          font-weight: 800;
-          padding: 3px 8px;
-          letter-spacing: 0.5px;
-          flex-shrink: 0;
-        }
 
-        /* Khu vực hiển thị media (ảnh hoặc text điểm số) */
+        /* Khu vực hiển thị media */
         .reward-media-display {
           width: 100%;
           height: 140px;
@@ -272,7 +317,7 @@ export default function SpectatorRewards() {
           color: #e2f1ec !important;
           font-size: 15px;
           line-height: 1.6;
-          margin-bottom: auto !important; /* Đẩy cụm action xuống đáy card */
+          margin-bottom: auto !important;
           padding-top: 8px;
           font-weight: 500;
           flex: 1;
@@ -332,7 +377,7 @@ export default function SpectatorRewards() {
           margin-bottom: 40px;
           padding: 28px;
         }
-          .vault-insurance-block {
+        .vault-insurance-block {
           display: flex;
           align-items: center;
           gap: 28px;
@@ -384,20 +429,11 @@ export default function SpectatorRewards() {
           border-radius: 6px;
           background: rgba(255, 255, 255, 0.03);
         }
-        .vault-stat-box {
-          display: inline-block;
-          background: rgba(105, 248, 221, 0.12);
-          border: 2px solid rgba(105, 248, 221, 0.3);
-          border-radius: 10px;
-          padding: 20px 36px;
-          text-align: center;
-        }
         .vault-card .ant-typography-secondary {
           color: #a3c2ba !important;
           font-size: 16px;
         }
 
-        /* Loading / Empty Overrides */
         .rewards-loading-container {
           display: flex;
           justify-content: center;
@@ -411,35 +447,49 @@ export default function SpectatorRewards() {
       `}</style>
 
       <div className="rewards-container">
-        <header className="rewards-header">
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/profile")}
-            style={{
-              color: "#69f8dd",
-              padding: 0,
-              marginBottom: "16px",
-              fontSize: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontWeight: "700",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "#86ffea")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "#69f8dd")}
-          >
-            Back to Profile
-          </Button>
-          <Title level={1}>Spectator Rewards</Title>
-          <Paragraph
-            className="reward-para"
-            style={{ color: "#cdf5ee", fontSize: "20px" }}
-          >
-            Claim unique profile assets, frames, and betting insurance using
-            your accumulated points and milestones.
-          </Paragraph>
-        </header>
+        <div className="rewards-header-wrapper">
+          <header className="rewards-header">
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate("/profile")}
+              style={{
+                color: "#69f8dd",
+                padding: 0,
+                marginBottom: "16px",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontWeight: "700",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#86ffea")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#69f8dd")}
+            >
+              Back to Profile
+            </Button>
+            <Title level={1}>Spectator Rewards</Title>
+            <Paragraph
+              className="reward-para"
+              style={{ color: "#cdf5ee", fontSize: "20px" }}
+            >
+              Claim unique profile assets, frames, and betting insurance using
+              your accumulated points and milestones.
+            </Paragraph>
+          </header>
+
+          <div className="balance-widget">
+            <WalletOutlined className="balance-icon" />
+            <div>
+              <Title level={5} className="balance-title">
+                Points Balance
+              </Title>
+              <Title level={3} className="balance-amount">
+                {userBalance?.toLocaleString()} POINTS
+              </Title>
+            </div>
+          </div>
+        </div>
 
         <Tabs
           className="rewards-tabs"
@@ -464,6 +514,7 @@ export default function SpectatorRewards() {
                 const isClaimed = item.isClaimed === true;
                 const isAvailable = item.isAvailable === true;
                 const isLocked = !isClaimed && !isAvailable;
+                const isShopItem = item.conditionType === "SHOP";
 
                 let cardClass = "reward-card";
                 if (isClaimed) cardClass += " reward-card-claimed";
@@ -482,13 +533,10 @@ export default function SpectatorRewards() {
                           {item.title}
                         </Title>
                       </div>
-                      {/* <Tag className="reward-type-tag">
-                            {getRewardTypeLabel(item.rewardType)}
-                        </Tag> */}
                     </div>
 
-                    <div style={{ marginBottom: "8px" }}>
-                      {getConditionTag(item)}
+                    <div style={{ marginBottom: "12px" }}>
+                      {getConditionElement(item)}
                     </div>
 
                     {/* Media Display Area */}
@@ -503,8 +551,7 @@ export default function SpectatorRewards() {
                           alt={item.title}
                           className="reward-media-img"
                           onError={(e) => {
-                            // Dự phòng khi link ảnh die
-                            e.target.style.display = "none";
+                            e.currentTarget.style.display = "none";
                           }}
                         />
                       )}
@@ -520,7 +567,7 @@ export default function SpectatorRewards() {
                           className="reward-btn reward-btn-claimed"
                           disabled
                         >
-                          Claimed
+                          {isShopItem ? "Purchased" : "Claimed"}
                         </Button>
                       ) : isLocked ? (
                         <Button
@@ -536,7 +583,7 @@ export default function SpectatorRewards() {
                           loading={isSubmittingId === item.id}
                           onClick={() => handleClaim(item.id)}
                         >
-                          Claim Reward
+                          {isShopItem ? "Buy Item" : "Claim Reward"}
                         </Button>
                       )}
                     </div>
