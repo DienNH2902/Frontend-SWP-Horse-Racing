@@ -1,0 +1,941 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  Descriptions,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  message,
+} from "antd";
+import {
+  AppstoreAddOutlined,
+  EyeOutlined,
+  FieldTimeOutlined,
+  FlagOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import "antd/dist/reset.css";
+import {
+  assignRaceCourse,
+  assignRaceReferee,
+  bulkAssignRaceHorses,
+  createRaceBatch,
+  createRound2Race,
+  getRaceById,
+  getRacesByTournament,
+} from "../../api/services/race.service";
+import { getTournaments } from "../../api/services/tournament.service";
+import { getUsersByRole } from "../../api/services/user.service";
+
+const { Title, Text } = Typography;
+
+const RACE_STATUSES = [
+  "Scheduled",
+  "Ready",
+  "Simulated",
+  "Ongoing",
+  "Finished",
+  "Cancelled",
+];
+
+function resolveList(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response?.races)) return response.races;
+  return [];
+}
+
+function getId(item, fallback) {
+  return item?._id || item?.id || fallback;
+}
+
+function formatDate(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+  }).format(date);
+}
+
+function formatDateTime(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function statusColor(status) {
+  switch (status) {
+    case "Scheduled":
+      return "blue";
+    case "Ready":
+      return "green";
+    case "Simulated":
+      return "purple";
+    case "Ongoing":
+      return "gold";
+    case "Finished":
+      return "cyan";
+    case "Cancelled":
+      return "red";
+    default:
+      return "default";
+  }
+}
+
+function normalizeRace(item, index) {
+  const id = getId(item, `race-${index}`);
+
+  return {
+    key: id,
+    id,
+    tournamentId: item?.tournamentId || "",
+    tournamentTitle: item?.tournamentTitle || "N/A",
+    refereeId: item?.refereeId || "",
+    raceCourseId: item?.raceCourseId || "",
+    name: item?.name || `Race ${index + 1}`,
+    roundNumber: item?.roundNumber ?? "N/A",
+    raceOrder: item?.raceOrder ?? "N/A",
+    startTime: item?.startTime || "",
+    date: item?.date || "",
+    totalBettors: item?.totalBettors ?? 0,
+    status: item?.status || "Scheduled",
+    refereeConfirmedAt: item?.refereeConfirmedAt || "",
+    simulatedAt: item?.simulatedAt || "",
+    createdAt: item?.createdAt || "",
+    horses: item?.horses || [],
+    totalSlots: item?.totalSlots,
+    filledSlots: item?.filledSlots,
+    availableSlots: item?.availableSlots,
+  };
+}
+
+function normalizeReferee(item, index) {
+  const id = getId(item, `referee-${index}`);
+  const label =
+    item?.fullName ||
+    item?.name ||
+    item?.username ||
+    item?.email ||
+    id;
+
+  return {
+    label,
+    value: id,
+  };
+}
+
+function normalizeTournamentOption(item, index) {
+  const id = getId(item, `tournament-${index}`);
+  const title = item?.title || item?.name || id;
+
+  return {
+    label: title,
+    value: id,
+  };
+}
+
+function parseRegistrationIds(value = "") {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function RaceManagement() {
+  const [searchForm] = Form.useForm();
+  const [batchForm] = Form.useForm();
+  const [round2Form] = Form.useForm();
+  const [refereeForm] = Form.useForm();
+  const [raceCourseForm] = Form.useForm();
+  const [horsesForm] = Form.useForm();
+
+  const [races, setRaces] = useState([]);
+  const [referees, setReferees] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [detailRace, setDetailRace] = useState(null);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isRound2ModalOpen, setIsRound2ModalOpen] = useState(false);
+  const [assigningRefereeRace, setAssigningRefereeRace] = useState(null);
+  const [assigningCourseRace, setAssigningCourseRace] = useState(null);
+  const [assigningHorsesRace, setAssigningHorsesRace] = useState(null);
+
+  async function loadReferees() {
+    try {
+      const response = await getUsersByRole("Referee");
+      setReferees(resolveList(response).map(normalizeReferee));
+    } catch (error) {
+      message.error(error?.message || "Unable to load referees");
+    }
+  }
+
+  async function loadRacesFor(tournamentId, status = "") {
+    setIsLoading(true);
+
+    try {
+      const response = await getRacesByTournament(tournamentId, status);
+      setRaces(resolveList(response).map(normalizeRace));
+    } catch (error) {
+      message.error(error?.message || "Unable to load races");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadRaces() {
+    const { tournamentId, status } = await searchForm.validateFields();
+    await loadRacesFor(tournamentId, status);
+  }
+
+  async function loadTournaments() {
+    setIsLoading(true);
+
+    try {
+      const response = await getTournaments();
+      const options = resolveList(response).map(normalizeTournamentOption);
+
+      setTournaments(options);
+
+      if (options.length > 0 && !searchForm.getFieldValue("tournamentId")) {
+        const firstTournamentId = options[0].value;
+
+        searchForm.setFieldsValue({
+          tournamentId: firstTournamentId,
+        });
+        await loadRacesFor(firstTournamentId);
+      }
+    } catch (error) {
+      message.error(error?.message || "Unable to load tournaments");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadReferees();
+    loadTournaments();
+  }, []);
+
+  function openBatchModal() {
+    const tournamentId = searchForm.getFieldValue("tournamentId") || "";
+
+    batchForm.resetFields();
+    batchForm.setFieldsValue({
+      tournamentId,
+      races: [
+        {
+          name: "Vong 1 - Race 1",
+          date: "",
+          startTime: "",
+        },
+      ],
+    });
+    setIsBatchModalOpen(true);
+  }
+
+  function openRound2Modal() {
+    round2Form.resetFields();
+    round2Form.setFieldsValue({
+      tournamentId: searchForm.getFieldValue("tournamentId") || "",
+      date: "",
+      startTime: "",
+    });
+    setIsRound2ModalOpen(true);
+  }
+
+  async function openDetailModal(record) {
+    setIsLoading(true);
+
+    try {
+      const response = await getRaceById(record.id);
+      setDetailRace(normalizeRace(response, 0));
+    } catch (error) {
+      message.error(error?.message || "Unable to load race detail");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function openAssignRefereeModal(record) {
+    setAssigningRefereeRace(record);
+    refereeForm.resetFields();
+    refereeForm.setFieldsValue({
+      refereeId: record.refereeId || undefined,
+    });
+  }
+
+  function openAssignRaceCourseModal(record) {
+    setAssigningCourseRace(record);
+    raceCourseForm.resetFields();
+    raceCourseForm.setFieldsValue({
+      raceCourseId: record.raceCourseId || "",
+    });
+  }
+
+  function openBulkAssignHorsesModal(record) {
+    setAssigningHorsesRace(record);
+    horsesForm.resetFields();
+  }
+
+  async function handleCreateBatch() {
+    const values = await batchForm.validateFields();
+
+    setIsSaving(true);
+
+    try {
+      await createRaceBatch(values);
+      message.success("Races created");
+      setIsBatchModalOpen(false);
+      batchForm.resetFields();
+      searchForm.setFieldsValue({ tournamentId: values.tournamentId });
+      await loadRacesFor(values.tournamentId, searchForm.getFieldValue("status"));
+    } catch (error) {
+      message.error(error?.message || "Unable to create races");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleCreateRound2() {
+    const values = await round2Form.validateFields();
+
+    setIsSaving(true);
+
+    try {
+      await createRound2Race(values.tournamentId, {
+        startTime: values.startTime,
+        date: values.date,
+      });
+      message.success("Round 2 race created");
+      setIsRound2ModalOpen(false);
+      round2Form.resetFields();
+      searchForm.setFieldsValue({ tournamentId: values.tournamentId });
+      await loadRacesFor(values.tournamentId, searchForm.getFieldValue("status"));
+    } catch (error) {
+      message.error(error?.message || "Unable to create round 2 race");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleAssignReferee() {
+    const values = await refereeForm.validateFields();
+
+    setIsSaving(true);
+
+    try {
+      await assignRaceReferee(assigningRefereeRace.id, values.refereeId);
+      message.success("Referee assigned");
+      setAssigningRefereeRace(null);
+      await loadRaces();
+    } catch (error) {
+      message.error(error?.message || "Unable to assign referee");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleAssignRaceCourse() {
+    const values = await raceCourseForm.validateFields();
+
+    setIsSaving(true);
+
+    try {
+      await assignRaceCourse(assigningCourseRace.id, values.raceCourseId);
+      message.success("Race course assigned");
+      setAssigningCourseRace(null);
+      await loadRaces();
+    } catch (error) {
+      message.error(error?.message || "Unable to assign race course");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleBulkAssignHorses() {
+    const values = await horsesForm.validateFields();
+    const registrationIds = parseRegistrationIds(values.registrationIds);
+
+    if (registrationIds.length === 0) {
+      message.error("Please enter at least one registration ID");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      await bulkAssignRaceHorses(assigningHorsesRace.id, registrationIds);
+      message.success("Horses assigned");
+      setAssigningHorsesRace(null);
+      horsesForm.resetFields();
+      await loadRaces();
+    } catch (error) {
+      message.error(error?.message || "Unable to assign horses");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const columns = useMemo(
+    () => [
+      {
+        title: "Race",
+        dataIndex: "name",
+        fixed: "left",
+        width: 220,
+        render: (value) => <Text strong>{value}</Text>,
+      },
+      {
+        title: "Tournament",
+        dataIndex: "tournamentTitle",
+        width: 260,
+        ellipsis: true,
+      },
+      {
+        title: "Round",
+        dataIndex: "roundNumber",
+        width: 90,
+      },
+      {
+        title: "Order",
+        dataIndex: "raceOrder",
+        width: 90,
+      },
+      {
+        title: "Date",
+        dataIndex: "date",
+        width: 130,
+        render: formatDate,
+      },
+      {
+        title: "Start Time",
+        dataIndex: "startTime",
+        width: 180,
+        render: formatDateTime,
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        width: 130,
+        render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
+      },
+      {
+        title: "Referee ID",
+        dataIndex: "refereeId",
+        width: 220,
+        ellipsis: true,
+        render: (value) => value || "N/A",
+      },
+      {
+        title: "Race Course ID",
+        dataIndex: "raceCourseId",
+        width: 220,
+        ellipsis: true,
+        render: (value) => value || "N/A",
+      },
+      {
+        title: "Slots",
+        key: "slots",
+        width: 150,
+        render: (_, record) =>
+          `${record.filledSlots ?? "N/A"} / ${record.totalSlots ?? "N/A"}`,
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        fixed: "right",
+        width: 260,
+        render: (_, record) => (
+          <Space>
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => openDetailModal(record)}
+            />
+
+            <Button
+              type="text"
+              icon={<TeamOutlined />}
+              onClick={() => openAssignRefereeModal(record)}
+            />
+
+            <Button
+              type="text"
+              icon={<FlagOutlined />}
+              onClick={() => openAssignRaceCourseModal(record)}
+            />
+
+            <Button
+              type="text"
+              icon={<AppstoreAddOutlined />}
+              onClick={() => openBulkAssignHorsesModal(record)}
+            />
+          </Space>
+        ),
+      },
+    ],
+    [],
+  );
+
+  return (
+    <section className="race-management">
+      <style>{`
+        .race-management-header {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 22px;
+        }
+
+        .race-management-kicker {
+          color: #007a68;
+          font-size: 13px;
+          font-weight: 950;
+          letter-spacing: 0;
+          text-transform: uppercase;
+        }
+
+        .race-management-header h1.ant-typography {
+          margin: 6px 0 0;
+          color: #06332e;
+          font-size: clamp(30px, 4vw, 44px);
+          line-height: 1.08;
+          font-weight: 950;
+          letter-spacing: 0;
+        }
+
+        .race-management-toolbar {
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 18px;
+        }
+
+        .race-management-card {
+          border: 1px solid #ccefe7;
+          border-radius: 8px;
+          background: #fff;
+          box-shadow: 0 22px 70px rgba(13, 70, 63, 0.08);
+          overflow: hidden;
+        }
+
+        .race-management-table.ant-table-wrapper .ant-table-thead > tr > th {
+          color: #52726e;
+          background: #f3fffc;
+          font-weight: 950;
+        }
+
+        .race-management-table.ant-table-wrapper .ant-table-tbody > tr > td {
+          color: #0d2321;
+        }
+
+        .race-management-link-btn.ant-btn {
+          border-color: #bdeee5;
+          color: #006755;
+          font-weight: 850;
+        }
+
+        .race-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
+        }
+
+        .race-management-primary.ant-btn {
+          border-color: transparent;
+          color: #06332e;
+          background: #69f8dd;
+          font-weight: 900;
+        }
+
+        .race-management-primary.ant-btn:hover {
+          border-color: transparent !important;
+          color: #06332e !important;
+          background: #75ffe6 !important;
+        }
+
+        .race-management-dynamic-row {
+          display: grid;
+          grid-template-columns: minmax(180px, 1fr) 150px minmax(230px, 1fr) auto;
+          gap: 10px;
+          align-items: flex-start;
+        }
+
+        @media (max-width: 920px) {
+          .race-management-header,
+          .race-management-toolbar {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .race-management-dynamic-row {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div className="race-management-header">
+        <div>
+          <div className="race-management-kicker">Admin dashboard</div>
+          <Title level={1}>Race Management</Title>
+        </div>
+
+        <Space wrap>
+          <Button
+            className="race-management-link-btn"
+            icon={<FieldTimeOutlined />}
+            onClick={openRound2Modal}
+          >
+            Create Round 2
+          </Button>
+
+          <Button
+            className="race-management-primary"
+            onClick={openBatchModal}
+          >
+            Create Batch
+          </Button>
+        </Space>
+      </div>
+
+      <div className="race-management-toolbar">
+        <Form form={searchForm} layout="inline">
+          <Form.Item
+            name="tournamentId"
+            rules={[{ required: true, message: "Tournament ID is required" }]}
+          >
+            <Select
+              showSearch
+              placeholder="Select tournament"
+              optionFilterProp="label"
+              style={{ width: 300 }}
+              options={tournaments}
+              onChange={() => loadRaces()}
+            />
+          </Form.Item>
+
+          <Form.Item name="status">
+            <Select
+              allowClear
+              placeholder="All Status"
+              style={{ width: 170 }}
+              onChange={() => loadRaces()}
+              options={RACE_STATUSES.map((status) => ({
+                label: status,
+                value: status,
+              }))}
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              className="race-management-link-btn"
+              loading={isLoading}
+              onClick={loadRaces}
+            >
+              Load Races
+            </Button>
+          </Form.Item>
+        </Form>
+      </div>
+
+      <div className="race-management-card">
+        <Table
+          className="race-management-table"
+          columns={columns}
+          dataSource={races}
+          loading={isLoading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: false,
+            showTotal: (total) => `${total} races`,
+          }}
+          scroll={{ x: 1950 }}
+        />
+      </div>
+
+      <Modal
+        title="Create Batch Races"
+        open={isBatchModalOpen}
+        okText="Create"
+        cancelText="Cancel"
+        width={850}
+        confirmLoading={isSaving}
+        onOk={handleCreateBatch}
+        onCancel={() => setIsBatchModalOpen(false)}
+        destroyOnClose
+      >
+        <Form form={batchForm} layout="vertical">
+          <Form.Item
+            label="Tournament ID"
+            name="tournamentId"
+            rules={[{ required: true, message: "Tournament ID is required" }]}
+          >
+            <Select
+              showSearch
+              placeholder="Select tournament"
+              optionFilterProp="label"
+              options={tournaments}
+            />
+          </Form.Item>
+
+          <Form.List name="races">
+            {(fields, { add, remove }) => (
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {fields.map(({ key, name, ...restField }) => (
+                  <div className="race-management-dynamic-row" key={key}>
+                    <Form.Item
+                      {...restField}
+                      label="Name"
+                      name={[name, "name"]}
+                      rules={[{ required: true, message: "Name is required" }]}
+                    >
+                      <Input placeholder="Vong 1 - Race 1" />
+                    </Form.Item>
+
+                    <Form.Item
+                      {...restField}
+                      label="Date"
+                      name={[name, "date"]}
+                      rules={[{ required: true, message: "Date is required" }]}
+                    >
+                      <Input placeholder="2026-07-15" />
+                    </Form.Item>
+
+                    <Form.Item
+                      {...restField}
+                      label="Start Time"
+                      name={[name, "startTime"]}
+                      rules={[
+                        { required: true, message: "Start time is required" },
+                      ]}
+                    >
+                      <Input placeholder="2026-07-15T08:00:00.000Z" />
+                    </Form.Item>
+
+                    <Form.Item label=" ">
+                      <Button danger onClick={() => remove(name)}>
+                        Remove
+                      </Button>
+                    </Form.Item>
+                  </div>
+                ))}
+
+                <Button
+                  className="race-management-link-btn"
+                  onClick={() =>
+                    add({
+                      name: `Vong 1 - Race ${fields.length + 1}`,
+                      date: "",
+                      startTime: "",
+                    })
+                  }
+                >
+                  Add Race
+                </Button>
+              </Space>
+            )}
+          </Form.List>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Create Round 2 Race"
+        open={isRound2ModalOpen}
+        okText="Create"
+        cancelText="Cancel"
+        confirmLoading={isSaving}
+        onOk={handleCreateRound2}
+        onCancel={() => setIsRound2ModalOpen(false)}
+      >
+        <Form form={round2Form} layout="vertical">
+          <Form.Item
+            label="Tournament ID"
+            name="tournamentId"
+            rules={[{ required: true, message: "Tournament ID is required" }]}
+          >
+            <Select
+              showSearch
+              placeholder="Select tournament"
+              optionFilterProp="label"
+              options={tournaments}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Date"
+            name="date"
+            rules={[{ required: true, message: "Date is required" }]}
+          >
+            <Input placeholder="2026-07-20" />
+          </Form.Item>
+
+          <Form.Item
+            label="Start Time"
+            name="startTime"
+            rules={[{ required: true, message: "Start time is required" }]}
+          >
+            <Input placeholder="2026-07-20T08:00:00.000Z" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Assign Referee"
+        open={Boolean(assigningRefereeRace)}
+        okText="Assign"
+        cancelText="Cancel"
+        confirmLoading={isSaving}
+        onOk={handleAssignReferee}
+        onCancel={() => setAssigningRefereeRace(null)}
+      >
+        <Form form={refereeForm} layout="vertical">
+          <Form.Item
+            label="Referee"
+            name="refereeId"
+            rules={[{ required: true, message: "Referee is required" }]}
+          >
+            <Select
+              showSearch
+              placeholder="Select referee"
+              optionFilterProp="label"
+              options={referees}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Assign Race Course"
+        open={Boolean(assigningCourseRace)}
+        okText="Assign"
+        cancelText="Cancel"
+        confirmLoading={isSaving}
+        onOk={handleAssignRaceCourse}
+        onCancel={() => setAssigningCourseRace(null)}
+      >
+        <Form form={raceCourseForm} layout="vertical">
+          <Form.Item
+            label="Race Course ID"
+            name="raceCourseId"
+            rules={[{ required: true, message: "Race Course ID is required" }]}
+          >
+            <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Bulk Assign Horses"
+        open={Boolean(assigningHorsesRace)}
+        okText="Assign"
+        cancelText="Cancel"
+        confirmLoading={isSaving}
+        onOk={handleBulkAssignHorses}
+        onCancel={() => setAssigningHorsesRace(null)}
+      >
+        <Form form={horsesForm} layout="vertical">
+          <Form.Item
+            label="Registration IDs"
+            name="registrationIds"
+            rules={[
+              { required: true, message: "Registration IDs are required" },
+            ]}
+          >
+            <Input.TextArea
+              rows={6}
+              placeholder={"one registration ID per line\nor,separate,by,comma"}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Race Detail"
+        open={Boolean(detailRace)}
+        footer={null}
+        width={800}
+        onCancel={() => setDetailRace(null)}
+      >
+        {detailRace && (
+          <Descriptions bordered column={1} size="middle">
+            <Descriptions.Item label="ID">{detailRace.id}</Descriptions.Item>
+            <Descriptions.Item label="Name">
+              {detailRace.name}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tournament">
+              {detailRace.tournamentTitle}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tournament ID">
+              {detailRace.tournamentId || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Round">
+              {detailRace.roundNumber}
+            </Descriptions.Item>
+            <Descriptions.Item label="Race Order">
+              {detailRace.raceOrder}
+            </Descriptions.Item>
+            <Descriptions.Item label="Date">
+              {formatDate(detailRace.date)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Start Time">
+              {formatDateTime(detailRace.startTime)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Status">
+              <Tag color={statusColor(detailRace.status)}>
+                {detailRace.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Referee ID">
+              {detailRace.refereeId || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Race Course ID">
+              {detailRace.raceCourseId || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Total Bettors">
+              {detailRace.totalBettors}
+            </Descriptions.Item>
+            <Descriptions.Item label="Slots">
+              {detailRace.filledSlots ?? "N/A"} /{" "}
+              {detailRace.totalSlots ?? "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Available Slots">
+              {detailRace.availableSlots ?? "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Horses">
+              {detailRace.horses.length}
+            </Descriptions.Item>
+            <Descriptions.Item label="Referee Confirmed At">
+              {formatDateTime(detailRace.refereeConfirmedAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Simulated At">
+              {formatDateTime(detailRace.simulatedAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Created At">
+              {formatDateTime(detailRace.createdAt)}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
+    </section>
+  );
+}
+
+export default RaceManagement;

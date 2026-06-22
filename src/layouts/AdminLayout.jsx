@@ -186,6 +186,15 @@ function AdminLayout({ children }) {
             Registration Management
           </Link>
 
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/races") ? "active" : ""
+            }`}
+            to="/admin/races"
+          >
+            Race Management
+          </Link>
+
           <Button className="admin-home-btn" onClick={() => navigate("/home")}>
             Quay lại Home
           </Button>

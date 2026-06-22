@@ -8,6 +8,7 @@ import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
 import TournamentManagement from "../pages/admin/TournamentManagement";
 import RegistrationManagement from "../pages/admin/RegistrationManagement";
+import RaceManagement from "../pages/admin/RaceManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
@@ -87,6 +88,14 @@ function AdminRegistrationsPage() {
   );
 }
 
+function AdminRacesPage() {
+  return (
+    <AdminLayout>
+      <RaceManagement />
+    </AdminLayout>
+  );
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -128,6 +137,7 @@ export default function AppRoutes() {
         />
         <Route path="/admin/tournaments" element={<AdminTournamentsPage />} />
         <Route path="/admin/registrations" element={<AdminRegistrationsPage />} />
+        <Route path="/admin/races" element={<AdminRacesPage />} />
 
         <Route
           path="/admin/jockey-license"
