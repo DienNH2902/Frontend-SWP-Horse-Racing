@@ -17,17 +17,8 @@ export function attachInterceptors(apiClient) {
     const accessToken = getAccessToken();
     const refreshToken = getRefreshToken();
 
-    console.log("REQUEST URL:", config.url);
-    console.log("includeAuth:", config.includeAuth);
-    console.log("accessToken:", accessToken);
-
     if (config.includeAuth && accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
-
-      console.log(
-        "Authorization Added:",
-        config.headers.Authorization
-      );
     }
 
     if (config.includeRefreshToken && refreshToken) {
@@ -39,6 +30,19 @@ export function attachInterceptors(apiClient) {
 
     return config;
   });
+
+  apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      const payload = error.response?.data;
+      const message = resolveErrorMessage(
+        payload,
+        error.message || "Request failed",
+      );
+
+      return Promise.reject(new Error(message));
+    },
+  );
 
   return apiClient;
 }

@@ -10,7 +10,3 @@ export const apiClient = attachInterceptors(axios.create({
     "Content-Type": "application/json",
   },
 }));
-console.log(
-  "ENV =",
-  import.meta.env.VITE_API_BASE_URL
-);

@@ -386,6 +386,207 @@ export default function RefereeRaceDetail() {
         );
     }
 
+    /* Obsolete mock implementation; real API-backed data is defined above.
+    const [messageApi, contextHolder] = message.useMessage();
+
+    const race = {
+        id,
+        code: "RC-2026-001",
+        name: "Golden Cup Championship",
+        status: "Scheduled",
+        startTime: "2026-06-10 09:00",
+        distance: "2000m",
+    };
+
+    const track = {
+        name: "Golden Hoof Track",
+        location: "Ho Chi Minh City",
+        type: "Turf",
+        distance: "2000m",
+        capacity: 5000,
+    };
+
+    const condition = {
+        weather: "Sunny",
+        trackCondition: "Dry",
+        windSpeed: "10 km/h",
+        temperature: "31°C",
+    };
+
+    const participants = [
+        {
+            id: 1,
+            lane: 1,
+            number: "001",
+            horse: "Thunder",
+            owner: "Nguyen Van A",
+            jockey: "John Smith",
+            registrationStatus: "Approved",
+        },
+        {
+            id: 2,
+            lane: 2,
+            number: "002",
+            horse: "Storm",
+            owner: "Tran Van B",
+            jockey: "David Lee",
+            registrationStatus: "Approved",
+        },
+        {
+            id: 3,
+            lane: 3,
+            number: "003",
+            horse: "Black Shadow",
+            owner: "Le Van C",
+            jockey: "Michael Tan",
+            registrationStatus: "Approved",
+        },
+    ];
+
+    const leaderboard = [
+        {
+            position: 1,
+            horse: "Thunder",
+            finishTime: "120.35s",
+        },
+        {
+            position: 2,
+            horse: "Storm",
+            finishTime: "121.82s",
+        },
+        {
+            position: 3,
+            horse: "Black Shadow",
+            finishTime: "123.12s",
+        },
+    ];
+
+    const [results, setResults] = useState({});
+    function updateResult(id, field, value) {
+        setResults((prev) => ({
+            ...prev,
+            [id]: {
+                ...prev[id],
+                [field]: value,
+            },
+        }));
+    }
+
+    const [reportForm] = Form.useForm();
+
+    function submitResult() {
+        const count = Object.keys(results).length;
+
+        if (count === 0) {
+            messageApi.warning(
+                "Please enter race results first."
+            );
+            return;
+        }
+
+        console.log(results);
+
+        messageApi.success(
+            "Official race result submitted successfully"
+        );
+    }
+
+    function submitReport(values) {
+        console.log(values);
+
+        messageApi.success(
+            "Referee report submitted successfully"
+        );
+
+        reportForm.resetFields();
+    }
+
+    const participantColumns = [
+        {
+            title: "No.",
+            dataIndex: "number",
+        },
+        {
+            title: "Lane",
+            dataIndex: "lane",
+        },
+        {
+            title: "Horse",
+            dataIndex: "horse",
+        },
+        {
+            title: "Owner",
+            dataIndex: "owner",
+        },
+        {
+            title: "Jockey",
+            dataIndex: "jockey",
+        },
+        {
+            title: "Registration",
+            dataIndex: "registrationStatus",
+            render: (value) => (
+                <Tag color="green">{value}</Tag>
+            ),
+        },
+    ];
+
+    const leaderboardColumns = [
+        {
+            title: "Position",
+            dataIndex: "position",
+        },
+        {
+            title: "Horse",
+            dataIndex: "horse",
+        },
+        {
+            title: "Finish Time",
+            dataIndex: "finishTime",
+        },
+    ];
+
+    const resultColumns = [
+        {
+            title: "Horse",
+            dataIndex: "horse",
+        },
+        {
+            title: "Finish Time",
+            render: (_, record) => (
+                <InputNumber
+                    min={0}
+                    step={0.01}
+                    style={{ width: 120 }}
+                    onChange={(value) =>
+                        updateResult(
+                            record.id,
+                            "finishTime",
+                            value
+                        )
+                    }
+                />
+            ),
+        },
+        {
+            title: "Final Rank",
+            render: (_, record) => (
+                <InputNumber
+                    min={1}
+                    max={participants.length}
+                    onChange={(value) =>
+                        updateResult(
+                            record.id,
+                            "rank",
+                            value
+                        )
+                    }
+                />
+            ),
+        },
+    ];
+
+    */
     return (
         <Space
             direction="vertical"
