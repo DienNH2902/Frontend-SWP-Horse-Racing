@@ -687,15 +687,13 @@ function Profile() {
                         </div>
                       </div>
                       <div>
-                        {streakData.isRewardAvailable ? (
-                          <span className="streak-reward-status streak-reward-claimable">
-                            Reward Ready
-                          </span>
-                        ) : (
-                          <span className="streak-reward-status streak-reward-locked">
-                            Collected
-                          </span>
-                        )}
+                        <span
+                          className="streak-reward-status streak-reward-claimable"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => navigate("/spectator/reward")}
+                        >
+                          Reward Shop
+                        </span>
                       </div>
                     </div>
                   )}
