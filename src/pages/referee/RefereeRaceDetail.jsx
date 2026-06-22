@@ -219,35 +219,26 @@ export default function RefereeRaceDetail() {
 
     const participantColumns = [
         {
+            title: "Gate",
+            dataIndex: "gateNumber",
+        },
+        {
             title: "Horse",
             render: (_, record) => (
                 <Link
-                    to={`/referee/horses/${record._id || record.id
-                        }`}
+                    to={`/referee/horses/${record.horseId}`}
                 >
-                    {record.name ||
-                        record.horseName ||
-                        "-"}
+                    {record.name}
                 </Link>
             ),
-        },
-        {
-            title: "Breed",
-            dataIndex: "breed",
-        },
-        {
-            title: "Age",
-            dataIndex: "age",
-        },
-        {
-            title: "Gender",
-            dataIndex: "gender",
         },
         {
             title: "Status",
             dataIndex: "status",
             render: (status) => (
-                <Tag>{status}</Tag>
+                <Tag color="green">
+                    {status}
+                </Tag>
             ),
         },
     ];
@@ -576,8 +567,7 @@ export default function RefereeRaceDetail() {
                 ) : (
                     <Table
                         rowKey={(record) =>
-                            record._id ||
-                            record.id
+                            record.horseId
                         }
                         columns={
                             participantColumns
