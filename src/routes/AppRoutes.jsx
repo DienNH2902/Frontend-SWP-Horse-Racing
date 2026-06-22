@@ -31,6 +31,7 @@ import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
 import RewardManagement from "../pages/admin/RewardManagement";
+import SpectatorRewards from "../pages/spectator/SpectatorReward";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -100,6 +101,11 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+
+        <Route
+          path="/spectator/reward"
+          element={<SpectatorRewards allowedRole="Spectator" />}
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
