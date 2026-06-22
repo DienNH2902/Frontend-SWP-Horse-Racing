@@ -14,11 +14,13 @@ import {
   getMyAssets,
   claimReward,
 } from "../../api/services/reward.service";
-import { LockOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, LockOutlined } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 
 const { Text, Title, Paragraph } = Typography;
 
 export default function SpectatorRewards() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dashboardItems, setDashboardItems] = useState([]);
   const [myAssets, setMyAssets] = useState(null);
@@ -93,8 +95,8 @@ export default function SpectatorRewards() {
         return "Bonus Points";
       case "BACKGROUND":
         return "Profile Background";
-      case "AVATAR_FRAME":
-        return "Avatar Frame";
+      //   case "AVATAR_FRAME":
+      //     return "Avatar Frame";
       default:
         return type;
     }
@@ -104,7 +106,7 @@ export default function SpectatorRewards() {
     dashboardItems.find((item) => item.rewardType === "INSURANCE_CARD")
       ?.rewardValue ||
     "https://api.horse-racing.io.vn/static/golden-hoof/golden-hoof-1782113268373-765684462.png";
-    
+
   return (
     <main className="spectator-rewards-page">
       <style>{`
@@ -410,6 +412,25 @@ export default function SpectatorRewards() {
 
       <div className="rewards-container">
         <header className="rewards-header">
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate("/profile")}
+            style={{
+              color: "#69f8dd",
+              padding: 0,
+              marginBottom: "16px",
+              fontSize: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontWeight: "700",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#86ffea")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#69f8dd")}
+          >
+            Back to Profile
+          </Button>
           <Title level={1}>Spectator Rewards</Title>
           <Paragraph
             className="reward-para"
