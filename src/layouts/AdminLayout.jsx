@@ -1,19 +1,32 @@
 import { Button, Layout } from "antd";
 import "antd/dist/reset.css";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const { Content, Sider } = Layout;
 
 function AdminLayout({ children }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <Layout className="admin-layout">
       <style>{`
-        * { box-sizing: border-box; }
-        html, body, #root { min-height: 100%; margin: 0; }
+        * {
+          box-sizing: border-box;
+        }
+
+        html,
+        body,
+        #root {
+          min-height: 100%;
+          margin: 0;
+        }
+
         body {
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+            BlinkMacSystemFont, "Segoe UI", sans-serif;
           color: #0d2321;
           background: #f7fffd;
         }
@@ -67,6 +80,20 @@ function AdminLayout({ children }) {
           background: #edfffb;
           font-weight: 900;
           text-decoration: none;
+          transition: all 0.2s ease;
+        }
+
+        .admin-nav-item:hover {
+          border-color: #69f8dd;
+          background: #dffff8;
+          color: #006755;
+        }
+
+        .admin-nav-item.active {
+          border-color: transparent;
+          background: #69f8dd;
+          color: #06332e;
+          box-shadow: 0 8px 20px rgba(105, 248, 221, 0.25);
         }
 
         .admin-home-btn.ant-btn {
@@ -86,7 +113,11 @@ function AdminLayout({ children }) {
         .admin-content.ant-layout-content {
           padding: 28px;
           background:
-            radial-gradient(circle at 90% 8%, rgba(105, 248, 221, 0.2), transparent 28%),
+            radial-gradient(
+              circle at 90% 8%,
+              rgba(105, 248, 221, 0.2),
+              transparent 28%
+            ),
             #f7fffd;
         }
 
@@ -94,6 +125,7 @@ function AdminLayout({ children }) {
           .admin-layout {
             display: block;
           }
+
           .admin-sidebar.ant-layout-sider {
             max-width: none !important;
             min-width: 0 !important;
@@ -101,9 +133,11 @@ function AdminLayout({ children }) {
             border-right: 0;
             border-bottom: 1px solid #ccefe7;
           }
+
           .admin-sidebar-inner {
             min-height: 0;
           }
+
           .admin-content.ant-layout-content {
             padding: 18px;
           }
@@ -115,17 +149,61 @@ function AdminLayout({ children }) {
           <Link className="admin-brand" to="/admin/dashboard">
             <img
               className="admin-brand-logo"
-              src="/goldenhoof-logo.png"
-              alt=""
+              src="/navbar-logo.png"
+              alt="GoldenHoof"
             />
             <span>GoldenHoof</span>
           </Link>
-          <Link className="admin-nav-item" to="/admin/users">
+
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/users") ||
+              isActive("/admin") ||
+              isActive("/admin/dashboard")
+                ? "active"
+                : ""
+            }`}
+            to="/admin/users"
+          >
             User Management
           </Link>
-          <Link className="admin-nav-item" to="/admin/jockey-license">
+
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/jockey-license") ? "active" : ""
+            }`}
+            to="/admin/jockey-license"
+          >
             Jockey License Management
           </Link>
+
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/reward") ? "active" : ""
+            }`}
+            to="/admin/reward"
+          >
+            Reward Management
+          </Link>
+
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/tournaments") ? "active" : ""
+            }`}
+            to="/admin/tournaments"
+          >
+            Tournament Management
+          </Link>
+
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/registrations") ? "active" : ""
+            }`}
+            to="/admin/registrations"
+          >
+            Registration Management
+          </Link>
+
           <Button className="admin-home-btn" onClick={() => navigate("/home")}>
             Quay lại Home
           </Button>

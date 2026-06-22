@@ -19,11 +19,12 @@ function unwrapCollection(response) {
     return [];
 }
 
-export async function getTournaments() {
+export async function getTournaments(status) {
     const response = await apiClient.get(
         TOURNAMENT_ENDPOINTS.ROOT,
         {
             includeAuth: true,
+            params: status ? { status } : undefined,
         }
     );
 

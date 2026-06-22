@@ -29,6 +29,7 @@ import {
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat"; // Hỗ trợ parse định dạng chuỗi VN
+import { getMyStreakStatus } from "../api/services/streak.service";
 
 dayjs.extend(customParseFormat);
 
@@ -83,15 +84,18 @@ function Profile() {
   const [isUploading, setIsUploading] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [streakData, setStreakData] = useState(null);
   const [passwordForm] = Form.useForm();
 
   useEffect(() => {
     let isMounted = true;
 
-    getProfile()
-      .then((data) => {
+    Promise.all([getProfile(), getMyStreakStatus()])
+      .then(([data, streak]) => {
         if (isMounted) {
           setProfile(data);
+          setStreakData(streak);
+
           const rawDob = data?.dateOfBirth || data?.dob || "";
           const parsedDob = rawDob ? dayjs(rawDob, "DD/MM/YYYY") : null;
 
@@ -490,13 +494,89 @@ function Profile() {
             width: auto;
           }
         }
+        .streak-container {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          background: linear-gradient(135deg, #06332e 0%, #004d44 100%);
+          padding: 20px 24px;
+          border-radius: 12px;
+          margin-bottom: 24px;
+          border: 1px solid #006755;
+          box-shadow: 0 12px 30px rgba(0, 54, 48, 0.15);
+        }
+        
+        .streak-fire-badge {
+          font-size: 38px;
+          line-height: 1;
+          background: rgba(255, 255, 255, 0.1);
+          padding: 12px;
+          border-radius: 50%;
+          animation: pulse-streak 2s infinite;
+        }
+        
+        @keyframes pulse-streak {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(105, 248, 221, 0.4); }
+          70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(105, 248, 221, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(105, 248, 221, 0); }
+        }
+        
+        .streak-info-block {
+          flex-grow: 1;
+        }
+        
+        .streak-meta-grid {
+          display: flex;
+          gap: 24px;
+          margin-top: 4px;
+        }
+        
+        .streak-meta-item {
+          font-size: 13px;
+          color: #a4ebd8;
+        }
+        
+        .streak-reward-status {
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+        
+        .streak-reward-claimable {
+          background: #69f8dd;
+          color: #06332e;
+        }
+        
+        .streak-reward-locked {
+          background: rgba(255, 255, 255, 0.15);
+          color: #ccefe7;
+        }
+        
+        @media (max-width: 640px) {
+          .streak-container {
+            flex-direction: column;
+             text-align: center;
+            gap: 14px;
+            padding: 18px;
+          }
+          .streak-meta-grid {
+            justify-content: center;
+            gap: 16px;
+          }
+        }  
       `}</style>
 
       <section className="profile-shell">
         <div className="profile-topbar">
           <Link className="profile-brand" to="/home">
             <span className="profile-brand-mark">
-              <img className="brand-logo-img" src="/goldenhoof-logo.png" alt="" />
+              <img
+                className="brand-logo-img"
+                src="/goldenhoof-logo.png"
+                alt=""
+              />
             </span>
             <span>GoldenHoof</span>
           </Link>
@@ -574,6 +654,51 @@ function Profile() {
                 </div>
 
                 <div className="profile-content">
+                  {/* --- KHU VỰC HIỂN THỊ STREAK STATUS --- */}
+                  {streakData && (
+                    <div className="streak-container">
+                      <div className="streak-fire-badge">🔥</div>
+                      <div className="streak-info-block">
+                        <Title
+                          level={4}
+                          style={{
+                            color: "#ffffff",
+                            margin: 0,
+                            fontWeight: 900,
+                          }}
+                        >
+                          {streakData.currentStreak} Day Streak!
+                        </Title>
+                        <div className="streak-meta-grid">
+                          <div className="streak-meta-item">
+                            Longest Record:{" "}
+                            <Text style={{ color: "#69f8dd", fontWeight: 800 }}>
+                              {streakData.longestStreak} days
+                            </Text>
+                          </div>
+                          <div className="streak-meta-item">
+                            Last active:{" "}
+                            <Text style={{ color: "#ccefe7" }}>
+                              {dayjs(new Date(streakData.lastLoginDate)).format(
+                                "DD/MM/YYYY",
+                              )}
+                            </Text>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        {streakData.isRewardAvailable ? (
+                          <span className="streak-reward-status streak-reward-claimable">
+                            Reward Ready
+                          </span>
+                        ) : (
+                          <span className="streak-reward-status streak-reward-locked">
+                            Collected
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <Title className="profile-section-title" level={3}>
                     Profile
                   </Title>
