@@ -2,24 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Avatar,
-  Button,
   Card,
   Col,
   Empty,
-  Form,
   Row,
-  Select,
   Skeleton,
   Space,
   Statistic,
   Table,
   Tag,
   Typography,
-  message,
 } from "antd";
-import { getSentJockeyInvitations } from "../../api/services/owner.service";
-import { createRegistration } from "../../api/services/registration.service";
-import { getTournamentById, getTournaments } from "../../api/services/tournament.service";
+import { getTournaments } from "../../api/services/tournament.service";
 
 function pickFirstValue(source, keys, fallback = "") {
   for (const key of keys) {
@@ -50,68 +44,6 @@ function normalizeTournament(tournament = {}) {
   };
 }
 
-function normalizeInvitation(invitation = {}) {
-  const horse = invitation.horse || invitation.horseInfo || {};
-  const jockey = invitation.jockey || invitation.jockeyInfo || {};
-  const tournament = invitation.tournament || invitation.tournamentInfo || {};
-  const tournamentId = pickFirstValue(
-    invitation,
-    ["tournamentId"],
-    pickFirstValue(tournament, ["id", "_id", "tournamentId"], ""),
-  );
-
-  return {
-    ...invitation,
-    id: pickFirstValue(invitation, ["id", "_id", "invitationId"]),
-    tournamentId,
-    horse: pickFirstValue(invitation, ["horseName"], pickFirstValue(horse, ["name", "horseName"], "N/A")),
-    jockey: pickFirstValue(
-      invitation,
-      ["jockeyName", "jockeyFullName"],
-      pickFirstValue(jockey, ["fullName", "name"], "N/A"),
-    ),
-    tournament: pickFirstValue(
-      invitation,
-      ["tournamentTitle", "tournamentName"],
-      pickFirstValue(tournament, ["title", "name"], "N/A"),
-    ),
-    status: pickFirstValue(invitation, ["status", "invitationStatus"], "Pending"),
-  };
-}
-
-async function resolveInvitationTournamentTitles(invitations) {
-  const tournamentCache = new Map();
-
-  return Promise.all(
-    invitations.map(async (invitation) => {
-      if (invitation.tournament !== "N/A" || !invitation.tournamentId) {
-        return invitation;
-      }
-
-      try {
-        if (!tournamentCache.has(invitation.tournamentId)) {
-          tournamentCache.set(invitation.tournamentId, getTournamentById(invitation.tournamentId));
-        }
-
-        const tournament = normalizeTournament(await tournamentCache.get(invitation.tournamentId));
-
-        return {
-          ...invitation,
-          tournament: tournament.title,
-        };
-      } catch {
-        return invitation;
-      }
-    }),
-  );
-}
-
-function isAcceptedInvitation(invitation) {
-  const status = String(invitation?.status || "").toLowerCase();
-
-  return status === "accepted" || status === "accept";
-}
-
 function statusColor(status) {
   const value = String(status || "").toLowerCase();
 
@@ -129,15 +61,9 @@ function formatMoney(value) {
 }
 
 export default function OwnerTournaments() {
-  const [form] = Form.useForm();
-  const [messageApi, contextHolder] = message.useMessage();
   const [tournaments, setTournaments] = useState([]);
-  const [acceptedInvitations, setAcceptedInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [invitationLoading, setInvitationLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -151,44 +77,6 @@ export default function OwnerTournaments() {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  async function loadAcceptedInvitations() {
-    setInvitationLoading(true);
-    setInvitationErrorMessage("");
-
-    try {
-      const invitations = await getSentJockeyInvitations();
-      const accepted = invitations.map(normalizeInvitation).filter(isAcceptedInvitation);
-      const resolved = await resolveInvitationTournamentTitles(accepted);
-
-      setAcceptedInvitations(resolved);
-    } catch (error) {
-      setAcceptedInvitations([]);
-      setInvitationErrorMessage(error.message || "Could not load accepted invitations.");
-    } finally {
-      setInvitationLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadAcceptedInvitations();
-  }, []);
-
-  async function handleRegister(values) {
-    setSaving(true);
-
-    try {
-      await createRegistration({
-        jockeyInvitationId: values.jockeyInvitationId,
-      });
-      messageApi.success("Tournament registration submitted");
-      form.resetFields();
-    } catch (error) {
-      messageApi.error(error.message || "Could not submit registration.");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   const stats = useMemo(() => {
     const total = tournaments.length;
@@ -245,22 +133,9 @@ export default function OwnerTournaments() {
     },
   ];
 
-  const invitationOptions = useMemo(
-    () =>
-      acceptedInvitations.map((invitation) => ({
-        value: invitation.id,
-        label: `${invitation.tournament} - ${invitation.horse} / ${invitation.jockey}`,
-      })),
-    [acceptedInvitations],
-  );
-
   return (
     <Space direction="vertical" size={16} className="owner-page-stack">
-      {contextHolder}
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
-      {invitationErrorMessage && (
-        <Alert type="warning" showIcon message={invitationErrorMessage} />
-      )}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} xl={6}>
@@ -284,35 +159,6 @@ export default function OwnerTournaments() {
           </Card>
         </Col>
       </Row>
-
-      <Card title="Register tournament entry">
-        <Form layout="vertical" form={form} onFinish={handleRegister}>
-          <Form.Item
-            label="Accepted jockey invitation"
-            name="jockeyInvitationId"
-            rules={[{ required: true, message: "Choose an accepted invitation" }]}
-          >
-            <Select
-              loading={invitationLoading}
-              options={invitationOptions}
-              placeholder="Select accepted invitation"
-              showSearch
-              optionFilterProp="label"
-              notFoundContent={
-                invitationLoading ? "Loading invitations..." : "No accepted invitations found"
-              }
-            />
-          </Form.Item>
-          <Space wrap>
-            <Button type="primary" htmlType="submit" loading={saving}>
-              Register
-            </Button>
-            <Button onClick={loadAcceptedInvitations} loading={invitationLoading}>
-              Refresh invitations
-            </Button>
-          </Space>
-        </Form>
-      </Card>
 
       <Card title="Tournaments">
         {loading ? (

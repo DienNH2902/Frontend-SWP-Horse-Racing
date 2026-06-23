@@ -35,16 +35,7 @@ export async function getTournaments(status) {
     });
 }
 
-export async function getTournamentById(id) {
-    const response = await apiClient.get(
-        TOURNAMENT_ENDPOINTS.DETAIL(id),
-        {
-            includeAuth: true,
-        }
-    );
 
-    return unwrapData(response);
-}
 
 export async function createTournament(payload) {
     const response = await apiClient.post(

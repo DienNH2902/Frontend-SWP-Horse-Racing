@@ -26,7 +26,8 @@ import {
   registerContractToTournament,
   sendJockeyInvitation,
 } from "../../api/services/owner.service";
-import { getTournaments } from "../../api/services/tournament.service";
+import { createRegistration } from "../../api/services/registration.service";
+import { getTournamentById, getTournaments } from "../../api/services/tournament.service";
 
 const contractColor = {
   Active: "green",
@@ -75,10 +76,16 @@ function normalizeInvitation(invitation) {
   const horse = invitation?.horse || invitation?.horseInfo || {};
   const jockey = invitation?.jockey || invitation?.jockeyInfo || {};
   const tournament = invitation?.tournament || invitation?.tournamentInfo || {};
+  const tournamentId = pickFirstValue(
+    invitation,
+    ["tournamentId"],
+    pickFirstValue(tournament, ["id", "_id", "tournamentId"], ""),
+  );
 
   return {
     ...invitation,
     id: pickFirstValue(invitation, ["id", "_id", "invitationId"]),
+    tournamentId,
     horse: pickFirstValue(invitation, ["horseName"], pickFirstValue(horse, ["name", "horseName"], "N/A")),
     jockey: pickFirstValue(
       invitation,
@@ -93,6 +100,39 @@ function normalizeInvitation(invitation) {
     status: pickFirstValue(invitation, ["status", "invitationStatus"], "Pending"),
     sentAt: pickFirstValue(invitation, ["sentAt", "createdAt", "createdDate"], ""),
   };
+}
+
+function isAcceptedInvitation(invitation) {
+  const status = String(invitation?.status || "").toLowerCase();
+
+  return status === "accepted" || status === "accept";
+}
+
+async function resolveInvitationTournamentTitles(invitations) {
+  const tournamentCache = new Map();
+
+  return Promise.all(
+    invitations.map(async (invitation) => {
+      if (invitation.tournament !== "N/A" || !invitation.tournamentId) {
+        return invitation;
+      }
+
+      try {
+        if (!tournamentCache.has(invitation.tournamentId)) {
+          tournamentCache.set(invitation.tournamentId, getTournamentById(invitation.tournamentId));
+        }
+
+        const tournament = normalizeTournament(await tournamentCache.get(invitation.tournamentId));
+
+        return {
+          ...invitation,
+          tournament: tournament.title,
+        };
+      } catch {
+        return invitation;
+      }
+    }),
+  );
 }
 
 function normalizeJockey(jockey) {
@@ -124,6 +164,7 @@ function formatRate(value) {
 
 export default function OwnerJockeyRaceWorkspace() {
   const [form] = Form.useForm();
+  const [registrationForm] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const [workspace, setWorkspace] = useState({
     horses: [],
@@ -137,6 +178,7 @@ export default function OwnerJockeyRaceWorkspace() {
   const [invitationLoading, setInvitationLoading] = useState(true);
   const [tournamentLoading, setTournamentLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [registrationSaving, setRegistrationSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
   const [tournamentErrorMessage, setTournamentErrorMessage] = useState("");
@@ -168,9 +210,12 @@ export default function OwnerJockeyRaceWorkspace() {
 
     try {
       const invitations = await getSentJockeyInvitations();
+      const normalized = (invitations || []).map(normalizeInvitation);
+      const resolved = await resolveInvitationTournamentTitles(normalized);
+
       setWorkspace((current) => ({
         ...current,
-        invitations: (invitations || []).map(normalizeInvitation),
+        invitations: resolved,
       }));
     } catch (error) {
       setWorkspace((current) => ({ ...current, invitations: [] }));
@@ -218,6 +263,15 @@ export default function OwnerJockeyRaceWorkspace() {
     [workspace.tournaments],
   );
 
+  const acceptedInvitationOptions = useMemo(
+    () =>
+      workspace.invitations.filter(isAcceptedInvitation).map((invitation) => ({
+        value: invitation.id,
+        label: `${invitation.tournament} - ${invitation.horse} / ${invitation.jockey}`,
+      })),
+    [workspace.invitations],
+  );
+
   async function handleInvite(values) {
     setSaving(true);
 
@@ -230,6 +284,23 @@ export default function OwnerJockeyRaceWorkspace() {
       messageApi.error(error.message || "Could not send invitation.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleRegisterTournament(values) {
+    setRegistrationSaving(true);
+
+    try {
+      await createRegistration({
+        jockeyInvitationId: values.jockeyInvitationId,
+      });
+      messageApi.success("Tournament registration submitted");
+      registrationForm.resetFields();
+      await loadSentInvitations();
+    } catch (error) {
+      messageApi.error(error.message || "Could not submit registration.");
+    } finally {
+      setRegistrationSaving(false);
     }
   }
 
@@ -543,6 +614,35 @@ export default function OwnerJockeyRaceWorkspace() {
           dataSource={workspace.invitations}
           pagination={{ pageSize: 5, showSizeChanger: false }}
         />
+      </Card>
+
+      <Card title="Register tournament entry">
+        <Form layout="vertical" form={registrationForm} onFinish={handleRegisterTournament}>
+          <Form.Item
+            label="Accepted jockey invitation"
+            name="jockeyInvitationId"
+            rules={[{ required: true, message: "Choose an accepted invitation" }]}
+          >
+            <Select
+              loading={invitationLoading}
+              options={acceptedInvitationOptions}
+              placeholder="Select accepted invitation"
+              showSearch
+              optionFilterProp="label"
+              notFoundContent={
+                invitationLoading ? "Loading invitations..." : "No accepted invitations found"
+              }
+            />
+          </Form.Item>
+          <Space wrap>
+            <Button type="primary" htmlType="submit" loading={registrationSaving}>
+              Register
+            </Button>
+            <Button onClick={loadSentInvitations} loading={invitationLoading}>
+              Refresh invitations
+            </Button>
+          </Space>
+        </Form>
       </Card>
 
       <Card title="Contracts and tournament registration">
