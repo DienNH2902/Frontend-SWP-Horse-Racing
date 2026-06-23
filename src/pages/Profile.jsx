@@ -87,12 +87,26 @@ function Profile() {
   const [streakData, setStreakData] = useState(null);
   const [passwordForm] = Form.useForm();
 
+  const userRole = profile?.role?.toUpperCase() || "";
+  
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([getProfile(), getMyStreakStatus()])
+    // Chỉ gọi API streak nếu là SPECTATOR để tối ưu hóa request hệ thống
+    const profilePromise = getProfile();
+
+    profilePromise
+      .then((data) => {
+        if (!isMounted) return [null, null];
+
+        const currentRole = data?.role?.toUpperCase() || "";
+        if (currentRole === "SPECTATOR") {
+          return Promise.all([data, getMyStreakStatus().catch(() => null)]);
+        }
+        return [data, null];
+      })
       .then(([data, streak]) => {
-        if (isMounted) {
+        if (isMounted && data) {
           setProfile(data);
           setStreakData(streak);
 
@@ -108,21 +122,21 @@ function Profile() {
             dateOfBirth: parsedDob && parsedDob.isValid() ? parsedDob : null,
             gender: data?.gender,
             // Đổ dữ liệu các trường đặc thù của từng Role
-            //Jockey
+            // Jockey
             weight: data?.weight,
             height: data?.height,
             jockeyStatus: data?.jockeyStatus,
             winRate: data?.winRate,
             reputationPoints: data?.reputationPoints,
-            //owner
+            // owner
             totalHorsesOwned: data?.totalHorsesOwned,
             stableName: data?.stableName,
             stableAddress: data?.stableAddress,
-            //referee
+            // referee
             experienceYears: data?.experienceYears,
             certification: data?.certification,
             racesAttempt: data?.racesAttempt,
-            //spectator
+            // spectator
             totalBets: data?.totalBets,
             totalPoints: data?.totalPoints,
             totalBalance: data?.totalBalance,
@@ -235,7 +249,7 @@ function Profile() {
     : undefined;
 
   // Chuẩn hóa chuỗi Role để kiểm tra giao diện (bất kể viết hoa viết thường)
-  const userRole = profile?.role?.toUpperCase() || "";
+  // const userRole = profile?.role?.toUpperCase() || "";
 
   // Hàm xử lý gửi dữ liệu đổi mật
   async function handleChangePasswordSubmit(values) {
