@@ -27,6 +27,14 @@ export async function getTournaments() {
   return unwrapCollection(response).filter((tournament) => {
     const status = String(tournament?.status || "").toLowerCase();
 
-    return status !== "canceled";
+    return status !== "canceled" && status !== "cancelled";
   });
+}
+
+export async function getTournamentById(id) {
+  const response = await apiClient.get(TOURNAMENT_ENDPOINTS.DETAIL(id), {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
 }
