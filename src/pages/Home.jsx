@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
 import { getRoleHomePath } from "../utils/roles";
-import { clearAuthSession, getAccessToken, getAuthSession } from "../utils/storage";
+import {
+  clearAuthSession,
+  getAccessToken,
+  getAuthSession,
+} from "../utils/storage";
+import { BellOutlined } from "@ant-design/icons";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -179,13 +184,13 @@ function decodeJwtClaims(token) {
     const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
     const paddedPayload = normalizedPayload.padEnd(
       normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      "="
+      "=",
     );
     const json = decodeURIComponent(
       atob(paddedPayload)
         .split("")
         .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
-        .join("")
+        .join(""),
     );
 
     return JSON.parse(json);
@@ -246,8 +251,21 @@ function Home() {
   const tokenClaims = decodeJwtClaims(getAccessToken());
   const currentUser = authSession?.user || {};
   const accountName =
-    pickFirstValue(currentUser, ["fullName", "name", "displayName", "username", "email"]) ||
-    pickFirstValue(tokenClaims, ["fullName", "name", "displayName", "username", "email", "sub"]) ||
+    pickFirstValue(currentUser, [
+      "fullName",
+      "name",
+      "displayName",
+      "username",
+      "email",
+    ]) ||
+    pickFirstValue(tokenClaims, [
+      "fullName",
+      "name",
+      "displayName",
+      "username",
+      "email",
+      "sub",
+    ]) ||
     "Account";
   const accountRole =
     pickFirstValue(currentUser, ["role", "roleName"]) ||
@@ -258,6 +276,12 @@ function Home() {
   const isAdmin = Array.isArray(accountRole)
     ? accountRole.some((role) => String(role).toLowerCase().includes("admin"))
     : String(accountRole).toLowerCase().includes("admin");
+
+  // Chuẩn hóa chuỗi role để kiểm tra điều kiện chính xác hơn
+  const roleString = String(primaryRole).toLowerCase();
+  const isSpectator = roleString.includes("spectator");
+  const isOwnerOrJockey =
+    roleString.includes("owner") || roleString.includes("jockey");
 
   if (!authSession) {
     return <Navigate to="/" replace />;
@@ -1157,14 +1181,48 @@ function Home() {
                     <Icon name="user" size={18} />
                     <span>Profile</span>
                   </Link>
-                  <Link
-                    className="account-menu-item"
-                    role="menuitem"
-                    to="/spectator/points-transaction"
-                  >
-                    <Icon name="user" size={18} />
-                    <span>Transaction</span>
-                  </Link>
+                  {/* Phân quyền hiển thị Points/Transactions và Notifications */}
+                  {isSpectator && (
+                    <>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/spectator/points-transaction"
+                      >
+                        <Icon name="chart" size={18} />
+                        <span>Points</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/notification"
+                      >
+                        <BellOutlined style={{ fontSize: "18px" }} />
+                        <span>Notifications</span>
+                      </Link>
+                    </>
+                  )}
+
+                  {isOwnerOrJockey && (
+                    <>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/money-transaction"
+                      >
+                        <Icon name="chart" size={18} />
+                        <span>Transactions</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/notification"
+                      >
+                        <BellOutlined style={{ fontSize: "18px" }} />
+                        <span>Notifications</span>
+                      </Link>
+                    </>
+                  )}
                   <button
                     className="account-menu-item account-menu-logout"
                     type="button"

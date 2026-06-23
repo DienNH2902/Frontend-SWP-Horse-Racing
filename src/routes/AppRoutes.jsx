@@ -33,6 +33,7 @@ import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
 import RewardManagement from "../pages/admin/RewardManagement";
 import SpectatorRewards from "../pages/spectator/SpectatorReward";
 import PointsTransactionHistory from "../pages/spectator/PointsTransaction";
+import NotificationHistory from "../pages/NotificationPage";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -102,16 +103,31 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+        <Route
+          path="notification"
+          element={<NotificationHistory allowedRole="Spectator" />}
+        />
+      </Route>
 
+      <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
+        <Route
+          path="/spectator"
+          element={<RoleHome allowedRole="Spectator" />}
+        />
         <Route
           path="/spectator/reward"
           element={<SpectatorRewards allowedRole="Spectator" />}
         />
-
         <Route
           path="/spectator/points-transaction"
           element={<PointsTransactionHistory allowedRole="Spectator" />}
         />
+      </Route>
+
+      <Route
+        element={<ProtectedRoute allowedRoles={["Horse Owner", "Jockey"]} />}
+      >
+        {/* <Route path="/transaction" element={<PointsTransactionHistory />} /> */}
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
