@@ -1,7 +1,5 @@
 export const TOURNAMENT_ENDPOINTS = {
   ROOT: "/tournaments",
-
   DETAIL: (id) => `/tournaments/${id}`,
-
-  STATUS: (id) => `/tournaments/${id}/status`,
+  UPDATE_STATUS: (id) => `/tournaments/${id}/status`,
 };

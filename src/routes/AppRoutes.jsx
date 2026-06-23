@@ -6,6 +6,8 @@ import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
+import TournamentManagement from "../pages/admin/TournamentManagement";
+import RegistrationManagement from "../pages/admin/RegistrationManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
@@ -20,11 +22,17 @@ import OwnerRaceResults from "../pages/owner/OwnerRaceResults";
 import OwnerTournaments from "../pages/owner/OwnerTournaments";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
-import RefereeRaces from "../pages/referee/RefereeRaces";
+import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
+import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
+import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
+import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
+import RewardManagement from "../pages/admin/RewardManagement";
+import SpectatorRewards from "../pages/spectator/SpectatorReward";
+import PointsTransactionHistory from "../pages/spectator/PointsTransaction";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -44,8 +52,7 @@ const OWNER_NAV = [
 ];
 
 const REFEREE_NAV = [
-  { key: "referee-dashboard", to: "/referee", label: "Dashboard" },
-  { key: "referee-races", to: "/referee/races", label: "Races" },
+  { key: "referee-dashboard", to: "/referee", label: "Tournaments" },
 ];
 
 const JOCKEY_NAV = [
@@ -67,6 +74,22 @@ function AdminUsersPage() {
   );
 }
 
+function AdminTournamentsPage() {
+  return (
+    <AdminLayout>
+      <TournamentManagement />
+    </AdminLayout>
+  );
+}
+
+function AdminRegistrationsPage() {
+  return (
+    <AdminLayout>
+      <RegistrationManagement />
+    </AdminLayout>
+  );
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -74,13 +97,21 @@ export default function AppRoutes() {
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-
       <Route path="/forgot-password" element={<ForgotPassword />} />
-
       <Route path="/oauth-success" element={<OAuthSuccess />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+
+        <Route
+          path="/spectator/reward"
+          element={<SpectatorRewards allowedRole="Spectator" />}
+        />
+
+        <Route
+          path="/spectator/points-transaction"
+          element={<PointsTransactionHistory allowedRole="Spectator" />}
+        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
@@ -114,6 +145,33 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <JockeyLicenseManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/reward"
+          element={
+            <AdminLayout>
+              <RewardManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/tournaments"
+          element={
+            <AdminLayout>
+              <TournamentManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/registrations"
+          element={
+            <AdminLayout>
+              <RegistrationManagement />
             </AdminLayout>
           }
         />
@@ -157,8 +215,19 @@ export default function AppRoutes() {
           }
         >
           <Route path="referee" element={<RefereeDashboard />} />
-          <Route path="referee/races" element={<RefereeRaces />} />
+
+          <Route
+            path="referee/tournaments/:id"
+            element={<RefereeTournamentDetail />}
+          />
+
           <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
+
+          <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
+
+          <Route path="referee/jockeys/:id" element={<RefereeJockeyDetail />} />
+
+          <Route path="referee/owners/:id" element={<RefereeOwnerDetail />} />
         </Route>
       </Route>
 
@@ -184,8 +253,10 @@ export default function AppRoutes() {
           <Route path="/jockey/invitations" element={<JockeyInvitations />} />
           <Route path="/jockey/schedule" element={<JockeyRaceSchedule />} />
         </Route>
+
         <Route path="/jockey/profile" element={<JockeyProfile />} />
       </Route>
+
       <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );

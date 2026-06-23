@@ -106,7 +106,6 @@ function JockeyLicenseManagement() {
   async function loadJockeys() {
     setIsLoading(true);
     try {
-      // Gọi API lấy toàn bộ danh sách Jockey
       const data = await getJockeysWithLicenses();
       setJockeys(data.map(normalizeJockey));
     } catch (error) {
@@ -116,7 +115,6 @@ function JockeyLicenseManagement() {
     }
   }
 
-  // Thực hiện lọc dữ liệu cục bộ phía Client khi admin chọn Filter
   const filteredJockeys = useMemo(() => {
     if (!selectedStatusFilter) return jockeys;
     return jockeys.filter(
@@ -126,16 +124,15 @@ function JockeyLicenseManagement() {
 
   async function handleJockeyStatusChange(profileId, recordId, nextStatus) {
     if (!profileId) {
-      message.error("Không tìm thấy Profile ID của Jockey");
+      message.error("Jockey Profile ID not found");
       return;
     }
 
     setStatusChangingId(recordId);
     try {
       await updateJockeyStatus(profileId, nextStatus);
-      message.success(`Đã cập nhật trạng thái hoạt động sang ${nextStatus}`);
+      message.success(`Updated status to ${nextStatus}`);
 
-      // Đồng bộ trạng thái mới vào danh sách hiển thị local
       setJockeys((current) =>
         current.map((jockey) =>
           jockey.id === recordId
@@ -144,7 +141,7 @@ function JockeyLicenseManagement() {
         ),
       );
     } catch (error) {
-      message.error(error?.message || "Cập nhật trạng thái Jockey thất bại");
+      message.error(error?.message || "Failed to update jockey status");
     } finally {
       setStatusChangingId(null);
     }
@@ -195,18 +192,16 @@ function JockeyLicenseManagement() {
         width: 150,
       },
       {
-        title: "Chiều cao/Cân nặng",
+        title: "Height / Weight",
         key: "specs",
         width: 160,
         render: (_, record) => `${record.height} cm / ${record.weight} kg`,
       },
       {
-        title: "Số chứng chỉ",
+        title: "Licenses Count",
         dataIndex: "licenses",
         width: 130,
-        render: (licenses) => (
-          <Tag color="blue">{licenses.length} chứng chỉ</Tag>
-        ),
+        render: (licenses) => <Tag color="blue">{licenses.length} active</Tag>,
       },
       {
         title: "Jockey Status",
@@ -271,7 +266,7 @@ function JockeyLicenseManagement() {
             size="small"
             onClick={() => setViewingLicensesJockey(record)}
           >
-            Xem chứng chỉ
+            View Licenses
           </Button>
         ),
       },
@@ -367,7 +362,7 @@ function JockeyLicenseManagement() {
         </div>
         <div className="user-management-actions">
           <Select
-            placeholder="Lọc theo Jockey Status"
+            placeholder="Filter by Jockey Status"
             allowClear
             style={{ width: 220 }}
             onChange={(val) => setSelectedStatusFilter(val)}
@@ -405,13 +400,12 @@ function JockeyLicenseManagement() {
         />
       </div>
 
-      {/* Modal hiển thị chi tiết danh sách bằng cấp/chứng chỉ của Jockey được chọn */}
       <Modal
-        title={`Danh sách chứng chỉ - ${viewingLicensesJockey?.fullName}`}
+        title={`License List - ${viewingLicensesJockey?.fullName}`}
         open={Boolean(viewingLicensesJockey)}
         footer={[
           <Button key="close" onClick={() => setViewingLicensesJockey(null)}>
-            Đóng
+            Close
           </Button>,
         ]}
         onCancel={() => setViewingLicensesJockey(null)}
@@ -421,30 +415,54 @@ function JockeyLicenseManagement() {
             type="secondary"
             style={{ display: "block", padding: "16px 0" }}
           >
-            Jockey này chưa cập nhật bất kỳ chứng chỉ nào hệ thống.
+            This jockey has not uploaded any licenses to the system.
           </Text>
         ) : (
           <List
-            itemLayout="horizontal"
+            itemLayout="vertical"
             dataSource={viewingLicensesJockey?.licenses}
             renderItem={(license) => (
               <List.Item
+                key={license.licenseCode}
+                extra={
+                  license.licenseUrl ? (
+                    <div style={{ marginTop: 8, marginBottom: 8 }}>
+                      <img
+                        src={license.licenseUrl}
+                        alt={`License ${license.licenseCode}`}
+                        style={{
+                          width: "100%",
+                          maxWidth: "220px",
+                          maxHeight: "140px",
+                          objectFit: "cover",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                        }}
+                      />
+                    </div>
+                  ) : null
+                }
                 actions={[
                   <a
                     href={license.licenseUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     key="view-link"
+                    style={{ fontWeight: 700, color: "#007a68" }}
                   >
-                    View File PDF
+                    View detailed source file
                   </a>,
                 ]}
               >
                 <List.Item.Meta
                   title={
-                    <Text strong>Mã chứng chỉ: {license.licenseCode}</Text>
+                    <Text strong>License Code: {license.licenseCode}</Text>
                   }
-                  description={`Ngày bắt đầu đua: ${formatDate(license.racingStartDate)}`}
+                  description={`Racing Start Date: ${formatDate(license.racingStartDate)}`}
                 />
               </List.Item>
             )}
