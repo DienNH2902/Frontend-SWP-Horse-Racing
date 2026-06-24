@@ -65,6 +65,27 @@ function formatDate(value) {
   }).format(date);
 }
 
+function getTimeValue(value) {
+  if (!value) return 0;
+
+  if (typeof value === "string" && value.includes("/")) {
+    const parsedDate = dayjs(value, "DD/MM/YYYY", true);
+
+    return parsedDate.isValid() ? parsedDate.valueOf() : 0;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function sortNewestUserFirst(a, b) {
+  const aTime = getTimeValue(a.createdAt || a.updatedAt || a.dateOfBirth);
+  const bTime = getTimeValue(b.createdAt || b.updatedAt || b.dateOfBirth);
+
+  return bTime - aTime;
+}
+
 function normalizeUser(user, index) {
   const id = pick(user, ["id", "_id", "userId"], `user-${index}`);
   const status = pick(user, ["status", "accountStatus", "isActive"], "Active");
@@ -104,6 +125,8 @@ function normalizeUser(user, index) {
     certification: user?.certification,
     stableName: user?.stableName,
     stableAddress: user?.stableAddress,
+    createdAt: pick(user, ["createdAt", "createdDate", "registeredAt"], ""),
+    updatedAt: pick(user, ["updatedAt", "modifiedAt"], ""),
   };
 }
 
@@ -145,7 +168,9 @@ function UserManagement() {
     setIsLoading(true);
     try {
       const response = await getUsers();
-      setUsers(resolveList(response).map(normalizeUser));
+      setUsers(
+        resolveList(response).map(normalizeUser).sort(sortNewestUserFirst),
+      );
       setSearchKey("");
     } catch (error) {
       message.error(error?.message || "Unable to load users");
@@ -175,7 +200,9 @@ function UserManagement() {
     setIsLoading(true);
     try {
       const response = await searchUsersByName(value.trim());
-      setUsers(resolveList(response).map(normalizeUser));
+      setUsers(
+        resolveList(response).map(normalizeUser).sort(sortNewestUserFirst),
+      );
     } catch (error) {
       message.error(error?.message || "Tìm kiếm thất bại");
     } finally {
