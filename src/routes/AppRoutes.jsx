@@ -31,6 +31,13 @@ import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
+import RewardManagement from "../pages/admin/RewardManagement";
+import SpectatorRewards from "../pages/spectator/SpectatorReward";
+import PointsTransactionHistory from "../pages/spectator/PointsTransaction";
+import NotificationHistory from "../pages/NotificationPage";
+import MoneyTransactionHistory from "../pages/MoneyTransaction";
+import Wallet from "../pages/Wallet";
+import PaymentResult from "../pages/PaymentResult";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -108,6 +115,36 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+        <Route
+          path="notification"
+          element={<NotificationHistory allowedRole="Spectator" />}
+        />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
+        <Route
+          path="/spectator"
+          element={<RoleHome allowedRole="Spectator" />}
+        />
+        <Route
+          path="/spectator/reward"
+          element={<SpectatorRewards allowedRole="Spectator" />}
+        />
+        <Route
+          path="/spectator/points-transaction"
+          element={<PointsTransactionHistory allowedRole="Spectator" />}
+        />
+      </Route>
+
+      <Route
+        element={<ProtectedRoute allowedRoles={["Horse Owner", "Jockey"]} />}
+      >
+        <Route
+          path="/money-transaction"
+          element={<MoneyTransactionHistory />}
+        />
+        <Route path="/wallet" element={<Wallet />} />
+        <Route path="/payment-result" element={<PaymentResult />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
@@ -144,6 +181,33 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <JockeyLicenseManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/reward"
+          element={
+            <AdminLayout>
+              <RewardManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/tournaments"
+          element={
+            <AdminLayout>
+              <TournamentManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/registrations"
+          element={
+            <AdminLayout>
+              <RegistrationManagement />
             </AdminLayout>
           }
         />
@@ -193,25 +257,13 @@ export default function AppRoutes() {
             element={<RefereeTournamentDetail />}
           />
 
-          <Route
-            path="referee/races/:id"
-            element={<RefereeRaceDetail />}
-          />
+          <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
 
-          <Route
-            path="referee/horses/:id"
-            element={<RefereeHorseDetail />}
-          />
+          <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
 
-          <Route
-            path="referee/jockeys/:id"
-            element={<RefereeJockeyDetail />}
-          />
+          <Route path="referee/jockeys/:id" element={<RefereeJockeyDetail />} />
 
-          <Route
-            path="referee/owners/:id"
-            element={<RefereeOwnerDetail />}
-          />
+          <Route path="referee/owners/:id" element={<RefereeOwnerDetail />} />
         </Route>
       </Route>
 

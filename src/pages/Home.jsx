@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
 import { getRoleHomePath } from "../utils/roles";
-import { clearAuthSession, getAccessToken, getAuthSession } from "../utils/storage";
+import {
+  clearAuthSession,
+  getAccessToken,
+  getAuthSession,
+} from "../utils/storage";
+import { BellOutlined, WalletOutlined } from "@ant-design/icons";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -179,13 +184,13 @@ function decodeJwtClaims(token) {
     const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
     const paddedPayload = normalizedPayload.padEnd(
       normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      "="
+      "=",
     );
     const json = decodeURIComponent(
       atob(paddedPayload)
         .split("")
         .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
-        .join("")
+        .join(""),
     );
 
     return JSON.parse(json);
@@ -246,8 +251,21 @@ function Home() {
   const tokenClaims = decodeJwtClaims(getAccessToken());
   const currentUser = authSession?.user || {};
   const accountName =
-    pickFirstValue(currentUser, ["fullName", "name", "displayName", "username", "email"]) ||
-    pickFirstValue(tokenClaims, ["fullName", "name", "displayName", "username", "email", "sub"]) ||
+    pickFirstValue(currentUser, [
+      "fullName",
+      "name",
+      "displayName",
+      "username",
+      "email",
+    ]) ||
+    pickFirstValue(tokenClaims, [
+      "fullName",
+      "name",
+      "displayName",
+      "username",
+      "email",
+      "sub",
+    ]) ||
     "Account";
   const accountRole =
     pickFirstValue(currentUser, ["role", "roleName"]) ||
@@ -258,6 +276,12 @@ function Home() {
   const isAdmin = Array.isArray(accountRole)
     ? accountRole.some((role) => String(role).toLowerCase().includes("admin"))
     : String(accountRole).toLowerCase().includes("admin");
+
+  // Chuẩn hóa chuỗi role để kiểm tra điều kiện chính xác hơn
+  const roleString = String(primaryRole).toLowerCase();
+  const isSpectator = roleString.includes("spectator");
+  const isOwnerOrJockey =
+    roleString.includes("owner") || roleString.includes("jockey");
 
   if (!authSession) {
     return <Navigate to="/" replace />;
@@ -1096,11 +1120,24 @@ function Home() {
       <header className="home-nav">
         <div className="home-container home-nav-inner">
           <a className="home-brand" href="#top" aria-label="GoldenHoof home">
-            <img className="home-brand-logo" src="/goldenhoof-logo.png" alt="" />
+            <img
+              className="home-brand-logo"
+              src="/goldenhoof-logo.png"
+              alt=""
+            />
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {["Races", "Horses", "Jockeys", "Results", "Rankings", "Predictions", "News", "About"].map((item) => (
+            {[
+              "Races",
+              "Horses",
+              "Jockeys",
+              "Results",
+              "Rankings",
+              "Predictions",
+              "News",
+              "About",
+            ].map((item) => (
               <a href={`#${item.toLowerCase()}`} key={item}>
                 {item}
               </a>
@@ -1136,10 +1173,64 @@ function Home() {
                     <Icon name="dashboard" size={18} />
                     <span>Dashboard</span>
                   </Link>
-                  <Link className="account-menu-item" role="menuitem" to="/profile">
+                  <Link
+                    className="account-menu-item"
+                    role="menuitem"
+                    to="/profile"
+                  >
                     <Icon name="user" size={18} />
                     <span>Profile</span>
                   </Link>
+                  {/* Phân quyền hiển thị Points/Transactions và Notifications */}
+                  {isSpectator && (
+                    <>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/spectator/points-transaction"
+                      >
+                        <Icon name="chart" size={18} />
+                        <span>Points</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/notification"
+                      >
+                        <BellOutlined style={{ fontSize: "18px" }} />
+                        <span>Notifications</span>
+                      </Link>
+                    </>
+                  )}
+
+                  {isOwnerOrJockey && (
+                    <>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/money-transaction"
+                      >
+                        <Icon name="chart" size={18} />
+                        <span>Transactions</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/notification"
+                      >
+                        <BellOutlined style={{ fontSize: "18px" }} />
+                        <span>Notifications</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/wallet"
+                      >
+                        <WalletOutlined style={{ fontSize: "18px" }} />
+                        <span>Wallet</span>
+                      </Link>
+                    </>
+                  )}
                   <button
                     className="account-menu-item account-menu-logout"
                     type="button"
@@ -1204,7 +1295,9 @@ function Home() {
                 {homeData.races.map((race) => (
                   <article className="race-card" key={race.id}>
                     <div className="race-meta">
-                      <span className={`pill ${race.status ? "pill-live" : ""}`}>
+                      <span
+                        className={`pill ${race.status ? "pill-live" : ""}`}
+                      >
                         {race.status || race.time}
                       </span>
                       <span>Race {race.id}</span>
@@ -1221,7 +1314,9 @@ function Home() {
                         {race.surface}
                       </span>
                     </div>
-                    {race.status && <img src={race.image} alt={`${race.name} race`} />}
+                    {race.status && (
+                      <img src={race.image} alt={`${race.name} race`} />
+                    )}
                     <button className="card-action" type="button">
                       {race.status ? "Watch Live" : "View Details"}
                     </button>
@@ -1292,7 +1387,11 @@ function Home() {
           <div className="lower-grid">
             <section className="panel" id="rankings">
               <SectionTitle title="Leaderboard" />
-              <div className="tabs" role="tablist" aria-label="Leaderboard views">
+              <div
+                className="tabs"
+                role="tablist"
+                aria-label="Leaderboard views"
+              >
                 <button type="button">Horses</button>
                 <button type="button">Jockeys</button>
                 <button type="button">Owners</button>
@@ -1314,7 +1413,11 @@ function Home() {
                       <td>{row.id}</td>
                       <td>
                         <span className="horse-name-cell">
-                          <img className="mini-thumb" src="/goldenhoof-hero.png" alt="" />
+                          <img
+                            className="mini-thumb"
+                            src="/goldenhoof-hero.png"
+                            alt=""
+                          />
                           {row.horse}
                         </span>
                       </td>
@@ -1370,8 +1473,8 @@ function Home() {
             <div>
               <h2>Make Your Predictions</h2>
               <p>
-                Predict race winners and compete with fans around the world.
-                Win points and unlock exclusive rewards.
+                Predict race winners and compete with fans around the world. Win
+                points and unlock exclusive rewards.
               </p>
               <a className="home-btn home-btn-primary" href="#predictions">
                 Start Predicting
@@ -1402,7 +1505,11 @@ function Home() {
         <div className="home-container footer-grid">
           <div>
             <a className="home-footer-brand" href="#top">
-              <img className="home-footer-brand-logo" src="/goldenhoof-logo.png" alt="" />
+              <img
+                className="home-footer-brand-logo"
+                src="/goldenhoof-logo.png"
+                alt=""
+              />
               <span>GoldenHoof</span>
             </a>
             <p>
@@ -1444,7 +1551,11 @@ function Home() {
             <h3>Stay Updated</h3>
             <p>Subscribe to our newsletter</p>
             <div className="newsletter">
-              <input type="email" placeholder="Enter your email" aria-label="Email address" />
+              <input
+                type="email"
+                placeholder="Enter your email"
+                aria-label="Email address"
+              />
               <button type="button" aria-label="Subscribe">
                 <Icon name="mail" size={18} />
               </button>

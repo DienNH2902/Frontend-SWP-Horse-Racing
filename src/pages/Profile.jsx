@@ -87,12 +87,26 @@ function Profile() {
   const [streakData, setStreakData] = useState(null);
   const [passwordForm] = Form.useForm();
 
+  const userRole = profile?.role?.toUpperCase() || "";
+
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([getProfile(), getMyStreakStatus()])
+    // Chỉ gọi API streak nếu là SPECTATOR để tối ưu hóa request hệ thống
+    const profilePromise = getProfile();
+
+    profilePromise
+      .then((data) => {
+        if (!isMounted) return [null, null];
+
+        const currentRole = data?.role?.toUpperCase() || "";
+        if (currentRole === "SPECTATOR") {
+          return Promise.all([data, getMyStreakStatus().catch(() => null)]);
+        }
+        return [data, null];
+      })
       .then(([data, streak]) => {
-        if (isMounted) {
+        if (isMounted && data) {
           setProfile(data);
           setStreakData(streak);
 
@@ -108,21 +122,25 @@ function Profile() {
             dateOfBirth: parsedDob && parsedDob.isValid() ? parsedDob : null,
             gender: data?.gender,
             // Đổ dữ liệu các trường đặc thù của từng Role
-            //Jockey
+            // Jockey
             weight: data?.weight,
             height: data?.height,
             jockeyStatus: data?.jockeyStatus,
             winRate: data?.winRate,
             reputationPoints: data?.reputationPoints,
-            //owner
+            balance: data?.balance,
+            heldBalance: data?.heldBalance,
+            // owner
             totalHorsesOwned: data?.totalHorsesOwned,
             stableName: data?.stableName,
             stableAddress: data?.stableAddress,
-            //referee
+            balance: data?.balance,
+            heldBalance: data?.heldBalance,
+            // referee
             experienceYears: data?.experienceYears,
             certification: data?.certification,
             racesAttempt: data?.racesAttempt,
-            //spectator
+            // spectator
             totalBets: data?.totalBets,
             totalPoints: data?.totalPoints,
             totalBalance: data?.totalBalance,
@@ -235,7 +253,7 @@ function Profile() {
     : undefined;
 
   // Chuẩn hóa chuỗi Role để kiểm tra giao diện (bất kể viết hoa viết thường)
-  const userRole = profile?.role?.toUpperCase() || "";
+  // const userRole = profile?.role?.toUpperCase() || "";
 
   // Hàm xử lý gửi dữ liệu đổi mật
   async function handleChangePasswordSubmit(values) {
@@ -687,15 +705,13 @@ function Profile() {
                         </div>
                       </div>
                       <div>
-                        {streakData.isRewardAvailable ? (
-                          <span className="streak-reward-status streak-reward-claimable">
-                            Reward Ready
-                          </span>
-                        ) : (
-                          <span className="streak-reward-status streak-reward-locked">
-                            Collected
-                          </span>
-                        )}
+                        <span
+                          className="streak-reward-status streak-reward-claimable"
+                          style={{ cursor: "pointer" }}
+                          onClick={() => navigate("/spectator/reward")}
+                        >
+                          Reward Shop
+                        </span>
                       </div>
                     </div>
                   )}
@@ -893,9 +909,19 @@ function Profile() {
                       <Text strong>{formatValue(profile.status)}</Text>
                     </Descriptions.Item>
                     {userRole === "JOCKEY" && (
-                      <Descriptions.Item label="Jockey Status">
-                        <Text strong>{formatValue(profile.jockeyStatus)}</Text>
-                      </Descriptions.Item>
+                      <>
+                        <Descriptions.Item label="Jockey Status">
+                          <Text strong>
+                            {formatValue(profile.jockeyStatus)}
+                          </Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Balance">
+                          <Text strong>{formatValue(profile.balance)}</Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Frozen Balance">
+                          <Text strong>{formatValue(profile.heldBalance)}</Text>
+                        </Descriptions.Item>
+                      </>
                     )}
                     {userRole === "REFEREE" && (
                       <>
@@ -918,11 +944,21 @@ function Profile() {
                     )}
                     {userRole === "OWNER" ||
                       (userRole === "HORSE OWNER" && (
-                        <Descriptions.Item label="Total Horse Owned">
-                          <Text strong>
-                            {formatValue(profile.totalHorsesOwned)}
-                          </Text>
-                        </Descriptions.Item>
+                        <>
+                          <Descriptions.Item label="Total Horse Owned">
+                            <Text strong>
+                              {formatValue(profile.totalHorsesOwned)}
+                            </Text>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Balance">
+                            <Text strong>{formatValue(profile.balance)}</Text>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Frozen Balance">
+                            <Text strong>
+                              {formatValue(profile.heldBalance)}
+                            </Text>
+                          </Descriptions.Item>
+                        </>
                       ))}
 
                     {userRole === "SPECTATOR" && (
@@ -942,7 +978,7 @@ function Profile() {
                     )}
                     {(userRole === "SPECTATOR" || userRole === "JOCKEY") && (
                       <Descriptions.Item label="Win Rate">
-                        <Text strong>{formatValue(profile.winRate)}</Text>
+                        <Text strong>{formatValue(profile.winRate)}%</Text>
                       </Descriptions.Item>
                     )}
                     {(userRole === "OWNER" ||
