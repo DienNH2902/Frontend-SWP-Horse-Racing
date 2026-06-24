@@ -88,7 +88,7 @@ function Profile() {
   const [passwordForm] = Form.useForm();
 
   const userRole = profile?.role?.toUpperCase() || "";
-  
+
   useEffect(() => {
     let isMounted = true;
 
@@ -128,10 +128,14 @@ function Profile() {
             jockeyStatus: data?.jockeyStatus,
             winRate: data?.winRate,
             reputationPoints: data?.reputationPoints,
+            balance: data?.balance,
+            heldBalance: data?.heldBalance,
             // owner
             totalHorsesOwned: data?.totalHorsesOwned,
             stableName: data?.stableName,
             stableAddress: data?.stableAddress,
+            balance: data?.balance,
+            heldBalance: data?.heldBalance,
             // referee
             experienceYears: data?.experienceYears,
             certification: data?.certification,
@@ -905,9 +909,19 @@ function Profile() {
                       <Text strong>{formatValue(profile.status)}</Text>
                     </Descriptions.Item>
                     {userRole === "JOCKEY" && (
-                      <Descriptions.Item label="Jockey Status">
-                        <Text strong>{formatValue(profile.jockeyStatus)}</Text>
-                      </Descriptions.Item>
+                      <>
+                        <Descriptions.Item label="Jockey Status">
+                          <Text strong>
+                            {formatValue(profile.jockeyStatus)}
+                          </Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Balance">
+                          <Text strong>{formatValue(profile.balance)}</Text>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Frozen Balance">
+                          <Text strong>{formatValue(profile.heldBalance)}</Text>
+                        </Descriptions.Item>
+                      </>
                     )}
                     {userRole === "REFEREE" && (
                       <>
@@ -930,11 +944,21 @@ function Profile() {
                     )}
                     {userRole === "OWNER" ||
                       (userRole === "HORSE OWNER" && (
-                        <Descriptions.Item label="Total Horse Owned">
-                          <Text strong>
-                            {formatValue(profile.totalHorsesOwned)}
-                          </Text>
-                        </Descriptions.Item>
+                        <>
+                          <Descriptions.Item label="Total Horse Owned">
+                            <Text strong>
+                              {formatValue(profile.totalHorsesOwned)}
+                            </Text>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Balance">
+                            <Text strong>{formatValue(profile.balance)}</Text>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Frozen Balance">
+                            <Text strong>
+                              {formatValue(profile.heldBalance)}
+                            </Text>
+                          </Descriptions.Item>
+                        </>
                       ))}
 
                     {userRole === "SPECTATOR" && (
@@ -954,7 +978,7 @@ function Profile() {
                     )}
                     {(userRole === "SPECTATOR" || userRole === "JOCKEY") && (
                       <Descriptions.Item label="Win Rate">
-                        <Text strong>{formatValue(profile.winRate)}</Text>
+                        <Text strong>{formatValue(profile.winRate)}%</Text>
                       </Descriptions.Item>
                     )}
                     {(userRole === "OWNER" ||
