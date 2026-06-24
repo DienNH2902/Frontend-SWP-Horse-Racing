@@ -7,7 +7,7 @@ import {
   getAccessToken,
   getAuthSession,
 } from "../utils/storage";
-import { BellOutlined } from "@ant-design/icons";
+import { BellOutlined, WalletOutlined } from "@ant-design/icons";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -1220,6 +1220,14 @@ function Home() {
                       >
                         <BellOutlined style={{ fontSize: "18px" }} />
                         <span>Notifications</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/wallet"
+                      >
+                        <WalletOutlined style={{ fontSize: "18px" }} />
+                        <span>Wallet</span>
                       </Link>
                     </>
                   )}
