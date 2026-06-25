@@ -174,6 +174,12 @@ function formatRate(value) {
   return String(value).includes("%") ? value : `${value}%`;
 }
 
+function toSortableNumber(value) {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : 0;
+}
+
 export default function OwnerJockeyRaceWorkspace() {
   const [form] = Form.useForm();
   const [registrationForm] = Form.useForm();
@@ -382,8 +388,22 @@ export default function OwnerJockeyRaceWorkspace() {
       ),
     },
     { title: "Phone", dataIndex: "phoneNumber", width: 130 },
-    { title: "Weight", dataIndex: "weight", width: 90 },
-    { title: "Height", dataIndex: "height", width: 90 },
+    {
+      title: "Weight",
+      dataIndex: "weight",
+      width: 90,
+      sorter: (first, second) =>
+        toSortableNumber(first.weight) - toSortableNumber(second.weight),
+      sortDirections: ["ascend", "descend"],
+    },
+    {
+      title: "Height",
+      dataIndex: "height",
+      width: 90,
+      sorter: (first, second) =>
+        toSortableNumber(first.height) - toSortableNumber(second.height),
+      sortDirections: ["ascend", "descend"],
+    },
     {
       title: "Win rate",
       dataIndex: "winRate",
