@@ -1,12 +1,63 @@
-import { Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Typography, message } from "antd";
+import {
+  Button,
+  Card,
+  Col,
+  Form,
+  Image,
+  Input,
+  InputNumber,
+  Row,
+  Space,
+  Typography,
+  Upload,
+  message,
+} from "antd";
+import { UploadOutlined } from "@ant-design/icons";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createHorse } from "../../api/services/horse.service";
-import { HORSE_STATUS_OPTIONS, toHorseCreatePayload } from "./horseViewModel";
+import { createHorse, uploadHorseAvatar } from "../../api/services/horse.service";
+import { toHorseCreatePayload } from "./horseViewModel";
+
+function getUploadedImagePath(data) {
+  return data?.imageUrl || data?.avatar || data?.avatarUrl || data?.url || data?.path || data;
+}
 
 export default function OwnerHorseRegister() {
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [isUploading, setIsUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
   const navigate = useNavigate();
+
+  async function handleImageUpload({ file, onSuccess, onError }) {
+    if (file.size > 5 * 1024 * 1024) {
+      const error = new Error("Image must be smaller than 5MB");
+      messageApi.error(error.message);
+      onError(error);
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const uploaded = await uploadHorseAvatar(file);
+      const imageUrl = getUploadedImagePath(uploaded);
+
+      if (!imageUrl) {
+        throw new Error("Invalid response from server");
+      }
+
+      form.setFieldsValue({ imageUrl });
+      setImagePreview(imageUrl);
+      messageApi.success("Horse image uploaded");
+      onSuccess(uploaded);
+    } catch (error) {
+      messageApi.error(error.message || "Could not upload horse image");
+      onError(error);
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   async function handleSubmit(values) {
     try {
@@ -38,7 +89,7 @@ export default function OwnerHorseRegister() {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ horseStatus: "IDLE", imageUrl: "" }}
+          initialValues={{ imageUrl: "" }}
           onFinish={handleSubmit}
         >
           <Row gutter={16}>
@@ -83,13 +134,37 @@ export default function OwnerHorseRegister() {
             </Col>
           </Row>
 
-          <Form.Item label="Image URL" name="imageUrl">
-            <Input placeholder="https://example.com/horse.png" />
+          <Form.Item
+            name="imageUrl"
+            hidden
+            rules={[{ required: true, message: "Upload horse image" }]}
+          >
+            <Input />
           </Form.Item>
 
-          <Form.Item label="Status" name="horseStatus">
-            <Select options={HORSE_STATUS_OPTIONS} />
-          </Form.Item>
+          <Upload
+            name="file"
+            accept="image/*"
+            showUploadList={false}
+            customRequest={handleImageUpload}
+            disabled={isUploading}
+          >
+            <Button icon={<UploadOutlined />} loading={isUploading}>
+              Upload horse image
+            </Button>
+          </Upload>
+
+          {imagePreview && (
+            <div style={{ marginTop: 16, marginBottom: 16 }}>
+              <Image
+                src={imagePreview}
+                alt="Horse preview"
+                width={220}
+                height={140}
+                style={{ borderRadius: 8, objectFit: "cover" }}
+              />
+            </div>
+          )}
 
           <Space wrap>
             <Button type="primary" htmlType="submit">

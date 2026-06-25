@@ -1730,9 +1730,6 @@ function Home() {
           </nav>
 
           <div className="home-actions">
-            <button className="home-icon-btn" type="button" aria-label="Search">
-              <Icon name="search" size={24} />
-            </button>
             <div className="nav-dropdown-wrap">
               <button
                 className={`home-icon-btn notification-trigger ${
