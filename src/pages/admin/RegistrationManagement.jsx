@@ -27,6 +27,7 @@ import {
   getRegistrations,
   rejectRegistration,
 } from "../../api/services/registration.service";
+import { getRacesByTournament } from "../../api/services/race.service";
 
 const { Title, Text } = Typography;
 
@@ -112,15 +113,33 @@ function normalizeRegistration(item, index) {
   };
 }
 
+function normalizeRaceOption(item, index) {
+  const id = item?._id || item?.id || `race-${index}`;
+  const name = item?.name || `Race ${index + 1}`;
+  const round = item?.roundNumber ? `Round ${item.roundNumber}` : "";
+  const order = item?.raceOrder ? `Race ${item.raceOrder}` : "";
+  const startTime = formatDate(item?.startTime || item?.date);
+  const details = [round, order, startTime !== "N/A" ? startTime : ""]
+    .filter(Boolean)
+    .join(" - ");
+
+  return {
+    label: details ? `${name} (${details})` : name,
+    value: id,
+  };
+}
+
 function RegistrationManagement() {
   const [confirmForm] = Form.useForm();
   const [rejectForm] = Form.useForm();
 
   const [registrations, setRegistrations] = useState([]);
+  const [raceOptions, setRaceOptions] = useState([]);
   const [filterStatus, setFilterStatus] = useState("");
   const [filterTournamentId, setFilterTournamentId] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRaces, setIsLoadingRaces] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [detailRegistration, setDetailRegistration] = useState(null);
@@ -168,13 +187,46 @@ function RegistrationManagement() {
     }
   }
 
+  async function loadRaceOptions(tournamentId, currentRaceId = "") {
+    if (!tournamentId) {
+      setRaceOptions([]);
+      return;
+    }
+
+    setIsLoadingRaces(true);
+
+    try {
+      const response = await getRacesByTournament(tournamentId);
+      const options = resolveList(response).map(normalizeRaceOption);
+
+      if (
+        currentRaceId &&
+        !options.some((option) => option.value === currentRaceId)
+      ) {
+        options.unshift({
+          label: `Current race (${currentRaceId})`,
+          value: currentRaceId,
+        });
+      }
+
+      setRaceOptions(options);
+    } catch (error) {
+      setRaceOptions([]);
+      message.error(error?.message || "Unable to load races");
+    } finally {
+      setIsLoadingRaces(false);
+    }
+  }
+
   function openConfirmModal(record) {
     setConfirmingRegistration(record);
+    setRaceOptions([]);
     confirmForm.resetFields();
     confirmForm.setFieldsValue({
       raceId: record.raceId || "",
       gateNumber: record.gateNumber !== "N/A" ? record.gateNumber : undefined,
     });
+    loadRaceOptions(record.tournamentId, record.raceId);
   }
 
   async function handleConfirm() {
@@ -554,11 +606,17 @@ function RegistrationManagement() {
       >
         <Form form={confirmForm} layout="vertical">
           <Form.Item
-            label="Race ID"
+            label="Race"
             name="raceId"
-            rules={[{ required: true, message: "Race ID is required" }]}
+            rules={[{ required: true, message: "Race is required" }]}
           >
-            <Input placeholder="Enter race ID" />
+            <Select
+              showSearch
+              loading={isLoadingRaces}
+              optionFilterProp="label"
+              options={raceOptions}
+              placeholder="Select race"
+            />
           </Form.Item>
 
           <Form.Item

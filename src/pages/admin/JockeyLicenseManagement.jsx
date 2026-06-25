@@ -42,9 +42,36 @@ function formatDate(value) {
   }).format(date);
 }
 
+function getTimeValue(value) {
+  if (!value) return 0;
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function getNewestLicenseTime(licenses = []) {
+  return licenses.reduce((latest, license) => {
+    const licenseTime = Math.max(
+      getTimeValue(license?.updatedAt),
+      getTimeValue(license?.createdAt),
+      getTimeValue(license?.uploadedAt),
+      getTimeValue(license?.issuedAt),
+      getTimeValue(license?.racingStartDate),
+    );
+
+    return Math.max(latest, licenseTime);
+  }, 0);
+}
+
+function sortNewestJockeyFirst(a, b) {
+  return b.sortTime - a.sortTime;
+}
+
 function normalizeJockey(jockey, index) {
   const id = pick(jockey, ["id", "_id", "userId"], `jockey-${index}`);
   const profileId = pick(jockey, ["profileId", "jockeyProfileId"], "");
+  const licenses = Array.isArray(jockey?.licenses) ? jockey.licenses : [];
 
   return {
     key: id,
@@ -67,9 +94,14 @@ function normalizeJockey(jockey, index) {
     weight: jockey?.weight || "N/A",
     height: jockey?.height || "N/A",
     jockeyStatus: jockey?.jockeyStatus || "Pending_Approval",
-    licenses: Array.isArray(jockey?.licenses) ? jockey.licenses : [],
+    licenses,
     winRate: jockey?.winRate || 0,
     reputationPoints: jockey?.reputationPoints || 0,
+    sortTime: Math.max(
+      getTimeValue(pick(jockey, ["updatedAt", "createdAt", "submittedAt", "registeredAt"], "")),
+      getTimeValue(pick(jockey?.profile, ["updatedAt", "createdAt", "submittedAt"], "")),
+      getNewestLicenseTime(licenses),
+    ),
   };
 }
 
@@ -107,7 +139,7 @@ function JockeyLicenseManagement() {
     setIsLoading(true);
     try {
       const data = await getJockeysWithLicenses();
-      setJockeys(data.map(normalizeJockey));
+      setJockeys(data.map(normalizeJockey).sort(sortNewestJockeyFirst));
     } catch (error) {
       message.error(error?.message || "Unable to load jockeys");
     } finally {

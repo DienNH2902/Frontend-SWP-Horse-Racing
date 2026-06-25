@@ -29,6 +29,7 @@ import {
   getRaceById,
   getRacesByTournament,
 } from "../../api/services/race.service";
+import { getRaceCourseById } from "../../api/services/race-course.service";
 import { getTournaments } from "../../api/services/tournament.service";
 import { getUsersByRole } from "../../api/services/user.service";
 
@@ -53,6 +54,30 @@ function resolveList(response) {
 
 function getId(item, fallback) {
   return item?._id || item?.id || fallback;
+}
+
+function getPersonName(item) {
+  return (
+    item?.fullName ||
+    item?.name ||
+    item?.username ||
+    item?.email ||
+    ""
+  );
+}
+
+function getRaceCourseName(item) {
+  return (
+    item?.raceCourseName ||
+    item?.raceCourse?.name ||
+    item?.raceCourse?.title ||
+    item?.raceCourse?.location ||
+    item?.courseName ||
+    item?.course?.name ||
+    item?.name ||
+    item?.title ||
+    ""
+  );
 }
 
 function formatDate(value) {
@@ -107,6 +132,8 @@ function normalizeRace(item, index) {
     tournamentTitle: item?.tournamentTitle || "N/A",
     refereeId: item?.refereeId || "",
     raceCourseId: item?.raceCourseId || "",
+    refereeName: item?.refereeName || getPersonName(item?.referee) || "",
+    raceCourseName: getRaceCourseName(item),
     name: item?.name || `Race ${index + 1}`,
     roundNumber: item?.roundNumber ?? "N/A",
     raceOrder: item?.raceOrder ?? "N/A",
@@ -126,12 +153,7 @@ function normalizeRace(item, index) {
 
 function normalizeReferee(item, index) {
   const id = getId(item, `referee-${index}`);
-  const label =
-    item?.fullName ||
-    item?.name ||
-    item?.username ||
-    item?.email ||
-    id;
+  const label = getPersonName(item) || id;
 
   return {
     label,
@@ -166,6 +188,7 @@ function RaceManagement() {
 
   const [races, setRaces] = useState([]);
   const [referees, setReferees] = useState([]);
+  const [raceCoursesById, setRaceCoursesById] = useState({});
   const [tournaments, setTournaments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -191,12 +214,47 @@ function RaceManagement() {
 
     try {
       const response = await getRacesByTournament(tournamentId, status);
-      setRaces(resolveList(response).map(normalizeRace));
+      const normalizedRaces = resolveList(response).map(normalizeRace);
+
+      setRaces(normalizedRaces);
+      loadRaceCourseNames(normalizedRaces);
     } catch (error) {
       message.error(error?.message || "Unable to load races");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function loadRaceCourseNames(nextRaces) {
+    const missingIds = [
+      ...new Set(
+        nextRaces
+          .filter((race) => race.raceCourseId && !race.raceCourseName)
+          .map((race) => race.raceCourseId),
+      ),
+    ].filter((id) => !raceCoursesById[id]);
+
+    if (missingIds.length === 0) {
+      return;
+    }
+
+    const entries = await Promise.all(
+      missingIds.map(async (id) => {
+        try {
+          const response = await getRaceCourseById(id);
+          const raceCourse = response?.data || response?.result || response;
+
+          return [id, getRaceCourseName(raceCourse) || "N/A"];
+        } catch {
+          return [id, "N/A"];
+        }
+      }),
+    );
+
+    setRaceCoursesById((current) => ({
+      ...current,
+      ...Object.fromEntries(entries),
+    }));
   }
 
   async function loadRaces() {
@@ -265,7 +323,10 @@ function RaceManagement() {
 
     try {
       const response = await getRaceById(record.id);
-      setDetailRace(normalizeRace(response, 0));
+      const nextRace = normalizeRace(response, 0);
+
+      setDetailRace(nextRace);
+      loadRaceCourseNames([nextRace]);
     } catch (error) {
       message.error(error?.message || "Unable to load race detail");
     } finally {
@@ -374,7 +435,7 @@ function RaceManagement() {
     const registrationIds = parseRegistrationIds(values.registrationIds);
 
     if (registrationIds.length === 0) {
-      message.error("Please enter at least one registration ID");
+      message.error("Please enter at least one registration");
       return;
     }
 
@@ -391,6 +452,22 @@ function RaceManagement() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function getRefereeDisplayName(record) {
+    return (
+      record.refereeName ||
+      referees.find((referee) => referee.value === record.refereeId)?.label ||
+      "N/A"
+    );
+  }
+
+  function getRaceCourseDisplayName(record) {
+    return (
+      record.raceCourseName ||
+      raceCoursesById[record.raceCourseId] ||
+      "N/A"
+    );
   }
 
   const columns = useMemo(
@@ -437,18 +514,18 @@ function RaceManagement() {
         render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
       },
       {
-        title: "Referee ID",
-        dataIndex: "refereeId",
+        title: "Referee",
+        key: "referee",
         width: 220,
         ellipsis: true,
-        render: (value) => value || "N/A",
+        render: (_, record) => getRefereeDisplayName(record),
       },
       {
-        title: "Race Course ID",
-        dataIndex: "raceCourseId",
+        title: "Race Course",
+        key: "raceCourse",
         width: 220,
         ellipsis: true,
-        render: (value) => value || "N/A",
+        render: (_, record) => getRaceCourseDisplayName(record),
       },
       {
         title: "Slots",
@@ -491,7 +568,7 @@ function RaceManagement() {
         ),
       },
     ],
-    [],
+    [raceCoursesById, referees],
   );
 
   return (
@@ -619,7 +696,7 @@ function RaceManagement() {
         <Form form={searchForm} layout="inline">
           <Form.Item
             name="tournamentId"
-            rules={[{ required: true, message: "Tournament ID is required" }]}
+            rules={[{ required: true, message: "Tournament is required" }]}
           >
             <Select
               showSearch
@@ -684,9 +761,9 @@ function RaceManagement() {
       >
         <Form form={batchForm} layout="vertical">
           <Form.Item
-            label="Tournament ID"
+            label="Tournament"
             name="tournamentId"
-            rules={[{ required: true, message: "Tournament ID is required" }]}
+            rules={[{ required: true, message: "Tournament is required" }]}
           >
             <Select
               showSearch
@@ -767,9 +844,9 @@ function RaceManagement() {
       >
         <Form form={round2Form} layout="vertical">
           <Form.Item
-            label="Tournament ID"
+            label="Tournament"
             name="tournamentId"
-            rules={[{ required: true, message: "Tournament ID is required" }]}
+            rules={[{ required: true, message: "Tournament is required" }]}
           >
             <Select
               showSearch
@@ -833,11 +910,11 @@ function RaceManagement() {
       >
         <Form form={raceCourseForm} layout="vertical">
           <Form.Item
-            label="Race Course ID"
+            label="Race Course"
             name="raceCourseId"
-            rules={[{ required: true, message: "Race Course ID is required" }]}
+            rules={[{ required: true, message: "Race course is required" }]}
           >
-            <Input />
+            <Input placeholder="Enter race course" />
           </Form.Item>
         </Form>
       </Modal>
@@ -853,15 +930,15 @@ function RaceManagement() {
       >
         <Form form={horsesForm} layout="vertical">
           <Form.Item
-            label="Registration IDs"
+            label="Registrations"
             name="registrationIds"
             rules={[
-              { required: true, message: "Registration IDs are required" },
+              { required: true, message: "Registrations are required" },
             ]}
           >
             <Input.TextArea
               rows={6}
-              placeholder={"one registration ID per line\nor,separate,by,comma"}
+              placeholder={"one registration per line\nor,separate,by,comma"}
             />
           </Form.Item>
         </Form>
@@ -876,15 +953,11 @@ function RaceManagement() {
       >
         {detailRace && (
           <Descriptions bordered column={1} size="middle">
-            <Descriptions.Item label="ID">{detailRace.id}</Descriptions.Item>
             <Descriptions.Item label="Name">
               {detailRace.name}
             </Descriptions.Item>
             <Descriptions.Item label="Tournament">
               {detailRace.tournamentTitle}
-            </Descriptions.Item>
-            <Descriptions.Item label="Tournament ID">
-              {detailRace.tournamentId || "N/A"}
             </Descriptions.Item>
             <Descriptions.Item label="Round">
               {detailRace.roundNumber}
@@ -903,11 +976,11 @@ function RaceManagement() {
                 {detailRace.status}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Referee ID">
-              {detailRace.refereeId || "N/A"}
+            <Descriptions.Item label="Referee">
+              {getRefereeDisplayName(detailRace)}
             </Descriptions.Item>
-            <Descriptions.Item label="Race Course ID">
-              {detailRace.raceCourseId || "N/A"}
+            <Descriptions.Item label="Race Course">
+              {getRaceCourseDisplayName(detailRace)}
             </Descriptions.Item>
             <Descriptions.Item label="Total Bettors">
               {detailRace.totalBettors}
