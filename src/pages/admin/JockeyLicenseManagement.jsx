@@ -80,12 +80,11 @@ function getNewestLicenseTime(licenses = []) {
       getObjectIdTime(license?._id),
       getObjectIdTime(license?.id),
       getObjectIdTime(license?.licenseId),
-      getTimeValue(license?.updatedAt),
       getTimeValue(license?.createdAt),
       getTimeValue(license?.uploadedAt),
       getTimeValue(license?.submittedAt),
-      getTimeValue(license?.issuedAt),
-      getTimeValue(license?.racingStartDate),
+      getTimeValue(license?.registeredAt),
+      getTimeValue(license?.requestedAt),
     );
 
     return Math.max(latest, licenseTime);
@@ -139,11 +138,9 @@ function normalizeJockey(jockey, index) {
         pick(
           jockey,
           [
-            "updatedAt",
             "createdAt",
             "submittedAt",
             "registeredAt",
-            "approvedAt",
             "requestedAt",
           ],
           "",
@@ -152,7 +149,7 @@ function normalizeJockey(jockey, index) {
       getTimeValue(
         pick(
           jockey?.profile,
-          ["updatedAt", "createdAt", "submittedAt", "approvedAt", "requestedAt"],
+          ["createdAt", "submittedAt", "registeredAt", "requestedAt"],
           "",
         ),
       ),

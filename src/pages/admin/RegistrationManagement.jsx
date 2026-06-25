@@ -71,9 +71,25 @@ function getTimeValue(value) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
+function getObjectIdTime(value) {
+  if (typeof value !== "string" || !/^[a-f\d]{24}$/i.test(value)) {
+    return 0;
+  }
+
+  return parseInt(value.slice(0, 8), 16) * 1000;
+}
+
 function sortNewestRegistrationFirst(a, b) {
-  const aTime = getTimeValue(a.registeredAt || a.createdAt);
-  const bTime = getTimeValue(b.registeredAt || b.createdAt);
+  const aTime = Math.max(
+    getTimeValue(a.registeredAt),
+    getTimeValue(a.createdAt),
+    getObjectIdTime(a.id),
+  );
+  const bTime = Math.max(
+    getTimeValue(b.registeredAt),
+    getTimeValue(b.createdAt),
+    getObjectIdTime(b.id),
+  );
 
   return bTime - aTime;
 }
