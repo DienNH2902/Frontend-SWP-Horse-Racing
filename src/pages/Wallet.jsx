@@ -388,9 +388,15 @@ export default function Wallet() {
                       min: 10000,
                       message: "Minimum deposit is 10,000 VND",
                     },
+                    {
+                      type: "number",
+                      max: 100000000,
+                      message: "Maximum deposit is 100,000,000 VND",
+                    },
                   ]}
                 >
                   <InputNumber
+                    controls={false}
                     className="wallet-input-number"
                     formatter={(value) =>
                       `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
