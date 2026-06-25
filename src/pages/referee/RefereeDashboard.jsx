@@ -23,6 +23,7 @@ import { Link } from "react-router-dom";
 import { getMyRaces } from "../../api/services/race.service";
 import { getRaceCourseById }
   from "../../api/services/race-course.service";
+import "./RefereeDashboard.css";
 
 function statusColor(status) {
   switch (status) {
@@ -50,6 +51,8 @@ export default function RefereeDashboard() {
   const [races, setRaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+
 
   useEffect(() => {
     loadRaces();
@@ -153,23 +156,26 @@ export default function RefereeDashboard() {
 
     {
       title: "Race Course",
-      render: (_, record) => (
-        <>
-          {console.log(record)}
-          {record.raceCourse?.name ||
-            record.raceCourseName ||
-            record.courseName ||
-            record.raceCourseId ||
-            "-"}
-        </>
-      ),
+      render: (_, record) =>
+        record.raceCourse?.name ||
+        record.raceCourseName ||
+        record.courseName ||
+        record.raceCourseId ||
+        "-"
     },
 
     {
       title: "Status",
       dataIndex: "status",
       render: (status) => (
-        <Tag color={statusColor(status)}>
+        <Tag
+          color={statusColor(status)}
+          style={{
+            borderRadius: 999,
+            padding: "2px 12px",
+            fontWeight: 600,
+          }}
+        >
           {status}
         </Tag>
       ),
@@ -180,10 +186,10 @@ export default function RefereeDashboard() {
       render: (_, record) => (
         <Space>
           <Link
-            to={`/referee/races/${record._id}`}
+            to={`/referee/races/${record._id || record.id}`}
           >
-            <Button type="primary">
-              View
+            <Button className="dashboard-btn">
+              View Details
             </Button>
           </Link>
         </Space>
@@ -192,101 +198,302 @@ export default function RefereeDashboard() {
   ];
 
   return (
-    <Space
-      direction="vertical"
-      size={16}
-      style={{ width: "100%" }}
-    >
-      {errorMessage && (
-        <Alert
-          type="error"
-          showIcon
-          message={errorMessage}
-        />
-      )}
+    <div className="dashboard-page">
+      <Space
+        direction="vertical"
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Assigned Races"
-              value={races.length}
-              prefix={<TrophyOutlined />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Preparing"
-              value={stats.preparing}
-              prefix={<ClockCircleOutlined />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Ready"
-              value={stats.ready}
-              prefix={<FlagOutlined />}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} xl={6}>
-          <Card>
-            <Statistic
-              title="Finished"
-              value={stats.finished}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Card
-        title="My Assigned Races"
-        extra={
-          <Typography.Text type="secondary">
-            Manage your assigned races
-          </Typography.Text>
-        }
+        size={16}
+        style={{
+          width: "100%",
+        }}
       >
-        {loading ? (
-          <Skeleton
-            active
-            paragraph={{ rows: 8 }}
-          />
-        ) : races.length === 0 ? (
-          <Empty description="No races assigned" />
-        ) : (
-          <Table
-            rowKey="_id"
-            columns={columns}
-            dataSource={races}
-            pagination={{
-              pageSize: 5,
-            }}
+
+        <Typography.Title
+          level={2}
+          style={{
+            marginBottom: 0,
+          }}
+        >
+          Referee Dashboard
+        </Typography.Title>
+
+        {errorMessage && (
+          <Alert
+            type="error"
+            showIcon
+            message={errorMessage}
           />
         )}
-      </Card>
 
-      <Card title="Referee Workspace">
-        <Typography.Paragraph
-          type="secondary"
-          style={{ marginBottom: 0 }}
+        <Card
+          className="dashboard-hero"
+          style={{
+            marginBottom: 8,
+          }}
         >
-          Review your assigned races,
-          configure race conditions,
-          confirm readiness,
-          run simulations,
-          and submit final reports after
-          each race.
-        </Typography.Paragraph>
-      </Card>
-    </Space>
+          <Row align="middle" gutter={24}>
+            <Col xs={24} md={16}>
+              <div className="dashboard-badge">
+                GOLDEN HOOF RACING SYSTEM
+              </div>
+
+              <Typography.Title
+                level={2}
+                className="dashboard-title"
+              >
+                Welcome Back,
+                <span className="dashboard-title-highlight">
+                  {" "}Referee
+                </span>
+              </Typography.Title>
+
+              <Typography.Paragraph
+                className="dashboard-subtitle"
+              >
+                Track races, validate results,
+                manage horse performance and
+                oversee tournament operations.
+              </Typography.Paragraph>
+            </Col>
+
+            <Col xs={24} md={8}>
+              <img
+                src="/goldenhoof-hero.png"
+                alt="Golden Hoof"
+                style={{
+                  width: "100%",
+                  maxHeight: 280,
+                  objectFit: "cover",
+                  borderRadius: 18,
+                }}
+              />
+            </Col>
+          </Row>
+        </Card>
+
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} xl={6}>
+            <Card
+              className="dashboard-stat-card"
+              styles={{
+                body: {
+                  padding: 24,
+                },
+              }}
+            >
+              <Statistic
+                title={
+                  <span
+                    style={{
+                      color:
+                        "rgba(244,255,251,.75)",
+
+                    }}
+                  >
+                    Assigned Races
+                  </span>
+                }
+                value={races.length}
+                valueStyle={{
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: 42,
+                }}
+                prefix={
+                  <div className="dashboard-icon">
+                    <TrophyOutlined />
+                  </div>
+                }
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} xl={6}>
+            <Card
+              className="dashboard-stat-card"
+              styles={{
+                body: {
+                  padding: 24,
+                },
+              }}
+            >
+              <Statistic
+                title={
+                  <span
+                    style={{
+                      color:
+                        "rgba(244,255,251,.75)",
+
+                    }}
+                  >
+                    Preparing
+                  </span>
+                }
+                value={stats.scheduled}
+                valueStyle={{
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: 42,
+                }}
+                prefix={
+                  <div className="dashboard-icon">
+                    <ClockCircleOutlined />
+                  </div>
+                }
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} xl={6}>
+            <Card
+              className="dashboard-stat-card"
+              styles={{
+                body: {
+                  padding: 24,
+                },
+              }}
+            >
+              <Statistic
+                title={
+                  <span
+                    style={{
+                      color:
+                        "rgba(244,255,251,.75)",
+
+                    }}
+                  >
+                    Ready
+                  </span>
+                }
+
+                value={stats.ready}
+                valueStyle={{
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: 42,
+                }}
+                prefix={
+                  <div className="dashboard-icon">
+                    <FlagOutlined />
+                  </div>
+                }
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} sm={12} xl={6}>
+            <Card
+              className="dashboard-stat-card"
+              styles={{
+                body: {
+                  padding: 24,
+                },
+              }}
+            >
+              <Statistic
+                title={
+                  <span
+                    style={{
+                      color:
+                        "rgba(244,255,251,.75)",
+
+                    }}
+                  >
+                    Finished
+                  </span>
+                }
+
+                value={stats.finished}
+                valueStyle={{
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: 42,
+                }}
+                prefix={
+                  <div className="dashboard-icon">
+                    <CheckCircleOutlined />
+                  </div>
+                }
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        <Card
+          className="dashboard-content-card"
+          bodyStyle={{
+            padding: 0,
+          }}
+          title={
+            <span
+              style={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: "#fff",
+              }}
+            >
+              My Assigned Races
+            </span>
+          }
+          extra={
+            <Typography.Text
+              style={{
+                color:
+                  "rgba(244,255,251,.6)",
+              }}
+            >
+              Manage your assigned races
+            </Typography.Text>
+          }
+        >
+          {loading ? (
+            <Skeleton
+              active
+              paragraph={{ rows: 8 }}
+            />
+          ) : races.length === 0 ? (
+            <Empty description="No races assigned" />
+          ) : (
+            <Table
+              className="dashboard-table"
+              rowKey={(record) => record._id || record.id}
+              columns={columns}
+              dataSource={races}
+              pagination={{
+                pageSize: 5,
+              }}
+            />
+          )}
+        </Card>
+
+        <Card
+          className="dashboard-content-card"
+          title={
+            <span
+              style={{
+                color: "#ffffff",
+              }}
+            >
+              Referee Workspace
+            </span>
+          }
+        >
+          <Typography.Paragraph
+            style={{
+              color:
+                "rgba(244,255,251,.75)",
+              marginBottom: 0,
+            }}
+          >
+            Review your assigned races,
+            configure race conditions,
+            confirm readiness,
+            run simulations,
+            and submit final reports after
+            each race.
+          </Typography.Paragraph>
+        </Card>
+      </Space>
+    </div>
   );
 }
