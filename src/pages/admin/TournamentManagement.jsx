@@ -5,6 +5,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
@@ -12,10 +13,11 @@ import {
   Typography,
   message,
 } from "antd";
-import { EyeOutlined, EditOutlined, SyncOutlined } from "@ant-design/icons";
+import { DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import {
   createTournament,
+  deleteTournament,
   getTournamentById,
   getTournaments,
   updateTournament,
@@ -242,6 +244,20 @@ function TournamentManagement() {
     }
   }
 
+  async function handleDeleteTournament(record) {
+    setIsSaving(true);
+
+    try {
+      await deleteTournament(record.id);
+      message.success("Tournament deleted");
+      await loadTournaments();
+    } catch (error) {
+      message.error(error?.message || "Unable to delete tournament");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -306,11 +322,22 @@ function TournamentManagement() {
             >
               Status
             </Button>
+
+            <Popconfirm
+              title="Delete tournament?"
+              description="This action cannot be undone."
+              okText="Delete"
+              cancelText="Cancel"
+              okButtonProps={{ danger: true, loading: isSaving }}
+              onConfirm={() => handleDeleteTournament(record)}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
           </Space>
         ),
       },
     ],
-    [],
+    [isSaving],
   );
 
   return (

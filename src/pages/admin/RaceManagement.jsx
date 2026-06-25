@@ -103,6 +103,43 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+function normalizeTimeInput(value = "") {
+  const trimmedValue = String(value).trim();
+
+  if (/^\d{1,2}$/.test(trimmedValue)) {
+    return `${trimmedValue.padStart(2, "0")}:00`;
+  }
+
+  if (/^\d{1,2}:\d{2}$/.test(trimmedValue)) {
+    const [hour, minute] = trimmedValue.split(":");
+
+    return `${hour.padStart(2, "0")}:${minute}`;
+  }
+
+  return trimmedValue;
+}
+
+function buildStartDateTime(dateValue, timeValue) {
+  const normalizedTime = normalizeTimeInput(timeValue);
+
+  if (!dateValue || !normalizedTime) {
+    return timeValue;
+  }
+
+  if (normalizedTime.includes("T")) {
+    return normalizedTime;
+  }
+
+  return `${dateValue}T${normalizedTime}:00.000Z`;
+}
+
+function normalizeRacePayload(race) {
+  return {
+    ...race,
+    startTime: buildStartDateTime(race.date, race.startTime),
+  };
+}
+
 function statusColor(status) {
   switch (status) {
     case "Scheduled":
@@ -357,16 +394,20 @@ function RaceManagement() {
 
   async function handleCreateBatch() {
     const values = await batchForm.validateFields();
+    const payload = {
+      ...values,
+      races: values.races.map(normalizeRacePayload),
+    };
 
     setIsSaving(true);
 
     try {
-      await createRaceBatch(values);
+      await createRaceBatch(payload);
       message.success("Races created");
       setIsBatchModalOpen(false);
       batchForm.resetFields();
-      searchForm.setFieldsValue({ tournamentId: values.tournamentId });
-      await loadRacesFor(values.tournamentId, searchForm.getFieldValue("status"));
+      searchForm.setFieldsValue({ tournamentId: payload.tournamentId });
+      await loadRacesFor(payload.tournamentId, searchForm.getFieldValue("status"));
     } catch (error) {
       message.error(error?.message || "Unable to create races");
     } finally {
@@ -381,7 +422,7 @@ function RaceManagement() {
 
     try {
       await createRound2Race(values.tournamentId, {
-        startTime: values.startTime,
+        startTime: buildStartDateTime(values.date, values.startTime),
         date: values.date,
       });
       message.success("Round 2 race created");
@@ -804,7 +845,7 @@ function RaceManagement() {
                         { required: true, message: "Start time is required" },
                       ]}
                     >
-                      <Input placeholder="2026-07-15T08:00:00.000Z" />
+                      <Input type="time" placeholder="08:00" />
                     </Form.Item>
 
                     <Form.Item label=" ">
@@ -869,7 +910,7 @@ function RaceManagement() {
             name="startTime"
             rules={[{ required: true, message: "Start time is required" }]}
           >
-            <Input placeholder="2026-07-20T08:00:00.000Z" />
+            <Input type="time" placeholder="08:00" />
           </Form.Item>
         </Form>
       </Modal>
