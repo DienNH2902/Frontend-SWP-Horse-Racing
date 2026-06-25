@@ -86,6 +86,5 @@ export function toHorseCreatePayload(values = {}) {
         imageUrl: values.imageUrl || "",
         height: values.height,
         weight: values.weight,
-        horseStatus: values.horseStatus || "IDLE",
     };
 }

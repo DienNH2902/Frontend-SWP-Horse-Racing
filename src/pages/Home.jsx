@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
+import { API_BASE_URL } from "../api/client";
+import { getHorses } from "../api/services/horse.service";
+import { getUsersByRole } from "../api/services/user.service";
 import { getRoleHomePath } from "../utils/roles";
 import {
   clearAuthSession,
@@ -144,12 +147,17 @@ function SectionTitle({ title, action }) {
   return (
     <div className="home-section-title">
       <h2>{title}</h2>
-      {action && (
+      {action?.onClick ? (
+        <button type="button" onClick={action.onClick}>
+          {action.label}
+          <Icon name="arrow" size={16} />
+        </button>
+      ) : action ? (
         <a href={action.href}>
           {action.label}
           <Icon name="arrow" size={16} />
         </a>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -223,11 +231,92 @@ function normalizeNotification(notification = {}) {
   };
 }
 
+function toNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function resolveImageUrl(path) {
+  if (!path) return "/goldenhoof-hero.png";
+
+  const value = String(path);
+  if (value.startsWith("http")) return value;
+
+  const base = API_BASE_URL || "";
+  const cleanBase = base.endsWith("/") ? base : `${base}/`;
+  const cleanPath = value.replace(/^\//, "");
+
+  return `${cleanBase}${cleanPath}`;
+}
+
+function normalizeHomeHorse(horse = {}, index = 0) {
+  const totalWin = toNumber(horse.totalWin ?? horse.wins);
+  const winRate = toNumber(horse.winRate);
+
+  return {
+    raw: horse,
+    id: horse.id || horse._id || horse.horseId || `${horse.name}-${index}`,
+    rank: index + 1,
+    name: horse.name || horse.horseName || "Unnamed horse",
+    breed: horse.breed || "Horse",
+    color: horse.color || "",
+    height: horse.height || "",
+    weight: horse.weight || "",
+    status: horse.horseStatus || horse.status || "",
+    description: horse.description || "",
+    owner: horse.ownerName || horse.owner?.fullName || horse.owner?.name || horse.stable || "N/A",
+    rating: toNumber(horse.rating),
+    totalWin,
+    winRate,
+    image: resolveImageUrl(
+      horse.imageUrl || horse.avatar || horse.avatarUrl || horse.photoUrl,
+    ),
+  };
+}
+
+const ALLOWED_JOCKEY_STATUSES = new Set([
+  "available",
+  "contracted",
+  "busy",
+  "resting",
+  "injured",
+]);
+
+function normalizeHomeJockey(jockey = {}, index = 0) {
+  const profile = jockey.jockeyProfile || jockey.profile || {};
+  const winRate = toNumber(jockey.winRate ?? profile.winRate);
+  const wins = toNumber(
+    jockey.totalWin ??
+      jockey.totalWins ??
+      jockey.careerWins ??
+      jockey.wins ??
+      profile.totalWin ??
+      profile.careerWins ??
+      profile.wins,
+  );
+  const status = jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
+
+  return {
+    id: jockey.id || jockey._id || jockey.userId || profile.id || `${jockey.fullName}-${index}`,
+    rank: index + 1,
+    name: jockey.fullName || jockey.name || profile.fullName || profile.name || "Unnamed jockey",
+    wins,
+    winRate,
+    status,
+  };
+}
+
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+  const [isAllHorsesOpen, setIsAllHorsesOpen] = useState(false);
+  const [selectedHorse, setSelectedHorse] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [horseSortBy, setHorseSortBy] = useState("winRate");
+  const [minHorseWinRate, setMinHorseWinRate] = useState("");
+  const [minHorseTotalWin, setMinHorseTotalWin] = useState("");
+  const [minJockeyWinRate, setMinJockeyWinRate] = useState("");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -241,10 +330,48 @@ function Home() {
   useEffect(() => {
     let isMounted = true;
 
-    getHomePageData()
-      .then((data) => {
+    Promise.allSettled([getHomePageData(), getHorses(), getUsersByRole("Jockey")])
+      .then(([homeResult, horsesResult, jockeysResult]) => {
         if (isMounted) {
-          setHomeData(data);
+          const data =
+            homeResult.status === "fulfilled"
+              ? homeResult.value
+              : {
+                  races: [],
+                  horses: [],
+                  jockeys: [],
+                  standings: [],
+                  results: [],
+                  predictors: [],
+                };
+          const apiHorses =
+            horsesResult.status === "fulfilled" &&
+            Array.isArray(horsesResult.value)
+              ? horsesResult.value.map(normalizeHomeHorse)
+              : data.horses.map(normalizeHomeHorse);
+          const apiJockeys =
+            jockeysResult.status === "fulfilled" &&
+            Array.isArray(jockeysResult.value)
+              ? jockeysResult.value
+                  .map(normalizeHomeJockey)
+                  .filter((jockey) =>
+                    ALLOWED_JOCKEY_STATUSES.has(
+                      String(jockey.status).toLowerCase(),
+                    ),
+                  )
+              : data.jockeys.map(normalizeHomeJockey);
+
+          setHomeData({
+            ...data,
+            horses: apiHorses.map((horse, index) => ({
+              ...horse,
+              rank: index + 1,
+            })),
+            jockeys: apiJockeys.map((jockey, index) => ({
+              ...jockey,
+              rank: index + 1,
+            })),
+          });
         }
       })
       .finally(() => {
@@ -349,6 +476,30 @@ function Home() {
     roleString.includes("owner") || roleString.includes("jockey");
   const unreadNotificationCount = notifications.filter((item) => !item.isRead).length;
   const notificationPreview = notifications.slice(0, 5);
+  const filteredHorses = useMemo(() => {
+    const minWinRate = minHorseWinRate === "" ? 0 : toNumber(minHorseWinRate);
+    const minTotalWin = minHorseTotalWin === "" ? 0 : toNumber(minHorseTotalWin);
+    const sortKey = horseSortBy === "totalWin" ? "totalWin" : "winRate";
+
+    return homeData.horses
+      .filter(
+        (horse) =>
+          toNumber(horse.winRate) >= minWinRate &&
+          toNumber(horse.totalWin) >= minTotalWin,
+      )
+      .sort((first, second) => toNumber(second[sortKey]) - toNumber(first[sortKey]))
+      .map((horse, index) => ({ ...horse, rank: index + 1 }));
+  }, [homeData.horses, horseSortBy, minHorseTotalWin, minHorseWinRate]);
+  const topHorses = filteredHorses.slice(0, 3);
+  const filteredJockeys = useMemo(() => {
+    const minWinRate = minJockeyWinRate === "" ? 0 : toNumber(minJockeyWinRate);
+
+    return homeData.jockeys
+      .filter((jockey) => toNumber(jockey.winRate) >= minWinRate)
+      .sort((first, second) => toNumber(second.winRate) - toNumber(first.winRate))
+      .map((jockey, index) => ({ ...jockey, rank: index + 1 }));
+  }, [homeData.jockeys, minJockeyWinRate]);
+  const topJockeys = filteredJockeys.slice(0, 5);
 
   if (!authSession) {
     return <Navigate to="/" replace />;
@@ -792,14 +943,18 @@ function Home() {
           letter-spacing: 0;
         }
 
-        .home-section-title a {
+        .home-section-title a,
+        .home-section-title button {
           display: inline-flex;
           align-items: center;
           gap: 10px;
+          border: 0;
           color: #007a68;
+          background: transparent;
           font-size: 14px;
           font-weight: 900;
           white-space: nowrap;
+          cursor: pointer;
         }
 
         .home-panel-link {
@@ -812,6 +967,191 @@ function Home() {
           color: #007a68;
           font-size: 14px;
           font-weight: 900;
+        }
+
+        .horse-filter-bar {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 10px;
+          margin: -6px 0 20px;
+        }
+
+        .horse-filter-bar select,
+        .horse-filter-bar input {
+          height: 38px;
+          border: 1px solid #bfece5;
+          border-radius: 7px;
+          color: #06332e;
+          background: #fafffe;
+          font-size: 13px;
+          font-weight: 850;
+          outline: 0;
+        }
+
+        .horse-filter-bar select {
+          min-width: 150px;
+          padding: 0 10px;
+        }
+
+        .horse-filter-bar input {
+          width: 128px;
+          padding: 0 12px;
+        }
+
+        .horse-filter-bar select:focus,
+        .horse-filter-bar input:focus {
+          border-color: #69f8dd;
+          box-shadow: 0 0 0 3px rgba(105, 248, 221, 0.18);
+        }
+
+        .horse-modal-backdrop {
+          position: fixed;
+          z-index: 40;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          padding: 28px;
+          background: rgba(0, 24, 22, 0.62);
+          backdrop-filter: blur(8px);
+        }
+
+        .horse-modal {
+          width: min(980px, 100%);
+          max-height: min(760px, calc(100dvh - 56px));
+          display: flex;
+          flex-direction: column;
+          border: 1px solid #cdeee8;
+          border-radius: 8px;
+          background: #ffffff;
+          box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+          overflow: hidden;
+        }
+
+        .horse-modal-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 18px 20px;
+          border-bottom: 1px solid #e5f3f0;
+        }
+
+        .horse-modal-head h3 {
+          margin: 0;
+          color: #06332e;
+          font-size: 22px;
+          font-weight: 950;
+        }
+
+        .horse-modal-close {
+          width: 34px;
+          height: 34px;
+          border: 1px solid #bfece5;
+          border-radius: 50%;
+          color: #006755;
+          background: #f3fffc;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1;
+          cursor: pointer;
+        }
+
+        .horse-modal-body {
+          padding: 18px;
+          overflow-y: auto;
+        }
+
+        .horse-profile {
+          display: grid;
+          grid-template-columns: 280px 1fr;
+          gap: 22px;
+        }
+
+        .horse-profile-image {
+          width: 100%;
+          aspect-ratio: 1;
+          border-radius: 8px;
+          object-fit: cover;
+          background: #f3fffc;
+        }
+
+        .horse-profile-main {
+          min-width: 0;
+        }
+
+        .horse-profile-main h4 {
+          margin: 0 0 8px;
+          color: #06332e;
+          font-size: 26px;
+          font-weight: 950;
+        }
+
+        .horse-profile-meta {
+          color: #6a817e;
+          font-size: 14px;
+          font-weight: 850;
+        }
+
+        .horse-profile-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin: 18px 0;
+        }
+
+        .horse-profile-stat {
+          min-height: 74px;
+          padding: 12px;
+          border: 1px solid #d9f3ed;
+          border-radius: 8px;
+          background: #fafffe;
+        }
+
+        .horse-profile-stat span {
+          display: block;
+          color: #6a817e;
+          font-size: 12px;
+          font-weight: 850;
+        }
+
+        .horse-profile-stat strong {
+          display: block;
+          margin-top: 6px;
+          color: #06332e;
+          font-size: 20px;
+          font-weight: 950;
+        }
+
+        .horse-profile-details {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px 18px;
+          margin-top: 16px;
+        }
+
+        .horse-profile-detail {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          border-bottom: 1px solid #e5f3f0;
+          padding-bottom: 8px;
+          color: #6a817e;
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .horse-profile-detail strong {
+          color: #06332e;
+          text-align: right;
+        }
+
+        .horse-profile-description {
+          margin: 18px 0 0;
+          color: #315a56;
+          line-height: 1.65;
+          font-size: 14px;
+          font-weight: 750;
         }
 
         .race-grid {
@@ -932,7 +1272,13 @@ function Home() {
           gap: 16px;
         }
 
+        .top-horse-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
         .horse-card {
+          display: flex;
+          flex-direction: column;
           overflow: hidden;
         }
 
@@ -963,25 +1309,45 @@ function Home() {
         }
 
         .horse-body {
+          min-height: 230px;
+          display: flex;
+          flex-direction: column;
           padding: 14px;
         }
 
         .horse-body h3 {
-          margin-top: 0;
+          min-height: 44px;
+          display: -webkit-box;
+          margin: 0 0 8px;
+          overflow: hidden;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
           font-size: 18px;
+          line-height: 1.2;
         }
 
         .horse-stat-row {
-          display: flex;
-          justify-content: space-between;
+          min-height: 34px;
+          display: grid;
+          grid-template-columns: 62px minmax(0, 1fr);
+          align-items: start;
           gap: 10px;
-          margin-top: 12px;
+          margin-top: 8px;
           color: #6a817e;
           font-size: 12px;
         }
 
         .horse-stat-row strong {
+          display: -webkit-box;
+          overflow: hidden;
           color: #0d2321;
+          text-align: right;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .horse-body .card-action {
+          margin-top: auto;
         }
 
         .jockey-list,
@@ -1000,7 +1366,7 @@ function Home() {
         }
 
         .jockey-row {
-          grid-template-columns: 28px 42px 1fr auto auto;
+          grid-template-columns: 28px 42px 1fr auto;
           min-height: 76px;
           font-size: 13px;
         }
@@ -1052,7 +1418,7 @@ function Home() {
 
         .tabs {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           margin-bottom: 18px;
           border: 1px solid #d9ece9;
           border-radius: 8px;
@@ -1063,8 +1429,10 @@ function Home() {
           min-height: 43px;
           border: 0;
           border-right: 1px solid #d9ece9;
+          padding: 0 18px;
           color: #53706c;
           background: #fff;
+          font-size: 14px;
           font-weight: 900;
           cursor: pointer;
         }
@@ -1286,7 +1654,8 @@ function Home() {
           .dashboard-grid,
           .lower-grid,
           .prediction-band { grid-template-columns: 1fr; }
-          .horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .horse-grid,
+          .top-horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .trophy-art { display: none; }
           .footer-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -1306,10 +1675,11 @@ function Home() {
           .home-stats,
           .race-grid,
           .horse-grid,
+          .top-horse-grid,
           .footer-grid { grid-template-columns: 1fr; }
           .panel { padding: 18px; }
           .jockey-row { grid-template-columns: 26px 38px 1fr; }
-          .jockey-row span:nth-last-child(-n + 2) { display: none; }
+          .jockey-row > span:last-child { display: none; }
           .result-row {
             grid-template-columns: 92px 1fr;
             padding: 14px 0;
@@ -1325,6 +1695,10 @@ function Home() {
           .home-table th:nth-child(6),
           .home-table td:nth-child(6) { display: none; }
           .prediction-band { padding: 26px; }
+          .horse-modal-backdrop { padding: 14px; }
+          .horse-profile { grid-template-columns: 1fr; }
+          .horse-profile-stats,
+          .horse-profile-details { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -1356,9 +1730,6 @@ function Home() {
           </nav>
 
           <div className="home-actions">
-            <button className="home-icon-btn" type="button" aria-label="Search">
-              <Icon name="search" size={24} />
-            </button>
             <div className="nav-dropdown-wrap">
               <button
                 className={`home-icon-btn notification-trigger ${
@@ -1616,10 +1987,40 @@ function Home() {
             <section className="panel">
               <SectionTitle
                 title="Top Horses"
-                action={{ label: "View All Horses", href: "#horses" }}
+                action={{
+                  label: "View All Horses",
+                  onClick: () => setIsAllHorsesOpen(true),
+                }}
               />
-              <div className="horse-grid">
-                {homeData.horses.map((horse) => (
+              <div className="horse-filter-bar" aria-label="Horse filters">
+                <select
+                  value={horseSortBy}
+                  onChange={(event) => setHorseSortBy(event.target.value)}
+                  aria-label="Sort horses"
+                >
+                  <option value="winRate">Sort by win rate</option>
+                  <option value="totalWin">Sort by total wins</option>
+                </select>
+                <input
+                  min="0"
+                  max="100"
+                  type="number"
+                  value={minHorseWinRate}
+                  onChange={(event) => setMinHorseWinRate(event.target.value)}
+                  placeholder="Min win rate"
+                  aria-label="Minimum win rate"
+                />
+                <input
+                  min="0"
+                  type="number"
+                  value={minHorseTotalWin}
+                  onChange={(event) => setMinHorseTotalWin(event.target.value)}
+                  placeholder="Min wins"
+                  aria-label="Minimum total wins"
+                />
+              </div>
+              <div className="horse-grid top-horse-grid">
+                {topHorses.map((horse) => (
                   <article className="horse-card" key={horse.id}>
                     <div className="horse-photo">
                       <img src={horse.image} alt={horse.name} />
@@ -1627,28 +2028,32 @@ function Home() {
                     </div>
                     <div className="horse-body">
                       <h3>{horse.name}</h3>
-                      <span className="muted">
-                        {horse.age} · {horse.breed}
-                      </span>
                       <div className="horse-stat-row">
                         <span>Owner</span>
                         <strong>{horse.owner}</strong>
                       </div>
                       <div className="horse-stat-row">
-                        <span>Rating</span>
-                        <strong>{horse.rating}</strong>
+                        <span>Win rate</span>
+                        <strong>{horse.winRate || 0}%</strong>
                       </div>
                       <div className="horse-stat-row">
                         <span>Wins</span>
-                        <strong>{horse.wins}</strong>
+                        <strong>{horse.totalWin || 0}</strong>
                       </div>
-                      <button className="card-action" type="button">
+                      <button
+                        className="card-action"
+                        type="button"
+                        onClick={() => setSelectedHorse(horse)}
+                      >
                         View Profile
                       </button>
                     </div>
                   </article>
                 ))}
               </div>
+              {topHorses.length === 0 && (
+                <p className="loading-line">No horses match the current filters.</p>
+              )}
             </section>
 
             <section className="panel" id="jockeys">
@@ -1656,19 +2061,192 @@ function Home() {
                 title="Top Jockeys"
                 action={{ label: "View All Jockeys", href: "#jockeys" }}
               />
+              <div className="horse-filter-bar" aria-label="Jockey filters">
+                <input
+                  min="0"
+                  max="100"
+                  type="number"
+                  value={minJockeyWinRate}
+                  onChange={(event) => setMinJockeyWinRate(event.target.value)}
+                  placeholder="Min win rate"
+                  aria-label="Minimum jockey win rate"
+                />
+              </div>
               <div className="jockey-list">
-                {homeData.jockeys.map((jockey) => (
+                {topJockeys.map((jockey) => (
                   <div className="jockey-row" key={jockey.id}>
                     <span className="rank-number">{jockey.rank}</span>
                     <Avatar name={jockey.name} rank={jockey.rank} />
                     <strong>{jockey.name}</strong>
-                    <span>{jockey.wins} Wins</span>
-                    <span>Win Rate {jockey.winRate}</span>
+                    <span>Win Rate {jockey.winRate || 0}%</span>
                   </div>
                 ))}
               </div>
+              {topJockeys.length === 0 && (
+                <p className="loading-line">No jockeys match the current filters.</p>
+              )}
             </section>
           </div>
+
+          {isAllHorsesOpen && (
+            <div
+              className="horse-modal-backdrop"
+              role="presentation"
+              onClick={() => setIsAllHorsesOpen(false)}
+            >
+              <section
+                className="horse-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label="All horses"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="horse-modal-head">
+                  <h3>All Horses</h3>
+                  <button
+                    className="horse-modal-close"
+                    type="button"
+                    aria-label="Close all horses"
+                    onClick={() => setIsAllHorsesOpen(false)}
+                  >
+                    x
+                  </button>
+                </div>
+                <div className="horse-modal-body">
+                  <div className="horse-grid">
+                    {filteredHorses.map((horse) => (
+                      <article className="horse-card" key={horse.id}>
+                        <div className="horse-photo">
+                          <img src={horse.image} alt={horse.name} />
+                          <span className="rank-badge">{horse.rank}</span>
+                        </div>
+                        <div className="horse-body">
+                          <h3>{horse.name}</h3>
+                      <span className="muted">{horse.breed}</span>
+                          <div className="horse-stat-row">
+                            <span>Owner</span>
+                            <strong>{horse.owner}</strong>
+                          </div>
+                          <div className="horse-stat-row">
+                            <span>Win rate</span>
+                            <strong>{horse.winRate || 0}%</strong>
+                          </div>
+                          <div className="horse-stat-row">
+                            <span>Wins</span>
+                            <strong>{horse.totalWin || 0}</strong>
+                          </div>
+                          <button
+                            className="card-action"
+                            type="button"
+                            onClick={() => setSelectedHorse(horse)}
+                          >
+                            View Profile
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  {filteredHorses.length === 0 && (
+                    <p className="loading-line">
+                      No horses match the current filters.
+                    </p>
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {selectedHorse && (
+            <div
+              className="horse-modal-backdrop"
+              role="presentation"
+              onClick={() => setSelectedHorse(null)}
+            >
+              <section
+                className="horse-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${selectedHorse.name} profile`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="horse-modal-head">
+                  <h3>Horse Profile</h3>
+                  <button
+                    className="horse-modal-close"
+                    type="button"
+                    aria-label="Close horse profile"
+                    onClick={() => setSelectedHorse(null)}
+                  >
+                    x
+                  </button>
+                </div>
+                <div className="horse-modal-body">
+                  <div className="horse-profile">
+                    <img
+                      className="horse-profile-image"
+                      src={selectedHorse.image}
+                      alt={selectedHorse.name}
+                    />
+                    <div className="horse-profile-main">
+                      <h4>{selectedHorse.name}</h4>
+                      <div className="horse-profile-meta">
+                        {selectedHorse.breed}
+                        {selectedHorse.color ? ` · ${selectedHorse.color}` : ""}
+                      </div>
+
+                      <div className="horse-profile-stats">
+                        <div className="horse-profile-stat">
+                          <span>Win rate</span>
+                          <strong>{selectedHorse.winRate || 0}%</strong>
+                        </div>
+                        <div className="horse-profile-stat">
+                          <span>Total wins</span>
+                          <strong>{selectedHorse.totalWin || 0}</strong>
+                        </div>
+                        <div className="horse-profile-stat">
+                          <span>Rating</span>
+                          <strong>{selectedHorse.rating || 0}</strong>
+                        </div>
+                      </div>
+
+                      <div className="horse-profile-details">
+                        <div className="horse-profile-detail">
+                          <span>Owner</span>
+                          <strong>{selectedHorse.owner}</strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Status</span>
+                          <strong>{selectedHorse.status || "N/A"}</strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Height</span>
+                          <strong>
+                            {selectedHorse.height ? `${selectedHorse.height} m` : "N/A"}
+                          </strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Weight</span>
+                          <strong>
+                            {selectedHorse.weight ? `${selectedHorse.weight} kg` : "N/A"}
+                          </strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Rank</span>
+                          <strong>#{selectedHorse.rank}</strong>
+                        </div>
+                      </div>
+
+                      {selectedHorse.description && (
+                        <p className="horse-profile-description">
+                          {selectedHorse.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
 
           <div className="lower-grid">
             <section className="panel" id="rankings">
@@ -1680,7 +2258,6 @@ function Home() {
               >
                 <button type="button">Horses</button>
                 <button type="button">Jockeys</button>
-                <button type="button">Owners</button>
               </div>
               <table className="home-table">
                 <thead>

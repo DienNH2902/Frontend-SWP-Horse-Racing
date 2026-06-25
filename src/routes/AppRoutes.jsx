@@ -15,6 +15,7 @@ import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
 import JockeyDashboard from "../pages/jockey/JockeyDashboard";
 import JockeyInvitations from "../pages/jockey/JockeyInvitations";
+import JockeyLicenseSubmit from "../pages/jockey/JockeyLicenseSubmit";
 import JockeyRaceSchedule from "../pages/jockey/JockeyRaceSchedule";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
 import OwnerHorseRegister from "../pages/owner/OwnerHorseRegister";
@@ -69,6 +70,7 @@ const JOCKEY_NAV = [
     to: "/jockey/invitations",
     label: "Invitations",
   },
+  { key: "jockey-license", to: "/jockey/license", label: "My license" },
   { key: "jockey-schedule", to: "/jockey/schedule", label: "My race schedule" },
 ];
 
@@ -305,6 +307,7 @@ export default function AppRoutes() {
         >
           <Route path="/jockey" element={<JockeyDashboard />} />
           <Route path="/jockey/invitations" element={<JockeyInvitations />} />
+          <Route path="/jockey/license" element={<JockeyLicenseSubmit />} />
           <Route path="/jockey/schedule" element={<JockeyRaceSchedule />} />
         </Route>
 
