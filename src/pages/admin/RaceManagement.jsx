@@ -902,7 +902,7 @@ function RaceManagement() {
             name="date"
             rules={[{ required: true, message: "Date is required" }]}
           >
-            <Input placeholder="2026-07-20" />
+            <Input type="date" placeholder="2027-07-20" />
           </Form.Item>
 
           <Form.Item

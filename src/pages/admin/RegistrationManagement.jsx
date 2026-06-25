@@ -152,7 +152,7 @@ function RegistrationManagement() {
   const [registrations, setRegistrations] = useState([]);
   const [raceOptions, setRaceOptions] = useState([]);
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterTournamentId, setFilterTournamentId] = useState("");
+  const [searchText, setSearchText] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingRaces, setIsLoadingRaces] = useState(false);
@@ -162,16 +162,12 @@ function RegistrationManagement() {
   const [confirmingRegistration, setConfirmingRegistration] = useState(null);
   const [rejectingRegistration, setRejectingRegistration] = useState(null);
 
-  async function loadRegistrations(
-    status = filterStatus,
-    tournamentId = filterTournamentId,
-  ) {
+  async function loadRegistrations(status = filterStatus) {
     setIsLoading(true);
 
     try {
       const response = await getRegistrations({
         status,
-        tournamentId,
       });
 
       setRegistrations(
@@ -305,6 +301,28 @@ function RegistrationManagement() {
       setIsSaving(false);
     }
   }
+
+  const filteredRegistrations = useMemo(() => {
+    const normalizedSearchText = searchText.trim().toLowerCase();
+
+    if (!normalizedSearchText) {
+      return registrations;
+    }
+
+    return registrations.filter((registration) =>
+      [
+        registration.tournamentTitle,
+        registration.horseName,
+        registration.jockeyName,
+        registration.ownerName,
+        registration.status,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(normalizedSearchText),
+        ),
+    );
+  }, [registrations, searchText]);
 
   const columns = useMemo(
     () => [
@@ -475,19 +493,16 @@ function RegistrationManagement() {
             ]}
             onChange={(value) => {
               setFilterStatus(value);
-              loadRegistrations(value, filterTournamentId);
+              loadRegistrations(value);
             }}
           />
 
           <Input
             allowClear
-            placeholder="Tournament ID"
-            value={filterTournamentId}
+            placeholder="Search by name"
+            value={searchText}
             style={{ width: 260 }}
-            onChange={(event) => setFilterTournamentId(event.target.value)}
-            onPressEnter={() =>
-              loadRegistrations(filterStatus, filterTournamentId)
-            }
+            onChange={(event) => setSearchText(event.target.value)}
           />
 
           <Button
@@ -501,8 +516,8 @@ function RegistrationManagement() {
             className="registration-management-primary"
             onClick={() => {
               setFilterStatus("");
-              setFilterTournamentId("");
-              loadRegistrations("", "");
+              setSearchText("");
+              loadRegistrations("");
             }}
           >
             Reset
@@ -514,7 +529,7 @@ function RegistrationManagement() {
         <Table
           className="registration-management-table"
           columns={columns}
-          dataSource={registrations}
+          dataSource={filteredRegistrations}
           loading={isLoading}
           pagination={{
             pageSize: 10,
@@ -534,44 +549,20 @@ function RegistrationManagement() {
       >
         {detailRegistration && (
           <Descriptions bordered column={1} size="middle">
-            <Descriptions.Item label="ID">
-              {detailRegistration._id}
-            </Descriptions.Item>
-
             <Descriptions.Item label="Tournament">
               {detailRegistration.tournamentTitle}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Tournament ID">
-              {detailRegistration.tournamentId}
             </Descriptions.Item>
 
             <Descriptions.Item label="Horse">
               {detailRegistration.horseName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Horse ID">
-              {detailRegistration.horseId}
-            </Descriptions.Item>
-
             <Descriptions.Item label="Jockey">
               {detailRegistration.jockeyName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Jockey ID">
-              {detailRegistration.jockeyId}
-            </Descriptions.Item>
-
             <Descriptions.Item label="Owner">
               {detailRegistration.ownerName}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Owner ID">
-              {detailRegistration.ownerId}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Race ID">
-              {detailRegistration.raceId || "N/A"}
             </Descriptions.Item>
 
             <Descriptions.Item label="Gate Number">
