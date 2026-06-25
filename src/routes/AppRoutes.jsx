@@ -27,6 +27,8 @@ import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
 import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
 import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
 import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
+import RefereeResultReview from "../pages/referee/RefereeResultReview";
+import RefereeFinalResults from "../pages/referee/RefereeFinalResults";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
@@ -58,7 +60,7 @@ const OWNER_NAV = [
 ];
 
 const REFEREE_NAV = [
-  { key: "referee-dashboard", to: "/referee", label: "Tournaments" },
+  { key: "referee-dashboard", to: "/referee", label: "Assigned Races" },
 ];
 
 const JOCKEY_NAV = [
@@ -265,6 +267,12 @@ export default function AppRoutes() {
           />
 
           <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
+
+          <Route path="referee/races/:id/results" element={<RefereeResultReview />} />
+
+          <Route path="referee/races/:id/final" element={<RefereeFinalResults />} />
+
+          <Route path="referee/races/:id/final" element={<RefereeFinalResults />} />
 
           <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
 

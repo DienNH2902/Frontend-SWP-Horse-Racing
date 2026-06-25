@@ -18,13 +18,11 @@ import {
     Typography,
     message,
     Select,
-    Popconfirm,
 } from "antd";
 import {
     CheckCircleOutlined,
     ClockCircleOutlined,
     ReloadOutlined,
-    RocketOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -40,17 +38,16 @@ import {
     updateRaceCondition,
 } from "../../api/services/raceCondition.service";
 
-import {
-    runSimulation,
-    getSimulationResult,
-} from "../../api/services/simulation.service";
 
 import {
     createEndReport,
 } from "../../api/services/refereeReport.service";
 
-import { getUserById } from "../../api/services/user.service";
 import { getRaceCourseById } from "../../api/services/race-course.service";
+import {
+    getUserById,
+    getUsers,
+} from "../../api/services/user.service";
 
 function statusColor(status) {
     switch (status) {
@@ -102,10 +99,10 @@ export default function RefereeRaceDetail() {
     const [race, setRace] = useState(null);
 
     const [referee, setReferee] = useState(null);
+
     const [raceCourse, setRaceCourse] = useState(null);
 
-    const [simulation, setSimulation] =
-        useState(null);
+    const [users, setUsers] = useState([]);
 
     const [loading, setLoading] =
         useState(true);
@@ -113,8 +110,6 @@ export default function RefereeRaceDetail() {
     const [savingCondition, setSavingCondition] =
         useState(false);
 
-    const [runningSimulation, setRunningSimulation] =
-        useState(false);
 
     const [confirmingReady, setConfirmingReady] =
         useState(false);
@@ -145,6 +140,8 @@ export default function RefereeRaceDetail() {
 
             const promises = [];
 
+            promises.push(getUsers());
+
             if (raceData.refereeId) {
                 promises.push(
                     getUserById(raceData.refereeId)
@@ -173,18 +170,14 @@ export default function RefereeRaceDetail() {
                 )
             );
 
-            promises.push(
-                getSimulationResult(id).catch(
-                    () => null
-                )
-            );
-
             const [
+                usersData,
                 refereeData,
                 raceCourseData,
                 conditionData,
-                simulationData,
             ] = await Promise.all(promises);
+
+            setUsers(usersData || []);
 
             setReferee(refereeData);
             setRaceCourse(raceCourseData);
@@ -202,7 +195,6 @@ export default function RefereeRaceDetail() {
                 });
             }
 
-            setSimulation(simulationData);
         } catch (error) {
             console.error(error);
 
@@ -212,10 +204,96 @@ export default function RefereeRaceDetail() {
         } finally {
             setLoading(false);
         }
+
     }
 
     const participants =
         race?.horses || [];
+
+    const horseMap =
+        Object.fromEntries(
+            participants.map((horse) => [
+                horse.horseId,
+                horse.name,
+            ])
+        );
+
+    const jockeyMap = Object.fromEntries(
+        users.map((user) => [
+            user._id,
+            user.fullName,
+        ])
+    );
+
+    const rawColumns = [
+        {
+            title: "Raw Rank",
+            dataIndex: "rawRank",
+        },
+        {
+            title: "Horse",
+            render: (_, record) =>
+                horseMap[record.horseId] ||
+                record.horseId,
+        },
+        {
+            title: "Finish Time",
+            dataIndex: "finishedTime",
+            render: (value) =>
+                new Date(value).toLocaleString(),
+        },
+        {
+            title: "Status",
+            dataIndex: "status",
+            render: (status) => (
+                <Tag
+                    color={
+                        status === "Confirmed"
+                            ? "green"
+                            : "red"
+                    }
+                >
+                    {status}
+                </Tag>
+            ),
+        },
+    ];
+
+    const finalColumns = [
+        {
+            title: "Final Rank",
+            dataIndex: "finalRank",
+            sorter: (a, b) =>
+                (a.finalRank || 999) -
+                (b.finalRank || 999),
+        },
+        {
+            title: "Horse",
+            render: (_, record) =>
+                horseMap[record.horseId] ||
+                record.horseId,
+        },
+        {
+            title: "Raw Rank",
+            dataIndex: "rawRank",
+        },
+        {
+            title: "Status",
+            dataIndex: "status",
+            render: (status) => (
+                <Tag
+                    color={
+                        status === "Confirmed"
+                            ? "green"
+                            : "red"
+                    }
+                >
+                    {status}
+                </Tag>
+            ),
+        },
+    ];
+
 
     const participantColumns = [
         {
@@ -233,6 +311,14 @@ export default function RefereeRaceDetail() {
             ),
         },
         {
+            title: "Jockey",
+            render: (_, record) =>
+                record.jockeyId
+                    ? jockeyMap[record.jockeyId] ||
+                    record.jockeyId
+                    : "Not Assigned",
+        },
+        {
             title: "Status",
             dataIndex: "status",
             render: (status) => (
@@ -243,20 +329,6 @@ export default function RefereeRaceDetail() {
         },
     ];
 
-    const simulationColumns = [
-        {
-            title: "Rank",
-            dataIndex: "rank",
-        },
-        {
-            title: "Horse",
-            dataIndex: "horseName",
-        },
-        {
-            title: "Finish Time",
-            dataIndex: "finishTime",
-        },
-    ];
 
     const handleSaveCondition =
         async (values) => {
@@ -323,26 +395,6 @@ export default function RefereeRaceDetail() {
             }
         };
 
-    const handleRunSimulation =
-        async () => {
-            try {
-                await runSimulation(id);
-
-                await loadData();
-
-                message.success(
-                    "Simulation completed."
-                );
-            } catch (error) {
-                message.error(
-                    error.response?.data
-                        ?.message ||
-                    "Simulation failed."
-                );
-            } finally {
-                setRunningSimulation(false);
-            }
-        };
 
     const handleSubmitReport =
         async (values) => {
@@ -386,212 +438,9 @@ export default function RefereeRaceDetail() {
         );
     }
 
-    /* Obsolete mock implementation; real API-backed data is defined above.
-    const [messageApi, contextHolder] = message.useMessage();
-
-    const race = {
-        id,
-        code: "RC-2026-001",
-        name: "Golden Cup Championship",
-        status: "Scheduled",
-        startTime: "2026-06-10 09:00",
-        distance: "2000m",
-    };
-
-    const track = {
-        name: "Golden Hoof Track",
-        location: "Ho Chi Minh City",
-        type: "Turf",
-        distance: "2000m",
-        capacity: 5000,
-    };
-
-    const condition = {
-        weather: "Sunny",
-        trackCondition: "Dry",
-        windSpeed: "10 km/h",
-        temperature: "31°C",
-    };
-
-    const participants = [
-        {
-            id: 1,
-            lane: 1,
-            number: "001",
-            horse: "Thunder",
-            owner: "Nguyen Van A",
-            jockey: "John Smith",
-            registrationStatus: "Approved",
-        },
-        {
-            id: 2,
-            lane: 2,
-            number: "002",
-            horse: "Storm",
-            owner: "Tran Van B",
-            jockey: "David Lee",
-            registrationStatus: "Approved",
-        },
-        {
-            id: 3,
-            lane: 3,
-            number: "003",
-            horse: "Black Shadow",
-            owner: "Le Van C",
-            jockey: "Michael Tan",
-            registrationStatus: "Approved",
-        },
-    ];
-
-    const leaderboard = [
-        {
-            position: 1,
-            horse: "Thunder",
-            finishTime: "120.35s",
-        },
-        {
-            position: 2,
-            horse: "Storm",
-            finishTime: "121.82s",
-        },
-        {
-            position: 3,
-            horse: "Black Shadow",
-            finishTime: "123.12s",
-        },
-    ];
-
-    const [results, setResults] = useState({});
-    function updateResult(id, field, value) {
-        setResults((prev) => ({
-            ...prev,
-            [id]: {
-                ...prev[id],
-                [field]: value,
-            },
-        }));
-    }
-
-    const [reportForm] = Form.useForm();
-
-    function submitResult() {
-        const count = Object.keys(results).length;
-
-        if (count === 0) {
-            messageApi.warning(
-                "Please enter race results first."
-            );
-            return;
-        }
-
-        console.log(results);
-
-        messageApi.success(
-            "Official race result submitted successfully"
-        );
-    }
-
-    function submitReport(values) {
-        console.log(values);
-
-        messageApi.success(
-            "Referee report submitted successfully"
-        );
-
-        reportForm.resetFields();
-    }
-
-    const participantColumns = [
-        {
-            title: "No.",
-            dataIndex: "number",
-        },
-        {
-            title: "Lane",
-            dataIndex: "lane",
-        },
-        {
-            title: "Horse",
-            dataIndex: "horse",
-        },
-        {
-            title: "Owner",
-            dataIndex: "owner",
-        },
-        {
-            title: "Jockey",
-            dataIndex: "jockey",
-        },
-        {
-            title: "Registration",
-            dataIndex: "registrationStatus",
-            render: (value) => (
-                <Tag color="green">{value}</Tag>
-            ),
-        },
-    ];
-
-    const leaderboardColumns = [
-        {
-            title: "Position",
-            dataIndex: "position",
-        },
-        {
-            title: "Horse",
-            dataIndex: "horse",
-        },
-        {
-            title: "Finish Time",
-            dataIndex: "finishTime",
-        },
-    ];
-
-    const resultColumns = [
-        {
-            title: "Horse",
-            dataIndex: "horse",
-        },
-        {
-            title: "Finish Time",
-            render: (_, record) => (
-                <InputNumber
-                    min={0}
-                    step={0.01}
-                    style={{ width: 120 }}
-                    onChange={(value) =>
-                        updateResult(
-                            record.id,
-                            "finishTime",
-                            value
-                        )
-                    }
-                />
-            ),
-        },
-        {
-            title: "Final Rank",
-            render: (_, record) => (
-                <InputNumber
-                    min={1}
-                    max={participants.length}
-                    onChange={(value) =>
-                        updateResult(
-                            record.id,
-                            "rank",
-                            value
-                        )
-                    }
-                />
-            ),
-        },
-    ];
-
-    */
     return (
         <Space
-            direction="vertical"
-            size={16}
-            style={{ width: "100%" }}
+            orientation="vertical"
         >
             <Card>
                 <Space wrap>
@@ -629,26 +478,7 @@ export default function RefereeRaceDetail() {
                         Confirm Ready
                     </Button>
 
-                    <Popconfirm
-                        title="Run simulation?"
-                        description="This action cannot be undone."
-                        onConfirm={
-                            handleRunSimulation
-                        }
-                        okText="Run"
-                        cancelText="Cancel"
-                    >
-                        <Button
-                            type="primary"
-                            icon={<RocketOutlined />}
-                            loading={runningSimulation}
-                            disabled={
-                                race.status !== "Ready"
-                            }
-                        >
-                            Run Simulation
-                        </Button>
-                    </Popconfirm>
+
                 </Space>
             </Card>
 
@@ -908,71 +738,29 @@ export default function RefereeRaceDetail() {
                 />
             </Card>
 
-            <Card title="Simulation Result">
-                {!simulation ? (
-                    <Empty
-                        description="Simulation has not been run."
-                    />
-                ) : (
-                    <Table
-                        rowKey={(record) =>
-                            record.rank ||
-                            record.id
-                        }
-                        columns={
-                            simulationColumns
-                        }
-                        dataSource={
-                            simulation.results ||
-                            simulation.rankings ||
-                            simulation.rawResult ||
-                            []
-                        }
-                        pagination={false}
-                    />
-                )}
-            </Card>
-
-            <Card title="End Report">
-                <Form
-                    form={reportForm}
-                    layout="vertical"
-                    onFinish={
-                        handleSubmitReport
-                    }
-                >
-                    <Form.Item
-                        label="Incident"
-                        name="incident"
-                    >
-                        <Input.TextArea
-                            rows={4}
-                        />
-                    </Form.Item>
-
-                    <Form.Item
-                        label="Comment"
-                        name="comment"
-                    >
-                        <Input.TextArea
-                            rows={4}
-                        />
-                    </Form.Item>
+            <Card title="Result Review">
+                <Space orientation="vertical">
+                    <Typography.Text>
+                        Open the Result Review page to:
+                        <br />
+                        • Review Raw Results
+                        <br />
+                        • Write Referee Report
+                        <br />
+                        • Confirm race result
+                    </Typography.Text>
 
                     <Button
                         type="primary"
-                        htmlType="submit"
-                        loading={
-                            reportLoading
-                        }
-                        disabled={
-                            race.status !==
-                            "Finished"
+                        onClick={() =>
+                            navigate(
+                                `/referee/races/${id}/results`
+                            )
                         }
                     >
-                        Submit Report
+                        Open Result Review
                     </Button>
-                </Form>
+                </Space>
             </Card>
         </Space>
     );

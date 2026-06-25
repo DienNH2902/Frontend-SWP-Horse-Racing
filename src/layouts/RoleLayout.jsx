@@ -43,47 +43,47 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
             <Layout
                 className={`role-layout${isOwnerRole ? " owner-role-layout" : ""}${isJockeyRole ? " jockey-role-layout" : ""}`}
             >
-            <Sider width={250} className="role-sider">
-                <div className="role-brand">
-                    <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
-                    <span>GoldenHoof</span>
-                </div>
+                <Sider width={250} className="role-sider">
+                    <div className="role-brand">
+                        <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
+                        <span>GoldenHoof</span>
+                    </div>
 
-                <Menu
-                    mode="inline"
-                    selectedKeys={[selectedKey]}
-                    className="role-menu"
-                    items={navItems.map((item) => ({
-                        key: item.key,
-                        label: <NavLink className="role-link" to={item.to}>{item.label}</NavLink>,
-                    }))}
-                />
-            </Sider>
+                    <Menu
+                        mode="inline"
+                        selectedKeys={[selectedKey]}
+                        className="role-menu"
+                        items={navItems.map((item) => ({
+                            key: item.key,
+                            label: <NavLink className="role-link" to={item.to}>{item.label}</NavLink>,
+                        }))}
+                    />
+                </Sider>
 
-            <Layout>
-                <Header className="role-header">
-                    <Space direction="vertical" size={0}>
-                        <Typography.Text type="secondary">{subtitle}</Typography.Text>
-                        <Typography.Title level={4} className="role-title">
-                            {title}
-                        </Typography.Title>
-                    </Space>
+                <Layout>
+                    <Header className="role-header">
+                        <Space orientation="vertical" size={0}>
+                            <Typography.Text type="secondary">{subtitle}</Typography.Text>
+                            <Typography.Title level={4} className="role-title">
+                                {title}
+                            </Typography.Title>
+                        </Space>
 
-                    <Space>
-                        <Button onClick={() => navigate("/home")}>Home</Button>
-                        <Avatar className="role-avatar">
-                            {initials}
-                        </Avatar>
-                        <span>{displayName}</span>
-                        <Button onClick={handleLogout}>Logout</Button>
-                    </Space>
-                </Header>
+                        <Space>
+                            <Button onClick={() => navigate("/home")}>Home</Button>
+                            <Avatar className="role-avatar">
+                                {initials}
+                            </Avatar>
+                            <span>{displayName}</span>
+                            <Button onClick={handleLogout}>Logout</Button>
+                        </Space>
+                    </Header>
 
-                <Content className="role-content">
-                    <Outlet />
-                </Content>
+                    <Content className="role-content">
+                        <Outlet />
+                    </Content>
+                </Layout>
             </Layout>
-        </Layout>
         </ConfigProvider>
     );
 }
