@@ -38,6 +38,7 @@ import NotificationHistory from "../pages/NotificationPage";
 import MoneyTransactionHistory from "../pages/MoneyTransaction";
 import Wallet from "../pages/Wallet";
 import PaymentResult from "../pages/PaymentResult";
+import { getAuthSession } from "../utils/storage";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -102,11 +103,14 @@ function AdminRacesPage() {
     </AdminLayout>
   );
 }
+function LandingRoute() {
+  return getAuthSession() ? <Navigate to="/home" replace /> : <Landing />;
+}
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<LandingRoute />} />
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -173,7 +177,10 @@ export default function AppRoutes() {
           }
         />
         <Route path="/admin/tournaments" element={<AdminTournamentsPage />} />
-        <Route path="/admin/registrations" element={<AdminRegistrationsPage />} />
+        <Route
+          path="/admin/registrations"
+          element={<AdminRegistrationsPage />}
+        />
         <Route path="/admin/races" element={<AdminRacesPage />} />
 
         <Route

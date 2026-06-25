@@ -8,6 +8,10 @@ import {
   getAuthSession,
 } from "../utils/storage";
 import { BellOutlined, WalletOutlined } from "@ant-design/icons";
+import {
+  getMyNotifications,
+  markNotificationAsRead,
+} from "../api/services/notification.service";
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -209,9 +213,21 @@ function pickFirstValue(source, keys) {
   return null;
 }
 
+function normalizeNotification(notification = {}) {
+  return {
+    id: notification._id || notification.id || notification.notificationId || "",
+    title: notification.title || notification.type || "Notification",
+    content: notification.content || notification.message || "",
+    isRead: Boolean(notification.isRead ?? notification.read),
+    createdAt: notification.createdAt || notification.created_at || notification.date || "",
+  };
+}
+
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -242,10 +258,59 @@ function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!authSession) {
+      return undefined;
+    }
+
+    getMyNotifications()
+      .then((data) => {
+        if (isMounted) {
+          setNotifications(Array.isArray(data) ? data.map(normalizeNotification) : []);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setNotifications([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession]);
+
   function handleLogout() {
     clearAuthSession();
     setAuthSession(null);
     setIsAccountMenuOpen(false);
+    setIsNotificationMenuOpen(false);
+  }
+
+  async function handleNotificationClick(notification) {
+    setIsNotificationMenuOpen(false);
+
+    if (!notification?.id || notification.isRead) {
+      return;
+    }
+
+    setNotifications((current) =>
+      current.map((item) =>
+        item.id === notification.id ? { ...item, isRead: true } : item,
+      ),
+    );
+
+    try {
+      await markNotificationAsRead(notification.id);
+    } catch {
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, isRead: false } : item,
+        ),
+      );
+    }
   }
 
   const tokenClaims = decodeJwtClaims(getAccessToken());
@@ -282,6 +347,8 @@ function Home() {
   const isSpectator = roleString.includes("spectator");
   const isOwnerOrJockey =
     roleString.includes("owner") || roleString.includes("jockey");
+  const unreadNotificationCount = notifications.filter((item) => !item.isRead).length;
+  const notificationPreview = notifications.slice(0, 5);
 
   if (!authSession) {
     return <Navigate to="/" replace />;
@@ -405,6 +472,39 @@ function Home() {
           position: relative;
         }
 
+        .nav-dropdown-wrap {
+          position: relative;
+        }
+
+        .notification-trigger {
+          position: relative;
+          border-radius: 50%;
+        }
+
+        .notification-trigger-open,
+        .notification-trigger:hover {
+          background: rgba(105, 248, 221, 0.12);
+        }
+
+        .notification-badge {
+          position: absolute;
+          top: 4px;
+          right: 3px;
+          min-width: 18px;
+          height: 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 5px;
+          border: 2px solid rgba(0, 45, 40, 0.96);
+          border-radius: 999px;
+          color: #062724;
+          background: #69f8dd;
+          font-size: 10px;
+          font-weight: 950;
+          line-height: 1;
+        }
+
         .account-trigger {
           min-width: 210px;
           max-width: 320px;
@@ -437,6 +537,117 @@ function Home() {
           border-radius: 8px;
           background: rgba(0, 45, 40, 0.96);
           box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .notification-dropdown {
+          width: min(360px, calc(100vw - 28px));
+          padding: 0;
+          overflow: hidden;
+        }
+
+        .notification-dropdown-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 14px 14px 12px;
+          border-bottom: 1px solid rgba(105, 248, 221, 0.16);
+        }
+
+        .notification-dropdown-head strong {
+          color: #f4fffb;
+          font-size: 14px;
+        }
+
+        .notification-dropdown-head span {
+          color: rgba(244, 255, 251, 0.68);
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .notification-list {
+          display: grid;
+          max-height: 320px;
+          overflow-y: auto;
+        }
+
+        .notification-item {
+          display: grid;
+          gap: 5px;
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(105, 248, 221, 0.1);
+          color: #f4fffb;
+        }
+
+        .notification-item:hover {
+          background: rgba(105, 248, 221, 0.1);
+        }
+
+        .notification-item-unread {
+          background: rgba(105, 248, 221, 0.07);
+        }
+
+        .notification-title-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .notification-dot {
+          width: 8px;
+          height: 8px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: #69f8dd;
+        }
+
+        .notification-title {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .notification-content {
+          margin: 0;
+          display: -webkit-box;
+          overflow: hidden;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          color: rgba(244, 255, 251, 0.72);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .notification-time {
+          color: rgba(244, 255, 251, 0.5);
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .notification-empty {
+          padding: 24px 14px;
+          color: rgba(244, 255, 251, 0.68);
+          text-align: center;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .notification-footer {
+          min-height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-top: 1px solid rgba(105, 248, 221, 0.16);
+          color: #69f8dd;
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .notification-footer:hover {
+          background: rgba(105, 248, 221, 0.1);
         }
 
         .account-menu-item {
@@ -1085,7 +1296,7 @@ function Home() {
           .home-nav { height: 74px; }
           .home-brand-logo { height: 62px; width: auto; }
           .account-trigger { min-width: 160px; max-width: 210px; }
-          .home-actions .home-icon-btn { display: none; }
+          .home-actions > .home-icon-btn { display: none; }
           .home-btn { min-height: 42px; padding: 0 14px; font-size: 13px; }
           .home-hero {
             min-height: 660px;
@@ -1148,6 +1359,94 @@ function Home() {
             <button className="home-icon-btn" type="button" aria-label="Search">
               <Icon name="search" size={24} />
             </button>
+            <div className="nav-dropdown-wrap">
+              <button
+                className={`home-icon-btn notification-trigger ${
+                  isNotificationMenuOpen ? "notification-trigger-open" : ""
+                }`}
+                type="button"
+                aria-label="Notifications"
+                aria-expanded={isNotificationMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => {
+                  setIsNotificationMenuOpen((current) => !current);
+                  setIsAccountMenuOpen(false);
+                }}
+              >
+                <BellOutlined style={{ fontSize: "20px" }} />
+                {unreadNotificationCount > 0 && (
+                  <span className="notification-badge">
+                    {unreadNotificationCount > 99
+                      ? "99+"
+                      : unreadNotificationCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotificationMenuOpen && (
+                <div
+                  className="account-dropdown notification-dropdown"
+                  role="menu"
+                  aria-label="Notifications"
+                >
+                  <div className="notification-dropdown-head">
+                    <strong>Notifications</strong>
+                    <span>{unreadNotificationCount} unread</span>
+                  </div>
+                  {notificationPreview.length > 0 ? (
+                    <div className="notification-list">
+                      {notificationPreview.map((notification) => (
+                        <Link
+                          className={`notification-item ${
+                            notification.isRead
+                              ? ""
+                              : "notification-item-unread"
+                          }`}
+                          key={
+                            notification.id ||
+                            `${notification.title}-${notification.createdAt}`
+                          }
+                          role="menuitem"
+                          to="/notification"
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <span className="notification-title-row">
+                            {!notification.isRead && (
+                              <span className="notification-dot" />
+                            )}
+                            <span className="notification-title">
+                              {notification.title}
+                            </span>
+                          </span>
+                          {notification.content && (
+                            <p className="notification-content">
+                              {notification.content}
+                            </p>
+                          )}
+                          {notification.createdAt && (
+                            <span className="notification-time">
+                              {new Date(
+                                notification.createdAt,
+                              ).toLocaleString()}
+                            </span>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="notification-empty">No notifications</div>
+                  )}
+                  <Link
+                    className="notification-footer"
+                    role="menuitem"
+                    to="/notification"
+                    onClick={() => setIsNotificationMenuOpen(false)}
+                  >
+                    View all notifications
+                  </Link>
+                </div>
+              )}
+            </div>
             <div className="account-menu">
               <button
                 className={`home-btn account-trigger ${
@@ -1156,7 +1455,10 @@ function Home() {
                 type="button"
                 aria-expanded={isAccountMenuOpen}
                 aria-haspopup="menu"
-                onClick={() => setIsAccountMenuOpen((current) => !current)}
+                onClick={() => {
+                  setIsAccountMenuOpen((current) => !current);
+                  setIsNotificationMenuOpen(false);
+                }}
               >
                 <Icon name="user" size={20} />
                 <span className="account-trigger-name">{accountName}</span>
@@ -1192,14 +1494,6 @@ function Home() {
                         <Icon name="chart" size={18} />
                         <span>Points</span>
                       </Link>
-                      <Link
-                        className="account-menu-item"
-                        role="menuitem"
-                        to="/notification"
-                      >
-                        <BellOutlined style={{ fontSize: "18px" }} />
-                        <span>Notifications</span>
-                      </Link>
                     </>
                   )}
 
@@ -1212,14 +1506,6 @@ function Home() {
                       >
                         <Icon name="chart" size={18} />
                         <span>Transactions</span>
-                      </Link>
-                      <Link
-                        className="account-menu-item"
-                        role="menuitem"
-                        to="/notification"
-                      >
-                        <BellOutlined style={{ fontSize: "18px" }} />
-                        <span>Notifications</span>
                       </Link>
                       <Link
                         className="account-menu-item"

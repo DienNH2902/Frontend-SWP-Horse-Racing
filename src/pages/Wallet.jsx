@@ -15,6 +15,7 @@ import {
   WalletOutlined,
   DollarOutlined,
   LockOutlined,
+  HistoryOutlined, // Import icon lịch sử
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getProfile } from "../api/services/auth.service";
@@ -30,7 +31,7 @@ export default function Wallet() {
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [callbackStatus, setCallbackStatus] = useState(null); // { success: boolean, msg: string }
+  const [callbackStatus, setCallbackStatus] = useState(null);
 
   async function loadProfileData() {
     setIsLoading(true);
@@ -56,7 +57,7 @@ export default function Wallet() {
       const res = await createDepositPayment(values.amount);
       if (res?.success && res?.paymentUrl) {
         message.loading("Redirecting to VNPay Gateway...", 1.5);
-        window.location.href = res.paymentUrl; // Chuyển hướng sang VNPay
+        window.location.href = res.paymentUrl;
       } else {
         message.error("Failed to fetch payment link");
       }
@@ -108,6 +109,18 @@ export default function Wallet() {
           max-width: 800px;
         }
         
+        .balance-section-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          align-items: flex-end;
+        }
+        @media (max-width: 768px) {
+          .balance-section-wrapper {
+            align-items: flex-start;
+            width: 100%;
+          }
+        }
         .balance-widgets-group {
           display: flex;
           gap: 16px;
@@ -150,6 +163,19 @@ export default function Wallet() {
           margin: 0 !important;
         }
 
+        .btn-history-link {
+          background: rgba(105, 248, 221, 0.1) !important;
+          border: 1px solid rgba(105, 248, 221, 0.4) !important;
+          color: #69f8dd !important;
+          font-weight: 700 !important;
+          border-radius: 8px !important;
+          height: 38px !important;
+        }
+        .btn-history-link:hover {
+          background: rgba(105, 248, 221, 0.2) !important;
+          border-color: #69f8dd !important;
+        }
+
         .wallet-grid {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
@@ -180,7 +206,6 @@ export default function Wallet() {
           text-transform: uppercase;
         }
 
-        /* Custom style InputNumber Antd */
         .wallet-input-number {
           width: 100% !important;
           background: rgba(0, 32, 28, 0.6) !important;
@@ -249,7 +274,6 @@ export default function Wallet() {
       `}</style>
 
       <div className="wallet-container">
-        {/* Banner hiển thị thông báo kết quả trả về từ Callback VNPay */}
         {callbackStatus && (
           <Alert
             className="callback-alert"
@@ -267,7 +291,7 @@ export default function Wallet() {
             <Button
               type="text"
               icon={<ArrowLeftOutlined />}
-              onClick={() => navigate("/profile")}
+              onClick={() => navigate("/home")}
               style={{
                 color: "#69f8dd",
                 padding: 0,
@@ -281,7 +305,7 @@ export default function Wallet() {
               onMouseEnter={(e) => (e.currentTarget.style.color = "#86ffea")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#69f8dd")}
             >
-              Back to Profile
+              Back to Home
             </Button>
             <Title level={1}>My Wallet</Title>
             <Paragraph style={{ color: "#cdf5ee", fontSize: "20px" }}>
@@ -290,39 +314,53 @@ export default function Wallet() {
             </Paragraph>
           </header>
 
-          <div className="balance-widgets-group">
-            {/* Real Balance */}
-            <div className="balance-widget">
-              <WalletOutlined className="balance-icon" />
-              <div>
-                <Title level={5} className="balance-title">
-                  Available Balance
-                </Title>
-                <Title level={3} className="balance-amount">
-                  {profile?.balance ? profile.balance.toLocaleString() : 0} VNĐ
-                </Title>
+          {/* Gom cụm số dư và nút chuyển hướng lịch sử vào một Wrapper */}
+          <div className="balance-section-wrapper">
+            <div className="balance-widgets-group">
+              {/* Real Balance */}
+              <div className="balance-widget">
+                <WalletOutlined className="balance-icon" />
+                <div>
+                  <Title level={5} className="balance-title">
+                    Available Balance
+                  </Title>
+                  <Title level={3} className="balance-amount">
+                    {profile?.balance ? profile.balance.toLocaleString() : 0}{" "}
+                    VNĐ
+                  </Title>
+                </div>
+              </div>
+
+              {/* Held Balance */}
+              <div className="balance-widget balance-widget-held">
+                <DollarOutlined className="balance-icon balance-icon-held" />
+                <div>
+                  <Title level={5} className="balance-title">
+                    Held Balance
+                  </Title>
+                  <Title
+                    level={3}
+                    className="balance-amount"
+                    style={{ color: "#ffb936" }}
+                  >
+                    {profile?.heldBalance
+                      ? profile.heldBalance.toLocaleString()
+                      : 0}{" "}
+                    VNĐ
+                  </Title>
+                </div>
               </div>
             </div>
 
-            {/* Held Balance */}
-            <div className="balance-widget balance-widget-held">
-              <DollarOutlined className="balance-icon balance-icon-held" />
-              <div>
-                <Title level={5} className="balance-title">
-                  Held Balance
-                </Title>
-                <Title
-                  level={3}
-                  className="balance-amount"
-                  style={{ color: "#ffb936" }}
-                >
-                  {profile?.heldBalance
-                    ? profile.heldBalance.toLocaleString()
-                    : 0}{" "}
-                  VNĐ
-                </Title>
-              </div>
-            </div>
+            {/* NÚT ĐI TỚI TRANG LỊCH SỬ GIAO DỊCH */}
+            <Button
+              type="default"
+              icon={<HistoryOutlined />}
+              className="btn-history-link"
+              onClick={() => navigate("/money-transaction")}
+            >
+              Transaction History
+            </Button>
           </div>
         </div>
 
@@ -350,9 +388,15 @@ export default function Wallet() {
                       min: 10000,
                       message: "Minimum deposit is 10,000 VND",
                     },
+                    {
+                      type: "number",
+                      max: 100000000,
+                      message: "Maximum deposit is 100,000,000 VND",
+                    },
                   ]}
                 >
                   <InputNumber
+                    controls={false}
                     className="wallet-input-number"
                     formatter={(value) =>
                       `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -381,7 +425,7 @@ export default function Wallet() {
               </Form>
             </Card>
 
-            {/* BLOCK WITHDRAW (DISABLE - COMING SOON) */}
+            {/* BLOCK WITHDRAW */}
             <Card
               title="Withdraw Money"
               className="action-card"

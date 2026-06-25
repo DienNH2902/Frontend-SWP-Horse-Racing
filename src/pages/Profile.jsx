@@ -196,6 +196,9 @@ function Profile() {
 
       message.success("Avatar uploaded successfully");
       onSuccess(resData);
+
+      const currentFormValues = form.getFieldsValue();
+      await handleSave(currentFormValues);
     } catch (err) {
       message.error(err?.message || "Failed to upload avatar");
       onError(err);
@@ -637,7 +640,7 @@ function Profile() {
                         accept="image/*"
                         showUploadList={false}
                         customRequest={handleCustomUpload}
-                        disabled={isUploading}
+                        disabled={isUploading || isSaving}
                       >
                         <div
                           style={{ cursor: "pointer", position: "relative" }}
@@ -652,7 +655,7 @@ function Profile() {
                           <div className="avatar-upload-overlay">
                             <Button
                               size="small"
-                              loading={isUploading}
+                              loading={isUploading || isSaving}
                               icon={<UploadOutlined />}
                               style={{ marginTop: 8 }}
                             >

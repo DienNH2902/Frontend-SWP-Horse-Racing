@@ -336,7 +336,7 @@ export default function NotificationHistory() {
           <Button
             type="text"
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/profile")}
+            onClick={() => navigate("/home")}
             style={{
               color: "#69f8dd",
               padding: 0,
@@ -348,7 +348,7 @@ export default function NotificationHistory() {
               fontWeight: "700",
             }}
           >
-            Back to Profile
+            Back to Home
           </Button>
           <div className="header-actions">
             <div>

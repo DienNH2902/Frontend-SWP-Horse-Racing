@@ -8,11 +8,13 @@ import {
   Spin,
   Empty,
   Card,
+  Space,
 } from "antd";
 import {
   ArrowLeftOutlined,
   FallOutlined,
   RiseOutlined,
+  WalletOutlined, // Import icon ví tiền
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
@@ -211,8 +213,17 @@ export default function MoneyTransactionHistory() {
           max-width: 1200px;
           margin: 0 auto;
         }
-        .history-header {
+        .history-header-wrapper {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 24px;
           margin-bottom: 40px;
+        }
+        .history-header {
+          flex: 1;
+          min-width: 300px;
         }
         .history-header h1.ant-typography {
           color: #69f8dd;
@@ -227,6 +238,32 @@ export default function MoneyTransactionHistory() {
           line-height: 1.6;
           margin: 0;
           max-width: 800px;
+        }
+
+        .action-section-wrapper {
+          display: flex;
+          align-items: flex-end;
+          padding-top: 40px;
+        }
+        @media (max-width: 768px) {
+          .action-section-wrapper {
+            align-items: flex-start;
+            width: 100%;
+            padding-top: 0;
+          }
+        }
+
+        .btn-wallet-link {
+          background: rgba(105, 248, 221, 0.1) !important;
+          border: 1px solid rgba(105, 248, 221, 0.4) !important;
+          color: #69f8dd !important;
+          font-weight: 700 !important;
+          border-radius: 8px !important;
+          height: 38px !important;
+        }
+        .btn-wallet-link:hover {
+          background: rgba(105, 248, 221, 0.2) !important;
+          border-color: #69f8dd !important;
         }
 
         .history-table-card {
@@ -293,30 +330,46 @@ export default function MoneyTransactionHistory() {
       `}</style>
 
       <div className="history-container">
-        <header className="history-header">
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate("/profile")}
-            style={{
-              color: "#69f8dd",
-              padding: 0,
-              marginBottom: "16px",
-              fontSize: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              fontWeight: "700",
-            }}
-          >
-            Back to Profile
-          </Button>
-          <Title level={1}>Money Transaction History</Title>
-          <Paragraph style={{ color: "#cdf5ee", fontSize: "20px" }}>
-            Review your financial history, including funds deposits, payouts,
-            entry fees, and balance adjustments within the platform.
-          </Paragraph>
-        </header>
+        <div className="history-header-wrapper">
+          <header className="history-header">
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate("/home")}
+              style={{
+                color: "#69f8dd",
+                padding: 0,
+                marginBottom: "16px",
+                fontSize: "16px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontWeight: "700",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#86ffea")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#69f8dd")}
+            >
+              Back to Home
+            </Button>
+            <Title level={1}>Money Transaction History</Title>
+            <Paragraph style={{ color: "#cdf5ee", fontSize: "20px" }}>
+              Review your financial history, including funds deposits, payouts,
+              entry fees, and balance adjustments within the platform.
+            </Paragraph>
+          </header>
+
+          {/* Cụm nút chức năng bên phải header */}
+          <div className="action-section-wrapper">
+            <Button
+              type="default"
+              icon={<WalletOutlined />}
+              className="btn-wallet-link"
+              onClick={() => navigate("/wallet")}
+            >
+              Back to Wallet
+            </Button>
+          </div>
+        </div>
 
         {isLoading ? (
           <div className="history-loading-container">
