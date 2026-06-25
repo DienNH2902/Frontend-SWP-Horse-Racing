@@ -4,4 +4,6 @@ export const HORSE_ENDPOINTS = {
   DETAIL: (id) => `/horses/${id}`,
 
   MY_HORSES: "/horses/my-horses",
+
+  UPLOAD_AVATAR: "/upload/horse-avatar",
 };

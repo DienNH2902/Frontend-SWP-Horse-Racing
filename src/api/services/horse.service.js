@@ -53,6 +53,20 @@ export async function updateHorse(id, payload) {
   return unwrapData(response);
 }
 
+export async function uploadHorseAvatar(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post(HORSE_ENDPOINTS.UPLOAD_AVATAR, formData, {
+    includeAuth: true,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return unwrapData(response);
+}
+
 export async function deleteHorse(id) {
   const response = await apiClient.delete(HORSE_ENDPOINTS.DETAIL(id), authConfig());
 

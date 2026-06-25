@@ -51,7 +51,7 @@ export function normalizeHorse(horse = {}) {
         ownerName: horse.ownerName ?? "",
         stable: horse.stable ?? "",
         description: horse.description ?? "",
-        imageUrl: horse.imageUrl ?? "",
+        imageUrl: horse.imageUrl ?? horse.avatar ?? horse.avatarUrl ?? horse.photoUrl ?? "",
     };
 }
 

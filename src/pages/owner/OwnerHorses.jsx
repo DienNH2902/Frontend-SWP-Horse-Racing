@@ -14,13 +14,17 @@ import {
   Table,
   Tag,
   Typography,
+  Upload,
   message,
 } from "antd";
+import { CameraOutlined } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { API_BASE_URL } from "../../api/client";
 import {
   deleteHorse,
   getMyHorses,
   updateHorse,
+  uploadHorseAvatar,
 } from "../../api/services/horse.service";
 import {
   getHorseStatusColor,
@@ -41,6 +45,7 @@ export default function OwnerHorses() {
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHorse, setEditingHorse] = useState(null);
+  const [uploadingHorseId, setUploadingHorseId] = useState("");
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [errorMessage, setErrorMessage] = useState("");
@@ -98,6 +103,73 @@ export default function OwnerHorses() {
     setModalOpen(true);
   }
 
+  function getImageUrl(path) {
+    if (!path) return undefined;
+    if (String(path).startsWith("http")) return path;
+
+    const base = API_BASE_URL || "";
+    const cleanBase = base.endsWith("/") ? base : `${base}/`;
+    const cleanPath = String(path).replace(/^\//, "");
+
+    return `${cleanBase}${cleanPath}`;
+  }
+
+  function getUploadedImagePath(data) {
+    return data?.imageUrl || data?.avatar || data?.avatarUrl || data?.url || data?.path || data;
+  }
+
+  function buildHorsePayloadWithImage(horse, imageUrl) {
+    return toHorsePayload({
+      ...toHorseFormValues(horse),
+      imageUrl,
+      horseStatus: horse.status,
+    });
+  }
+
+  async function handleHorseAvatarUpload(horse, { file, onSuccess, onError }) {
+    if (!horse?.id) {
+      const error = new Error("Missing horse id.");
+      messageApi.error(error.message);
+      onError(error);
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      const error = new Error("Image must be smaller than 5MB");
+      messageApi.error(error.message);
+      onError(error);
+      return;
+    }
+
+    setUploadingHorseId(horse.id);
+
+    try {
+      const uploaded = await uploadHorseAvatar(file);
+      const imageUrl = getUploadedImagePath(uploaded);
+
+      if (!imageUrl) {
+        throw new Error("Invalid response from server");
+      }
+
+      await updateHorse(horse.id, buildHorsePayloadWithImage(horse, imageUrl));
+      setHorses((current) =>
+        current.map((item) =>
+          (item.id ?? item._id) === horse.id
+            ? { ...item, imageUrl, avatar: imageUrl, avatarUrl: imageUrl }
+            : item,
+        ),
+      );
+      messageApi.success("Horse photo uploaded");
+      onSuccess(uploaded);
+    } catch (error) {
+      console.error(error);
+      messageApi.error(error.message || "Could not upload horse photo.");
+      onError(error);
+    } finally {
+      setUploadingHorseId("");
+    }
+  }
+
   async function handleSubmit(values) {
     setSaving(true);
 
@@ -143,9 +215,32 @@ export default function OwnerHorses() {
       dataIndex: "name",
       render: (value, record) => (
         <Space>
-          <Avatar shape="square" size={48} src={record.imageUrl}>
-            {String(value || "?").charAt(0)}
-          </Avatar>
+          <Upload
+            name="file"
+            accept="image/*"
+            showUploadList={false}
+            customRequest={(options) => handleHorseAvatarUpload(record, options)}
+            disabled={uploadingHorseId === record.id}
+          >
+            <button
+              type="button"
+              className="horse-avatar-upload"
+              title="Upload horse photo"
+              aria-label={`Upload photo for ${value || "horse"}`}
+              disabled={uploadingHorseId === record.id}
+            >
+              <Avatar size={44} src={getImageUrl(record.imageUrl)}>
+                {uploadingHorseId === record.id ? (
+                  <CameraOutlined />
+                ) : (
+                  String(value || "?").charAt(0)
+                )}
+              </Avatar>
+              <span className="horse-avatar-upload-icon">
+                <CameraOutlined />
+              </span>
+            </button>
+          </Upload>
           <Space direction="vertical" size={0}>
             <Typography.Text strong>{value}</Typography.Text>
             <Typography.Text type="secondary">{record.breed}</Typography.Text>
@@ -308,6 +403,57 @@ export default function OwnerHorses() {
 
         </Form>
       </Modal>
+
+      <style>{`
+        .horse-avatar-upload {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          padding: 0;
+          border: 0;
+          border-radius: 50%;
+          background: transparent;
+          cursor: pointer;
+        }
+
+        .horse-avatar-upload .ant-avatar {
+          flex: 0 0 auto;
+          border: 1px solid #d9f3ed;
+          background: #f3fffc;
+          color: #006755;
+          font-weight: 800;
+        }
+
+        .horse-avatar-upload-icon {
+          position: absolute;
+          right: 0;
+          bottom: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 18px;
+          height: 18px;
+          border: 2px solid #ffffff;
+          border-radius: 50%;
+          background: #006755;
+          color: #ffffff;
+          font-size: 10px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+        }
+
+        .horse-avatar-upload:hover .ant-avatar {
+          border-color: #69f8dd;
+          box-shadow: 0 0 0 3px rgba(105, 248, 221, 0.18);
+        }
+
+        .horse-avatar-upload:disabled {
+          cursor: wait;
+          opacity: 0.7;
+        }
+      `}</style>
     </Space>
   );
 }
