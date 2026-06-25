@@ -1,25 +1,19 @@
 import { apiClient } from "../client";
+import { RACE_ENDPOINTS } from "../endpoints/race.endpoint";
 
 export const getMyRaces = async () => {
-    const response = await apiClient.get(
-        "/races/my-races",
-        {
-            includeAuth: true,
-        }
-    );
-
-    console.log(
-        "MY RACES RESPONSE:",
-        response.data
-    );
+    const response = await apiClient.get(RACE_ENDPOINTS.MY_RACES, {
+        includeAuth: true,
+    });
 
     return response.data;
 };
 
-export const getRacesByTournament = async (tournamentId) => {
+export const getRacesByTournament = async (tournamentId, status = "") => {
     const response = await apiClient.get(
-        `/races/tournament/${tournamentId}`,
+        RACE_ENDPOINTS.BY_TOURNAMENT(tournamentId),
         {
+            params: status ? { status } : {},
             includeAuth: true,
         }
     );
@@ -29,7 +23,7 @@ export const getRacesByTournament = async (tournamentId) => {
 
 export const getRaceById = async (raceId) => {
     const response = await apiClient.get(
-        `/races/${raceId}`,
+        RACE_ENDPOINTS.DETAIL(raceId),
         {
             includeAuth: true,
         }
@@ -40,8 +34,72 @@ export const getRaceById = async (raceId) => {
 
 export const confirmRaceReady = async (raceId) => {
     const response = await apiClient.patch(
-        `/races/${raceId}/confirm-ready`,
+        RACE_ENDPOINTS.CONFIRM_READY(raceId),
         {},
+        {
+            includeAuth: true,
+        }
+    );
+
+    return response.data;
+};
+
+export const createRaceBatch = async (payload) => {
+    const response = await apiClient.post(
+        RACE_ENDPOINTS.BATCH,
+        payload,
+        {
+            includeAuth: true,
+        }
+    );
+
+    return response.data;
+};
+
+export const createRound2Race = async (tournamentId, payload) => {
+    const response = await apiClient.post(
+        RACE_ENDPOINTS.ROUND_2(tournamentId),
+        {},
+        {
+            params: {
+                startTime: payload.startTime,
+                date: payload.date,
+            },
+            includeAuth: true,
+        }
+    );
+
+    return response.data;
+};
+
+export const assignRaceReferee = async (raceId, refereeId) => {
+    const response = await apiClient.patch(
+        RACE_ENDPOINTS.ASSIGN_REFEREE(raceId),
+        { refereeId },
+        {
+            includeAuth: true,
+        }
+    );
+
+    return response.data;
+};
+
+export const assignRaceCourse = async (raceId, raceCourseId) => {
+    const response = await apiClient.patch(
+        RACE_ENDPOINTS.ASSIGN_RACE_COURSE(raceId),
+        { raceCourseId },
+        {
+            includeAuth: true,
+        }
+    );
+
+    return response.data;
+};
+
+export const bulkAssignRaceHorses = async (raceId, registrationIds) => {
+    const response = await apiClient.post(
+        RACE_ENDPOINTS.BULK_ASSIGN_HORSES(raceId),
+        { registrationIds },
         {
             includeAuth: true,
         }

@@ -1,4 +1,5 @@
 export const REGISTRATION_ENDPOINTS = {
+  CREATE: "/registrations",
   ROOT: "/admin/registrations",
   DETAIL: (id) => `/admin/registrations/${id}`,
   CONFIRM: (id) => `/admin/registrations/${id}/confirm`,

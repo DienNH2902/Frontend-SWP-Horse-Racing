@@ -64,7 +64,7 @@ function conditionColor(type) {
 function rewardTypeColor(type) {
   const normalized = String(type).toUpperCase();
   if (normalized === "POINTS") return "green";
-  if (normalized === "AVATAR_FRAME") return "gold";
+  // if (normalized === "AVATAR_FRAME") return "gold";
   if (normalized === "BACKGROUND") return "purple";
   if (normalized === "INSURANCE_CARD") return "magenta";
   return "cyan";
@@ -73,7 +73,7 @@ function rewardTypeColor(type) {
 function rewardTypeLabel(type) {
   const normalized = String(type).toUpperCase();
   if (normalized === "POINTS") return "POINTS";
-  if (normalized === "AVATAR_FRAME") return "AVATAR FRAME";
+  // if (normalized === "AVATAR_FRAME") return "AVATAR FRAME";
   if (normalized === "BACKGROUND") return "BACKGROUND";
   if (normalized === "INSURANCE_CARD") return "INSURANCE CARD";
   return type;
@@ -352,7 +352,7 @@ function RewardManagement() {
             onChange={(val) => setSelectedRewardType(val)}
           >
             <Select.Option value="POINTS">POINTS</Select.Option>
-            <Select.Option value="AVATAR_FRAME">AVATAR FRAME</Select.Option>
+            {/* <Select.Option value="AVATAR_FRAME">AVATAR FRAME</Select.Option> */}
             <Select.Option value="BACKGROUND">BACKGROUND</Select.Option>
             <Select.Option value="INSURANCE_CARD">INSURANCE CARD</Select.Option>
           </Select>
@@ -444,9 +444,9 @@ function RewardManagement() {
               <Select.Option value="POINTS">
                 POINTS (Directly add points)
               </Select.Option>
-              <Select.Option value="AVATAR_FRAME">
+              {/* <Select.Option value="AVATAR_FRAME">
                 AVATAR_FRAME (Avatar asset frame)
-              </Select.Option>
+              </Select.Option> */}
               <Select.Option value="BACKGROUND">
                 BACKGROUND (Profile wallpaper background)
               </Select.Option>

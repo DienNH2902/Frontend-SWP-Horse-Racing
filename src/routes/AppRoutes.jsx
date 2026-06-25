@@ -8,6 +8,7 @@ import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
 import TournamentManagement from "../pages/admin/TournamentManagement";
 import RegistrationManagement from "../pages/admin/RegistrationManagement";
+import RaceManagement from "../pages/admin/RaceManagement";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
@@ -31,6 +32,13 @@ import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
 import RewardManagement from "../pages/admin/RewardManagement";
+import SpectatorRewards from "../pages/spectator/SpectatorReward";
+import PointsTransactionHistory from "../pages/spectator/PointsTransaction";
+import NotificationHistory from "../pages/NotificationPage";
+import MoneyTransactionHistory from "../pages/MoneyTransaction";
+import Wallet from "../pages/Wallet";
+import PaymentResult from "../pages/PaymentResult";
+import { getAuthSession } from "../utils/storage";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -88,10 +96,21 @@ function AdminRegistrationsPage() {
   );
 }
 
+function AdminRacesPage() {
+  return (
+    <AdminLayout>
+      <RaceManagement />
+    </AdminLayout>
+  );
+}
+function LandingRoute() {
+  return getAuthSession() ? <Navigate to="/home" replace /> : <Landing />;
+}
+
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<LandingRoute />} />
       <Route path="/home" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
@@ -100,6 +119,36 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+        <Route
+          path="notification"
+          element={<NotificationHistory allowedRole="Spectator" />}
+        />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
+        <Route
+          path="/spectator"
+          element={<RoleHome allowedRole="Spectator" />}
+        />
+        <Route
+          path="/spectator/reward"
+          element={<SpectatorRewards allowedRole="Spectator" />}
+        />
+        <Route
+          path="/spectator/points-transaction"
+          element={<PointsTransactionHistory allowedRole="Spectator" />}
+        />
+      </Route>
+
+      <Route
+        element={<ProtectedRoute allowedRoles={["Horse Owner", "Jockey"]} />}
+      >
+        <Route
+          path="/money-transaction"
+          element={<MoneyTransactionHistory />}
+        />
+        <Route path="/wallet" element={<Wallet />} />
+        <Route path="/payment-result" element={<PaymentResult />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
@@ -127,6 +176,12 @@ export default function AppRoutes() {
             </AdminLayout>
           }
         />
+        <Route path="/admin/tournaments" element={<AdminTournamentsPage />} />
+        <Route
+          path="/admin/registrations"
+          element={<AdminRegistrationsPage />}
+        />
+        <Route path="/admin/races" element={<AdminRacesPage />} />
 
         <Route
           path="/admin/jockey-license"

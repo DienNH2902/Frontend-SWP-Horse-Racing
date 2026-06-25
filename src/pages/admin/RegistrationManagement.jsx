@@ -62,6 +62,21 @@ function formatDate(value) {
   }).format(date);
 }
 
+function getTimeValue(value) {
+  if (!value) return 0;
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function sortNewestRegistrationFirst(a, b) {
+  const aTime = getTimeValue(a.registeredAt || a.createdAt);
+  const bTime = getTimeValue(b.registeredAt || b.createdAt);
+
+  return bTime - aTime;
+}
+
 function statusColor(status) {
   switch (status) {
     case "Pending":
@@ -93,6 +108,7 @@ function normalizeRegistration(item, index) {
     gateNumber: item?.gateNumber ?? "N/A",
     status: item?.status || "Pending",
     registeredAt: item?.registeredAt || "",
+    createdAt: item?.createdAt || "",
   };
 }
 
@@ -123,7 +139,11 @@ function RegistrationManagement() {
         tournamentId,
       });
 
-      setRegistrations(resolveList(response).map(normalizeRegistration));
+      setRegistrations(
+        resolveList(response)
+          .map(normalizeRegistration)
+          .sort(sortNewestRegistrationFirst),
+      );
     } catch (error) {
       message.error(error?.message || "Unable to load registrations");
     } finally {
