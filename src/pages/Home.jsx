@@ -441,7 +441,7 @@ function Home() {
       .sort((first, second) => toNumber(second[sortKey]) - toNumber(first[sortKey]))
       .map((horse, index) => ({ ...horse, rank: index + 1 }));
   }, [homeData.horses, horseSortBy, minHorseTotalWin, minHorseWinRate]);
-  const topHorses = filteredHorses.slice(0, 4);
+  const topHorses = filteredHorses.slice(0, 3);
 
   if (!authSession) {
     return <Navigate to="/" replace />;
@@ -1214,7 +1214,13 @@ function Home() {
           gap: 16px;
         }
 
+        .top-horse-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
         .horse-card {
+          display: flex;
+          flex-direction: column;
           overflow: hidden;
         }
 
@@ -1245,25 +1251,45 @@ function Home() {
         }
 
         .horse-body {
+          min-height: 230px;
+          display: flex;
+          flex-direction: column;
           padding: 14px;
         }
 
         .horse-body h3 {
-          margin-top: 0;
+          min-height: 44px;
+          display: -webkit-box;
+          margin: 0 0 8px;
+          overflow: hidden;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
           font-size: 18px;
+          line-height: 1.2;
         }
 
         .horse-stat-row {
-          display: flex;
-          justify-content: space-between;
+          min-height: 34px;
+          display: grid;
+          grid-template-columns: 62px minmax(0, 1fr);
+          align-items: start;
           gap: 10px;
-          margin-top: 12px;
+          margin-top: 8px;
           color: #6a817e;
           font-size: 12px;
         }
 
         .horse-stat-row strong {
+          display: -webkit-box;
+          overflow: hidden;
           color: #0d2321;
+          text-align: right;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .horse-body .card-action {
+          margin-top: auto;
         }
 
         .jockey-list,
@@ -1568,7 +1594,8 @@ function Home() {
           .dashboard-grid,
           .lower-grid,
           .prediction-band { grid-template-columns: 1fr; }
-          .horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .horse-grid,
+          .top-horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .trophy-art { display: none; }
           .footer-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -1588,6 +1615,7 @@ function Home() {
           .home-stats,
           .race-grid,
           .horse-grid,
+          .top-horse-grid,
           .footer-grid { grid-template-columns: 1fr; }
           .panel { padding: 18px; }
           .jockey-row { grid-template-columns: 26px 38px 1fr; }
@@ -1934,7 +1962,7 @@ function Home() {
                   aria-label="Minimum total wins"
                 />
               </div>
-              <div className="horse-grid">
+              <div className="horse-grid top-horse-grid">
                 {topHorses.map((horse) => (
                   <article className="horse-card" key={horse.id}>
                     <div className="horse-photo">
