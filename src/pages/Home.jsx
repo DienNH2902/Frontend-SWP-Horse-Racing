@@ -3,6 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
 import { API_BASE_URL } from "../api/client";
 import { getHorses } from "../api/services/horse.service";
+import { getUsersByRole } from "../api/services/user.service";
 import { getRoleHomePath } from "../utils/roles";
 import {
   clearAuthSession,
@@ -273,6 +274,38 @@ function normalizeHomeHorse(horse = {}, index = 0) {
   };
 }
 
+const ALLOWED_JOCKEY_STATUSES = new Set([
+  "available",
+  "contracted",
+  "busy",
+  "resting",
+  "injured",
+]);
+
+function normalizeHomeJockey(jockey = {}, index = 0) {
+  const profile = jockey.jockeyProfile || jockey.profile || {};
+  const winRate = toNumber(jockey.winRate ?? profile.winRate);
+  const wins = toNumber(
+    jockey.totalWin ??
+      jockey.totalWins ??
+      jockey.careerWins ??
+      jockey.wins ??
+      profile.totalWin ??
+      profile.careerWins ??
+      profile.wins,
+  );
+  const status = jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
+
+  return {
+    id: jockey.id || jockey._id || jockey.userId || profile.id || `${jockey.fullName}-${index}`,
+    rank: index + 1,
+    name: jockey.fullName || jockey.name || profile.fullName || profile.name || "Unnamed jockey",
+    wins,
+    winRate,
+    status,
+  };
+}
+
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -283,6 +316,7 @@ function Home() {
   const [horseSortBy, setHorseSortBy] = useState("winRate");
   const [minHorseWinRate, setMinHorseWinRate] = useState("");
   const [minHorseTotalWin, setMinHorseTotalWin] = useState("");
+  const [minJockeyWinRate, setMinJockeyWinRate] = useState("");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -296,8 +330,8 @@ function Home() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.allSettled([getHomePageData(), getHorses()])
-      .then(([homeResult, horsesResult]) => {
+    Promise.allSettled([getHomePageData(), getHorses(), getUsersByRole("Jockey")])
+      .then(([homeResult, horsesResult, jockeysResult]) => {
         if (isMounted) {
           const data =
             homeResult.status === "fulfilled"
@@ -315,11 +349,26 @@ function Home() {
             Array.isArray(horsesResult.value)
               ? horsesResult.value.map(normalizeHomeHorse)
               : data.horses.map(normalizeHomeHorse);
+          const apiJockeys =
+            jockeysResult.status === "fulfilled" &&
+            Array.isArray(jockeysResult.value)
+              ? jockeysResult.value
+                  .map(normalizeHomeJockey)
+                  .filter((jockey) =>
+                    ALLOWED_JOCKEY_STATUSES.has(
+                      String(jockey.status).toLowerCase(),
+                    ),
+                  )
+              : data.jockeys.map(normalizeHomeJockey);
 
           setHomeData({
             ...data,
             horses: apiHorses.map((horse, index) => ({
               ...horse,
+              rank: index + 1,
+            })),
+            jockeys: apiJockeys.map((jockey, index) => ({
+              ...jockey,
               rank: index + 1,
             })),
           });
@@ -442,6 +491,15 @@ function Home() {
       .map((horse, index) => ({ ...horse, rank: index + 1 }));
   }, [homeData.horses, horseSortBy, minHorseTotalWin, minHorseWinRate]);
   const topHorses = filteredHorses.slice(0, 3);
+  const filteredJockeys = useMemo(() => {
+    const minWinRate = minJockeyWinRate === "" ? 0 : toNumber(minJockeyWinRate);
+
+    return homeData.jockeys
+      .filter((jockey) => toNumber(jockey.winRate) >= minWinRate)
+      .sort((first, second) => toNumber(second.winRate) - toNumber(first.winRate))
+      .map((jockey, index) => ({ ...jockey, rank: index + 1 }));
+  }, [homeData.jockeys, minJockeyWinRate]);
+  const topJockeys = filteredJockeys.slice(0, 5);
 
   if (!authSession) {
     return <Navigate to="/" replace />;
@@ -1308,7 +1366,7 @@ function Home() {
         }
 
         .jockey-row {
-          grid-template-columns: 28px 42px 1fr auto auto;
+          grid-template-columns: 28px 42px 1fr auto;
           min-height: 76px;
           font-size: 13px;
         }
@@ -1619,7 +1677,7 @@ function Home() {
           .footer-grid { grid-template-columns: 1fr; }
           .panel { padding: 18px; }
           .jockey-row { grid-template-columns: 26px 38px 1fr; }
-          .jockey-row span:nth-last-child(-n + 2) { display: none; }
+          .jockey-row > span:last-child { display: none; }
           .result-row {
             grid-template-columns: 92px 1fr;
             padding: 14px 0;
@@ -2004,17 +2062,30 @@ function Home() {
                 title="Top Jockeys"
                 action={{ label: "View All Jockeys", href: "#jockeys" }}
               />
+              <div className="horse-filter-bar" aria-label="Jockey filters">
+                <input
+                  min="0"
+                  max="100"
+                  type="number"
+                  value={minJockeyWinRate}
+                  onChange={(event) => setMinJockeyWinRate(event.target.value)}
+                  placeholder="Min win rate"
+                  aria-label="Minimum jockey win rate"
+                />
+              </div>
               <div className="jockey-list">
-                {homeData.jockeys.map((jockey) => (
+                {topJockeys.map((jockey) => (
                   <div className="jockey-row" key={jockey.id}>
                     <span className="rank-number">{jockey.rank}</span>
                     <Avatar name={jockey.name} rank={jockey.rank} />
                     <strong>{jockey.name}</strong>
-                    <span>{jockey.wins} Wins</span>
-                    <span>Win Rate {jockey.winRate}</span>
+                    <span>Win Rate {jockey.winRate || 0}%</span>
                   </div>
                 ))}
               </div>
+              {topJockeys.length === 0 && (
+                <p className="loading-line">No jockeys match the current filters.</p>
+              )}
             </section>
           </div>
 
