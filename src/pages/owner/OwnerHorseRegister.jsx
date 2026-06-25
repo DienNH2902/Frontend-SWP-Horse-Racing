@@ -134,11 +134,7 @@ export default function OwnerHorseRegister() {
             </Col>
           </Row>
 
-          <Form.Item
-            name="imageUrl"
-            hidden
-            rules={[{ required: true, message: "Upload horse image" }]}
-          >
+          <Form.Item name="imageUrl" hidden>
             <Input />
           </Form.Item>
 
