@@ -1418,7 +1418,7 @@ function Home() {
 
         .tabs {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           margin-bottom: 18px;
           border: 1px solid #d9ece9;
           border-radius: 8px;
@@ -1429,8 +1429,10 @@ function Home() {
           min-height: 43px;
           border: 0;
           border-right: 1px solid #d9ece9;
+          padding: 0 18px;
           color: #53706c;
           background: #fff;
+          font-size: 14px;
           font-weight: 900;
           cursor: pointer;
         }
@@ -2259,7 +2261,6 @@ function Home() {
               >
                 <button type="button">Horses</button>
                 <button type="button">Jockeys</button>
-                <button type="button">Owners</button>
               </div>
               <table className="home-table">
                 <thead>
