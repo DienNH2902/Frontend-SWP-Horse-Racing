@@ -13,6 +13,7 @@ import {
   Typography,
   message,
   DatePicker,
+  Descriptions,
 } from "antd";
 import "antd/dist/reset.css";
 import {
@@ -21,6 +22,7 @@ import {
   searchUsersByName,
   updateAccountStatus,
   updateUserAccount,
+  getUserById,
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
 
@@ -140,6 +142,8 @@ function UserManagement() {
   const [statusChangingId, setStatusChangingId] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
+  const [detailUser, setDetailUser] = useState(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
 
   async function loadUsers() {
     setIsLoading(true);
@@ -331,6 +335,19 @@ function UserManagement() {
     }
   }
 
+  // Hàm gọi API lấy chi tiết tài khoản
+  async function openDetailModal(id) {
+    setIsDetailLoading(true);
+    try {
+      const data = await getUserById(id);
+      setDetailUser(data);
+    } catch (error) {
+      message.error(error?.message || "Không thể tải thông tin chi tiết");
+    } finally {
+      setIsDetailLoading(false);
+    }
+  }
+
   const renderDynamicFields = () => {
     return (
       <Form.Item
@@ -477,6 +494,15 @@ function UserManagement() {
         width: 180,
         render: (_, record) => (
           <Space>
+            <Button
+              size="small"
+              type="primary"
+              ghost
+              loading={isDetailLoading}
+              onClick={() => openDetailModal(record.id)}
+            >
+              Detail
+            </Button>
             <Button
               className="user-management-link-btn"
               size="small"
@@ -717,6 +743,183 @@ function UserManagement() {
 
           {renderDynamicFields()}
         </Form>
+      </Modal>
+
+      {/* Modal hiển thị chi tiết tài khoản */}
+      <Modal
+        title="Thông tin chi tiết tài khoản"
+        open={Boolean(detailUser)}
+        footer={[
+          <Button key="close" onClick={() => setDetailUser(null)}>
+            Đóng
+          </Button>,
+        ]}
+        onCancel={() => setDetailUser(null)}
+        width={700}
+      >
+        {detailUser && (
+          <div style={{ paddingTop: 10 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginBottom: 20,
+              }}
+            >
+              <Avatar size={80} src={detailUser.avatar}>
+                {detailUser.fullName
+                  ? detailUser.fullName
+                      .split(" ")
+                      .map((p) => p[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()
+                  : "?"}
+              </Avatar>
+            </div>
+
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="Họ và tên" span={2}>
+                <Text strong>{detailUser.fullName}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Email" span={2}>
+                {detailUser.email}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số điện thoại">
+                {detailUser.phoneNumber || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày sinh">
+                {detailUser.dateOfBirth || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Giới tính">
+                {detailUser.gender === 1
+                  ? "Nam"
+                  : detailUser.gender === 2
+                    ? "Nữ"
+                    : "Khác"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Vai trò">
+                <Tag color={roleColor(detailUser.role)}>{detailUser.role}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái" span={2}>
+                <Tag color={statusColor(detailUser.status)}>
+                  {detailUser.status}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Địa chỉ" span={2}>
+                {detailUser.address || "N/A"}
+              </Descriptions.Item>
+
+              {/* Các trường động theo Role Spectator */}
+              {String(detailUser.role).toLowerCase().includes("spectator") && (
+                <>
+                  <Descriptions.Item label="Số dư điểm">
+                    {detailUser.pointBalance ?? 0}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tổng điểm tích lũy">
+                    {detailUser.totalPoints ?? 0}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tổng số lượt cược">
+                    {detailUser.totalBets ?? 0}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tỷ lệ thắng cược">
+                    {detailUser.winRate ?? 0}%
+                  </Descriptions.Item>
+                </>
+              )}
+
+              {/* Các trường động theo Role Jockey */}
+              {String(detailUser.role).toLowerCase().includes("jockey") && (
+                <>
+                  <Descriptions.Item label="Cân nặng">
+                    {detailUser.weight ? `${detailUser.weight} kg` : "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Chiều cao">
+                    {detailUser.height ? `${detailUser.height} cm` : "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Trạng thái nài ngựa">
+                    {detailUser.jockeyStatus || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tỷ lệ thắng">
+                    {detailUser.winRate ?? 0}%
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số dư tài khoản">
+                    {(detailUser.balance ?? 0).toLocaleString()} VND
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số dư đóng băng">
+                    {(detailUser.heldBalance ?? 0).toLocaleString()} VND
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Điểm uy tín" span={2}>
+                    {detailUser.reputationPoints ?? 0}
+                  </Descriptions.Item>
+                  {detailUser.licenses && detailUser.licenses.length > 0 && (
+                    <Descriptions.Item label="Chứng chỉ hành nghề" span={2}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "5px",
+                        }}
+                      >
+                        {detailUser.licenses.map((lic, idx) => (
+                          <div key={lic._id || idx}>
+                            <Text code>{lic.licenseCode}</Text> (Bắt đầu:{" "}
+                            {lic.racingStartDate || "N/A"})
+                          </div>
+                        ))}
+                      </div>
+                    </Descriptions.Item>
+                  )}
+                </>
+              )}
+
+              {/* Các trường động theo Role Horse-Owner */}
+              {(String(detailUser.role).toLowerCase().includes("owner") ||
+                String(detailUser.role).toLowerCase().includes("horse")) && (
+                <>
+                  <Descriptions.Item label="Tên trang trại">
+                    {detailUser.stableName || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Địa chỉ trang trại">
+                    {detailUser.stableAddress || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số dư tài khoản">
+                    {(detailUser.balance ?? 0).toLocaleString()} VND
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số dư đóng băng">
+                    {(detailUser.heldBalance ?? 0).toLocaleString()} VND
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tỷ lệ thắng">
+                    {detailUser.winRate ?? 0}%
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Điểm uy tín">
+                    {detailUser.reputationPoints ?? 0}
+                  </Descriptions.Item>
+                </>
+              )}
+
+              {/* Các trường động theo Role Referee */}
+              {String(detailUser.role).toLowerCase().includes("referee") && (
+                <>
+                  <Descriptions.Item label="Số năm kinh nghiệm">
+                    {detailUser.experienceYears
+                      ? `${detailUser.experienceYears} năm`
+                      : "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Chứng chỉ trọng tài">
+                    {detailUser.certification || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số trận điều hành">
+                    {detailUser.racesAttempt ?? 0}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Điểm uy tín">
+                    {detailUser.reputationPoints ?? 0}
+                  </Descriptions.Item>
+                </>
+              )}
+            </Descriptions>
+          </div>
+        )}
       </Modal>
     </section>
   );
