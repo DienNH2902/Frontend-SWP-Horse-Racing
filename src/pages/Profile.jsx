@@ -386,7 +386,7 @@ function Profile() {
 
         .spectator-profile-nav {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 12px;
           margin-bottom: 26px;
         }
@@ -639,6 +639,14 @@ function Profile() {
             <span>GoldenHoof</span>
           </Link>
           <Space>
+            {userRole === "SPECTATOR" && (
+              <Button
+                className="profile-primary"
+                onClick={() => navigate("/spectator/broadcast")}
+              >
+                Live Broadcast
+              </Button>
+            )}
             <Button
               className="profile-secondary"
               onClick={() => navigate("/home")}
@@ -717,10 +725,6 @@ function Profile() {
                       className="spectator-profile-nav"
                       aria-label="Spectator features"
                     >
-                      <Link to="/spectator/broadcast">
-                        <strong>🏇 Race trực tiếp</strong>
-                        <span>Chọn và theo dõi race đang live</span>
-                      </Link>
                       <Link to="/spectator/reward">
                         <strong>🎁 Phần thưởng</strong>
                         <span>Xem và đổi phần thưởng Spectator</span>
