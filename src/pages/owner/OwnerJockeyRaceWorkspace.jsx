@@ -28,6 +28,7 @@ import {
 } from "../../api/services/owner.service";
 import { createRegistration } from "../../api/services/registration.service";
 import { getTournamentById, getTournaments } from "../../api/services/tournament.service";
+import { searchUsersByName } from "../../api/services/user.service";
 
 const contractColor = {
   Active: "green",
@@ -47,11 +48,22 @@ function pickFirstValue(source, keys, fallback = "") {
 
 function collectionFrom(value) {
   if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.data)) return value.data;
+  if (Array.isArray(value?.result)) return value.result;
+  if (Array.isArray(value?.users)) return value.users;
   if (Array.isArray(value?.items)) return value.items;
   if (Array.isArray(value?.licenses)) return value.licenses;
   if (Array.isArray(value?.license)) return value.license;
+  if (Array.isArray(value?.content)) return value.content;
+  if (Array.isArray(value?.records)) return value.records;
 
   return [];
+}
+
+function isJockeyUser(user) {
+  const role = String(user?.role || user?.roleName || "").toLowerCase();
+
+  return role.includes("jockey");
 }
 
 function normalizeHorse(horse) {
@@ -162,6 +174,12 @@ function formatRate(value) {
   return String(value).includes("%") ? value : `${value}%`;
 }
 
+function toSortableNumber(value) {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : 0;
+}
+
 export default function OwnerJockeyRaceWorkspace() {
   const [form] = Form.useForm();
   const [registrationForm] = Form.useForm();
@@ -178,6 +196,8 @@ export default function OwnerJockeyRaceWorkspace() {
   const [invitationLoading, setInvitationLoading] = useState(true);
   const [tournamentLoading, setTournamentLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [jockeySearchKeyword, setJockeySearchKeyword] = useState("");
+  const [jockeySearching, setJockeySearching] = useState(false);
   const [registrationSaving, setRegistrationSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
@@ -201,6 +221,38 @@ export default function OwnerJockeyRaceWorkspace() {
       setErrorMessage(error.message || "Could not load jockey workspace.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSearchJockeys(value = jockeySearchKeyword) {
+    const keyword = String(value || "").trim();
+
+    if (!keyword) {
+      await loadWorkspace();
+      return;
+    }
+
+    setJockeySearching(true);
+    setErrorMessage("");
+
+    try {
+      const data = await searchUsersByName(keyword);
+      const jockeys = collectionFrom(data)
+        .filter(isJockeyUser)
+        .map(normalizeJockey);
+
+      setWorkspace((current) => ({
+        ...current,
+        jockeys,
+      }));
+
+      if (jockeys.length === 0) {
+        messageApi.info("No jockeys found with that name");
+      }
+    } catch (error) {
+      messageApi.error(error.message || "Could not search jockeys.");
+    } finally {
+      setJockeySearching(false);
     }
   }
 
@@ -336,8 +388,22 @@ export default function OwnerJockeyRaceWorkspace() {
       ),
     },
     { title: "Phone", dataIndex: "phoneNumber", width: 130 },
-    { title: "Weight", dataIndex: "weight", width: 90 },
-    { title: "Height", dataIndex: "height", width: 90 },
+    {
+      title: "Weight",
+      dataIndex: "weight",
+      width: 90,
+      sorter: (first, second) =>
+        toSortableNumber(first.weight) - toSortableNumber(second.weight),
+      sortDirections: ["ascend", "descend"],
+    },
+    {
+      title: "Height",
+      dataIndex: "height",
+      width: 90,
+      sorter: (first, second) =>
+        toSortableNumber(first.height) - toSortableNumber(second.height),
+      sortDirections: ["ascend", "descend"],
+    },
     {
       title: "Win rate",
       dataIndex: "winRate",
@@ -593,10 +659,37 @@ export default function OwnerJockeyRaceWorkspace() {
         </Col>
 
         <Col xs={24} xl={15}>
-          <Card title="Available jockeys">
+          <Card
+            title="Available jockeys"
+            extra={
+              <Space wrap>
+                <Input.Search
+                  allowClear
+                  value={jockeySearchKeyword}
+                  placeholder="Search jockey name"
+                  onChange={(event) =>
+                    setJockeySearchKeyword(event.target.value)
+                  }
+                  onSearch={handleSearchJockeys}
+                  enterButton="Search"
+                  loading={jockeySearching}
+                  style={{ width: 260 }}
+                />
+                <Button
+                  onClick={() => {
+                    setJockeySearchKeyword("");
+                    loadWorkspace();
+                  }}
+                  loading={loading}
+                >
+                  Reset
+                </Button>
+              </Space>
+            }
+          >
             <Table
               rowKey="id"
-              loading={loading}
+              loading={loading || jockeySearching}
               columns={jockeyColumns}
               dataSource={workspace.jockeys}
               pagination={{ pageSize: 5, showSizeChanger: false }}

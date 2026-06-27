@@ -14,6 +14,7 @@ import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
 import JockeyDashboard from "../pages/jockey/JockeyDashboard";
 import JockeyInvitations from "../pages/jockey/JockeyInvitations";
+import JockeyLicenseSubmit from "../pages/jockey/JockeyLicenseSubmit";
 import JockeyRaceSchedule from "../pages/jockey/JockeyRaceSchedule";
 import OwnerDashboard from "../pages/owner/OwnerDashboard";
 import OwnerHorseRegister from "../pages/owner/OwnerHorseRegister";
@@ -38,6 +39,11 @@ import NotificationHistory from "../pages/NotificationPage";
 import MoneyTransactionHistory from "../pages/MoneyTransaction";
 import Wallet from "../pages/Wallet";
 import PaymentResult from "../pages/PaymentResult";
+import Broadcast from "../pages/spectator/Broadcast";
+import LiveRaceChannels from "../pages/spectator/LiveRaceChannels";
+import AllHorses from "../pages/AllHorses";
+import AllJockeys from "../pages/AllJockeys";
+import AllRaceResults from "../pages/AllRaceResults";
 import { getAuthSession } from "../utils/storage";
 
 const OWNER_NAV = [
@@ -68,6 +74,7 @@ const JOCKEY_NAV = [
     to: "/jockey/invitations",
     label: "Invitations",
   },
+  { key: "jockey-license", to: "/jockey/license", label: "My license" },
   { key: "jockey-schedule", to: "/jockey/schedule", label: "My race schedule" },
 ];
 
@@ -119,6 +126,9 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+        <Route path="/horses" element={<AllHorses />} />
+        <Route path="/jockeys" element={<AllJockeys />} />
+        <Route path="/race-results" element={<AllRaceResults />} />
         <Route
           path="notification"
           element={<NotificationHistory allowedRole="Spectator" />}
@@ -126,10 +136,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
-        <Route
-          path="/spectator"
-          element={<RoleHome allowedRole="Spectator" />}
-        />
+        <Route path="/spectator" element={<Navigate to="/profile" replace />} />
         <Route
           path="/spectator/reward"
           element={<SpectatorRewards allowedRole="Spectator" />}
@@ -137,6 +144,14 @@ export default function AppRoutes() {
         <Route
           path="/spectator/points-transaction"
           element={<PointsTransactionHistory allowedRole="Spectator" />}
+        />
+        <Route
+          path="/spectator/broadcast"
+          element={<LiveRaceChannels />}
+        />
+        <Route
+          path="/spectator/broadcast/:raceId"
+          element={<Broadcast />}
         />
       </Route>
 
@@ -270,17 +285,8 @@ export default function AppRoutes() {
 
           <Route path="referee/races/:id/final" element={<RefereeFinalResults />} />
 
-          <Route path="referee/races/:id/final" element={<RefereeFinalResults />} />
-
           <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
         </Route>
-      </Route>
-
-      <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
-        <Route
-          path="/spectator"
-          element={<RoleHome allowedRole="Spectator" />}
-        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
@@ -296,6 +302,7 @@ export default function AppRoutes() {
         >
           <Route path="/jockey" element={<JockeyDashboard />} />
           <Route path="/jockey/invitations" element={<JockeyInvitations />} />
+          <Route path="/jockey/license" element={<JockeyLicenseSubmit />} />
           <Route path="/jockey/schedule" element={<JockeyRaceSchedule />} />
         </Route>
 

@@ -9,7 +9,7 @@ export function getRoleHomePath(role) {
 
     if (value === "horseowner") return "/owner";
     if (value === "referee") return "/referee";
-    if (value === "spectator") return "/spectator";
+    if (value === "spectator") return "/profile";
     if (value === "jockey") return "/jockey";
     if (value === "admin") return "/admin/dashboard";
 
