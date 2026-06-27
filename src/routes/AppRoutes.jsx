@@ -25,6 +25,7 @@ import OwnerTournaments from "../pages/owner/OwnerTournaments";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
+import RefereeTournamentList from "../pages/referee/RefereeTournamentList";
 import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
 import RefereeResultReview from "../pages/referee/RefereeResultReview";
 import RefereeFinalResults from "../pages/referee/RefereeFinalResults";
@@ -64,7 +65,17 @@ const OWNER_NAV = [
 ];
 
 const REFEREE_NAV = [
-  { key: "referee-dashboard", to: "/referee", label: "Assigned Races" },
+  {
+    key: "referee-dashboard",
+    to: "/referee",
+    label: "Assigned Races",
+  },
+
+  {
+    key: "referee-tournaments",
+    to: "/referee/tournaments",
+    label: "Tournaments",
+  },
 ];
 
 const JOCKEY_NAV = [
@@ -273,6 +284,10 @@ export default function AppRoutes() {
           }
         >
           <Route path="referee" element={<RefereeDashboard />} />
+          <Route
+            path="referee/tournaments"
+            element={<RefereeTournamentList />}
+          />
 
           <Route
             path="referee/tournaments/:id"
