@@ -237,11 +237,6 @@ export default function LiveRaceChannels() {
         <header className="live-channels-header">
           <div>
             <p className="live-channels-eyebrow">GOLDEN HOOF · LIVE TV</p>
-            <h1>Chọn race để theo dõi</h1>
-            <p>
-              Chọn một kênh đang phát trực tiếp hoặc xem bảng kết quả của race
-              đã kết thúc.
-            </p>
           </div>
           <div className="live-channels-actions">
             <span>{updateLabel}</span>
@@ -328,7 +323,6 @@ export default function LiveRaceChannels() {
                   <span className="replay-icon" aria-hidden="true">↻</span>
                   <h2 id="replay-races-title">Replay gần đây</h2>
                 </div>
-                <span>Tối đa 6 race</span>
               </div>
               {replayRaces.length ? (
                 <div className="live-channel-grid">
