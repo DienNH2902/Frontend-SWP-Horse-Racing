@@ -6,7 +6,9 @@ import { getAccessToken } from "../../utils/storage";
 import "./Broadcast.css";
 
 const TICK_DURATION_SECONDS = 0.5;
-const RESULT_CACHE_PREFIX = "goldenhoof_broadcast_result_";
+// v2 only contains results received from the spectator socket's race_finished.
+// The previous cache could contain referee/raw simulation data.
+const RESULT_CACHE_PREFIX = "goldenhoof_broadcast_result_v2_";
 
 const COLORS = [
   "#ef4444",
@@ -502,15 +504,7 @@ export default function Broadcast() {
       .then((raceData) => {
         if (!isMounted) return;
 
-        const raceResults = normalizeResults(raceData);
-
         setRaceStartAt(resolveRaceStart(raceData));
-        if (raceResults.length) {
-          setResults(raceResults);
-          setIsFinished(true);
-          finishedRef.current = true;
-          saveCachedResults(raceId, raceResults);
-        }
       })
       .catch(() => {
         // Live socket and the local race_finished cache remain available.
