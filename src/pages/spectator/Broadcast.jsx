@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { Link, useParams } from "react-router-dom";
 import { getRaceById } from "../../api/services/race.service";
-import { getSimulationResult } from "../../api/services/simulation.service";
 import { getAccessToken } from "../../utils/storage";
 import "./Broadcast.css";
 
@@ -263,7 +262,6 @@ export default function Broadcast() {
     activeRaceRef.current = "";
     requestedRaceRef.current = "";
     trackInitializedRef.current = false;
-    finishedRef.current = false;
     setJoinedRaceId("");
     setHorses([]);
     setCurrentTick(null);
@@ -435,6 +433,7 @@ export default function Broadcast() {
       finishedRef.current = true;
       setIsFinished(true);
       setIsCatchUp(false);
+      if (data?.tickNumber != null) setCurrentTick(data.tickNumber);
       const sortedResults = normalizeResults(data?.results || data);
       setResults(sortedResults);
       saveCachedResults(raceId, sortedResults);
@@ -490,6 +489,7 @@ export default function Broadcast() {
     setResults([]);
     setRaceStartAt(null);
     setIsFinished(false);
+    finishedRef.current = false;
 
     const cachedResults = readCachedResults(raceId);
     if (cachedResults.length) {
@@ -498,31 +498,23 @@ export default function Broadcast() {
       finishedRef.current = true;
     }
 
-    Promise.allSettled([getRaceById(raceId), getSimulationResult(raceId)]).then(
-      ([raceResponse, simulationResponse]) => {
+    getRaceById(raceId)
+      .then((raceData) => {
         if (!isMounted) return;
 
-        const raceData =
-          raceResponse.status === "fulfilled" ? raceResponse.value : null;
-        const simulationData =
-          simulationResponse.status === "fulfilled"
-            ? simulationResponse.value
-            : null;
-        const persistedResults = normalizeResults(simulationData);
         const raceResults = normalizeResults(raceData);
-        const loadedResults = persistedResults.length
-          ? persistedResults
-          : raceResults;
 
         setRaceStartAt(resolveRaceStart(raceData));
-        if (loadedResults.length) {
-          setResults(loadedResults);
+        if (raceResults.length) {
+          setResults(raceResults);
           setIsFinished(true);
           finishedRef.current = true;
-          saveCachedResults(raceId, loadedResults);
+          saveCachedResults(raceId, raceResults);
         }
-      },
-    );
+      })
+      .catch(() => {
+        // Live socket and the local race_finished cache remain available.
+      });
 
     return () => {
       isMounted = false;
@@ -542,7 +534,11 @@ export default function Broadcast() {
   );
 
   const statusLabel = useMemo(() => {
-    if (isFinished) return "FINISHED";
+    if (isFinished) {
+      return currentTick === null
+        ? "FINISHED"
+        : `${(currentTick * TICK_DURATION_SECONDS).toFixed(1)} giây · FINISHED`;
+    }
     if (currentTick === null) return "Đang chờ dữ liệu race";
     const elapsedSeconds = currentTick * TICK_DURATION_SECONDS;
     return `${elapsedSeconds.toFixed(1)} giây${
