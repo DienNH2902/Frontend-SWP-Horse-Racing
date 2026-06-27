@@ -317,6 +317,23 @@ function normalizeHomeJockey(jockey = {}, index = 0) {
   };
 }
 
+const HOME_DIRECTORY_CACHE_MS = 30_000;
+let homeDirectoryPromise = null;
+let homeDirectoryExpiresAt = 0;
+
+function loadHomeDirectories() {
+  if (homeDirectoryPromise && Date.now() < homeDirectoryExpiresAt) {
+    return homeDirectoryPromise;
+  }
+
+  homeDirectoryExpiresAt = Date.now() + HOME_DIRECTORY_CACHE_MS;
+  homeDirectoryPromise = Promise.allSettled([
+    getHorses(),
+    getUsersByRole("Jockey"),
+  ]);
+  return homeDirectoryPromise;
+}
+
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -340,54 +357,46 @@ function Home() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.allSettled([getHomePageData(), getHorses(), getUsersByRole("Jockey")])
-      .then(([homeResult, horsesResult, jockeysResult]) => {
-        if (isMounted) {
-          const data =
-            homeResult.status === "fulfilled"
-              ? homeResult.value
-              : {
-                  races: [],
-                  horses: [],
-                  jockeys: [],
-                  results: [],
-                  predictors: [],
-                };
-          const apiHorses =
-            horsesResult.status === "fulfilled" &&
-            Array.isArray(horsesResult.value)
-              ? horsesResult.value.map(normalizeHomeHorse)
-              : data.horses.map(normalizeHomeHorse);
-          const apiJockeys =
-            jockeysResult.status === "fulfilled" &&
-            Array.isArray(jockeysResult.value)
-              ? jockeysResult.value
-                  .map(normalizeHomeJockey)
-                  .filter((jockey) =>
-                    ALLOWED_JOCKEY_STATUSES.has(
-                      String(jockey.status).toLowerCase(),
-                    ),
-                  )
-              : data.jockeys.map(normalizeHomeJockey);
-
-          setHomeData({
-            ...data,
-            horses: apiHorses.map((horse, index) => ({
-              ...horse,
-              rank: index + 1,
-            })),
-            jockeys: apiJockeys.map((jockey, index) => ({
-              ...jockey,
-              rank: index + 1,
-            })),
-          });
-        }
+    getHomePageData()
+      .then((data) => {
+        if (!isMounted) return;
+        setHomeData((current) => ({ ...current, ...data }));
+      })
+      .catch(() => {
+        // Each directory below still renders independently when race data fails.
       })
       .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       });
+
+    loadHomeDirectories().then(([horsesResult, jockeysResult]) => {
+      if (!isMounted) return;
+      const horses =
+        horsesResult.status === "fulfilled" &&
+        Array.isArray(horsesResult.value)
+          ? horsesResult.value.map(normalizeHomeHorse)
+          : [];
+      const jockeys =
+        jockeysResult.status === "fulfilled" &&
+        Array.isArray(jockeysResult.value)
+          ? jockeysResult.value
+              .map(normalizeHomeJockey)
+              .filter((jockey) =>
+                ALLOWED_JOCKEY_STATUSES.has(
+                  String(jockey.status).toLowerCase(),
+                ),
+              )
+          : [];
+
+      setHomeData((current) => ({
+        ...current,
+        horses: horses.map((horse, index) => ({ ...horse, rank: index + 1 })),
+        jockeys: jockeys.map((jockey, index) => ({
+          ...jockey,
+          rank: index + 1,
+        })),
+      }));
+    });
 
     return () => {
       isMounted = false;
@@ -594,6 +603,30 @@ function Home() {
           display: flex;
           align-items: center;
           gap: 14px;
+        }
+
+        .home-live-btn {
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 0 13px;
+          border: 1px solid rgba(105, 248, 221, 0.55);
+          border-radius: 8px;
+          color: #06332e;
+          background: #69f8dd;
+          font-size: 12px;
+          font-weight: 950;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
+        .home-live-btn i {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #dc2626;
+          box-shadow: 0 0 8px #ef4444;
         }
 
         .home-icon-btn {
@@ -1806,6 +1839,12 @@ function Home() {
           </nav>
 
           <div className="home-actions">
+            {isSpectator && (
+              <Link className="home-live-btn" to="/spectator/broadcast">
+                <i aria-hidden="true" />
+                Live Broadcast
+              </Link>
+            )}
             <div className="nav-dropdown-wrap">
               <button
                 className={`home-icon-btn notification-trigger ${

@@ -156,60 +156,7 @@ const topPredictors = [
 ];
 
 export async function getUpcomingRaces() {
-  try {
-    const tournaments = resolveList(await getTournaments());
-    const statuses = ["Ongoing", "Scheduled", "Ready"];
-    const requests = tournaments.flatMap((tournament) => {
-      const tournamentId = getId(tournament);
-      if (!tournamentId) return [];
-
-      return statuses.map(async (status) => {
-        const response = await getRacesByTournament(tournamentId, status);
-        return resolveList(response).map((race, index) =>
-          normalizeHomeRace(race, tournament, index),
-        );
-      });
-    });
-    const responses = await Promise.allSettled(requests);
-    const races = responses
-      .flatMap((result) => (result.status === "fulfilled" ? result.value : []))
-      .filter((race) => {
-        const status = race.rawStatus.trim().toLowerCase();
-        return (
-          race.id &&
-          [
-            "ongoing",
-            "live",
-            "in progress",
-            "in_progress",
-            "scheduled",
-            "ready",
-          ].includes(status)
-        );
-      });
-    const uniqueRaces = Array.from(
-      new Map(races.map((race) => [race.id, race])).values(),
-    );
-
-    return uniqueRaces.sort((first, second) => {
-      if (Boolean(first.status) !== Boolean(second.status)) {
-        return first.status ? -1 : 1;
-      }
-
-      const firstTime = new Date(first.sortTime).getTime();
-      const secondTime = new Date(second.sortTime).getTime();
-      const safeFirstTime = Number.isNaN(firstTime)
-        ? Number.MAX_SAFE_INTEGER
-        : firstTime;
-      const safeSecondTime = Number.isNaN(secondTime)
-        ? Number.MAX_SAFE_INTEGER
-        : secondTime;
-      return safeFirstTime - safeSecondTime;
-    }).slice(0, 5);
-  } catch {
-    // Keep the remaining Home sections usable when race APIs are unavailable.
-    return [];
-  }
+  return (await loadRaceCollections()).upcoming.slice(0, 5);
 }
 
 export async function getTopHorses() {
@@ -297,43 +244,99 @@ function normalizeFinishedRace(race, tournament, index) {
   };
 }
 
-export async function getFinishedRaceResults() {
-  try {
-    const tournaments = resolveList(await getTournaments());
-    const responses = await Promise.allSettled(
-      tournaments.map(async (tournament) => {
-        const tournamentId = getId(tournament);
-        if (!tournamentId) return [];
-        const response = await getRacesByTournament(tournamentId, "Finished");
-        return resolveList(response)
+const HOME_RACE_CACHE_MS = 30_000;
+let raceCollectionsPromise = null;
+let raceCollectionsExpiresAt = 0;
+
+async function loadRaceCollections() {
+  if (raceCollectionsPromise && Date.now() < raceCollectionsExpiresAt) {
+    return raceCollectionsPromise;
+  }
+
+  raceCollectionsExpiresAt = Date.now() + HOME_RACE_CACHE_MS;
+  raceCollectionsPromise = (async () => {
+    try {
+      const tournaments = resolveList(await getTournaments());
+      const responses = await Promise.allSettled(
+        tournaments.map(async (tournament) => {
+          const tournamentId = getId(tournament);
+          if (!tournamentId) return { tournament, races: [] };
+
+          // One request per tournament is enough. Filtering by status happens
+          // locally and feeds both Upcoming and Latest Results.
+          const response = await getRacesByTournament(tournamentId);
+          return { tournament, races: resolveList(response) };
+        }),
+      );
+      const groups = responses.flatMap((response) =>
+        response.status === "fulfilled" ? [response.value] : [],
+      );
+      const upcomingStatuses = new Set([
+        "ongoing",
+        "live",
+        "in progress",
+        "in_progress",
+        "scheduled",
+        "ready",
+      ]);
+      const finishedStatuses = new Set(["finished", "completed"]);
+      const upcoming = groups.flatMap(({ tournament, races }) =>
+        races
           .filter((race) =>
-            ["finished", "completed"].includes(
-              String(race?.status || "").toLowerCase(),
+            upcomingStatuses.has(
+              String(race?.status || "").trim().toLowerCase(),
+            ),
+          )
+          .map((race, index) => normalizeHomeRace(race, tournament, index)),
+      );
+      const finished = groups.flatMap(({ tournament, races }) =>
+        races
+          .filter((race) =>
+            finishedStatuses.has(
+              String(race?.status || "").trim().toLowerCase(),
             ),
           )
           .map((race, index) =>
             normalizeFinishedRace(race, tournament, index),
-          );
-      }),
-    );
+          ),
+      );
 
-    return Array.from(
-      new Map(
-        responses
-          .flatMap((result) =>
-            result.status === "fulfilled" ? result.value : [],
-          )
-          .filter((race) => race.id)
-          .map((race) => [race.id, race]),
-      ).values(),
-    ).sort(
-      (first, second) =>
-        (new Date(second.date).getTime() || 0) -
-        (new Date(first.date).getTime() || 0),
-    );
-  } catch {
-    return [];
-  }
+      const uniqueUpcoming = Array.from(
+        new Map(
+          upcoming.filter((race) => race.id).map((race) => [race.id, race]),
+        ).values(),
+      ).sort((first, second) => {
+        if (Boolean(first.status) !== Boolean(second.status)) {
+          return first.status ? -1 : 1;
+        }
+        const firstTime = new Date(first.sortTime).getTime();
+        const secondTime = new Date(second.sortTime).getTime();
+        return (
+          (Number.isNaN(firstTime) ? Number.MAX_SAFE_INTEGER : firstTime) -
+          (Number.isNaN(secondTime) ? Number.MAX_SAFE_INTEGER : secondTime)
+        );
+      });
+      const uniqueFinished = Array.from(
+        new Map(
+          finished.filter((race) => race.id).map((race) => [race.id, race]),
+        ).values(),
+      ).sort(
+        (first, second) =>
+          (new Date(second.date).getTime() || 0) -
+          (new Date(first.date).getTime() || 0),
+      );
+
+      return { upcoming: uniqueUpcoming, finished: uniqueFinished };
+    } catch {
+      return { upcoming: [], finished: [] };
+    }
+  })();
+
+  return raceCollectionsPromise;
+}
+
+export async function getFinishedRaceResults() {
+  return (await loadRaceCollections()).finished;
 }
 
 export async function getLatestResults() {
@@ -341,23 +344,19 @@ export async function getLatestResults() {
 }
 
 export async function getTopPredictors() {
-  return delay(topPredictors);
+  return topPredictors;
 }
 
 export async function getHomePageData() {
-  const [races, horses, jockeys, results, predictors] =
+  const [races, results, predictors] =
     await Promise.all([
       getUpcomingRaces(),
-      getTopHorses(),
-      getTopJockeys(),
       getLatestResults(),
       getTopPredictors(),
     ]);
 
   return {
     races,
-    horses,
-    jockeys,
     results,
     predictors,
   };
