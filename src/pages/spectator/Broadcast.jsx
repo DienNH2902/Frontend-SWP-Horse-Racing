@@ -625,7 +625,9 @@ export default function Broadcast() {
             <div className="card-heading">
               <div>
                 <span>Đường đua</span>
-                <strong>Thời gian: {statusLabel}</strong>
+                <strong>
+                  {isFinished ? statusLabel : `Thời gian: ${statusLabel}`}
+                </strong>
               </div>
               <span className={isFinished ? "race-ended" : "race-live"}>
                 {isFinished ? "ĐÃ KẾT THÚC" : "LIVE"}
