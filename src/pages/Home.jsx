@@ -16,6 +16,17 @@ import {
   markNotificationAsRead,
 } from "../api/services/notification.service";
 
+function formatRaceDateTime(value, fallback = "TBA") {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function Icon({ name, size = 24 }) {
   const common = {
     width: size,
@@ -312,6 +323,7 @@ function Home() {
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
   const [isAllHorsesOpen, setIsAllHorsesOpen] = useState(false);
   const [selectedHorse, setSelectedHorse] = useState(null);
+  const [selectedRace, setSelectedRace] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [horseSortBy, setHorseSortBy] = useState("winRate");
   const [minHorseWinRate, setMinHorseWinRate] = useState("");
@@ -1062,6 +1074,68 @@ function Home() {
           overflow-y: auto;
         }
 
+        .race-detail-hero {
+          position: relative;
+          min-height: 220px;
+          display: flex;
+          align-items: flex-end;
+          overflow: hidden;
+          padding: 24px;
+          border-radius: 8px;
+          color: #f4fffb;
+          background:
+            linear-gradient(0deg, rgba(0, 45, 40, 0.92), rgba(0, 45, 40, 0.1)),
+            var(--race-detail-image) center / cover;
+        }
+
+        .race-detail-hero h4 {
+          margin: 8px 0 0;
+          color: #fff;
+          font-size: clamp(25px, 4vw, 38px);
+          font-weight: 950;
+        }
+
+        .race-detail-status {
+          display: inline-flex;
+          padding: 6px 9px;
+          border-radius: 999px;
+          color: #06332e;
+          background: #69f8dd;
+          font-size: 11px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .race-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          margin-top: 16px;
+        }
+
+        .race-detail-item {
+          display: grid;
+          gap: 6px;
+          min-height: 78px;
+          align-content: center;
+          padding: 13px;
+          border: 1px solid #d9f3ed;
+          border-radius: 8px;
+          background: #fafffe;
+        }
+
+        .race-detail-item span {
+          color: #6a817e;
+          font-size: 11px;
+          font-weight: 850;
+          text-transform: uppercase;
+        }
+
+        .race-detail-item strong {
+          color: #06332e;
+          font-size: 14px;
+        }
+
         .horse-profile {
           display: grid;
           grid-template-columns: 280px 1fr;
@@ -1696,6 +1770,7 @@ function Home() {
           .home-table td:nth-child(6) { display: none; }
           .prediction-band { padding: 26px; }
           .horse-modal-backdrop { padding: 14px; }
+          .race-detail-grid { grid-template-columns: 1fr 1fr; }
           .horse-profile { grid-template-columns: 1fr; }
           .horse-profile-stats,
           .horse-profile-details { grid-template-columns: 1fr; }
@@ -1984,7 +2059,11 @@ function Home() {
                         Watch Live
                       </Link>
                     ) : (
-                      <button className="card-action" type="button">
+                      <button
+                        className="card-action"
+                        type="button"
+                        onClick={() => setSelectedRace(race)}
+                      >
                         {race.status ? "Live Race" : "View Details"}
                       </button>
                     )}
@@ -2098,6 +2177,92 @@ function Home() {
               )}
             </section>
           </div>
+
+          {selectedRace && (
+            <div
+              className="horse-modal-backdrop"
+              role="presentation"
+              onClick={() => setSelectedRace(null)}
+            >
+              <section
+                className="horse-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${selectedRace.name} details`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="horse-modal-head">
+                  <h3>Race Details</h3>
+                  <button
+                    className="horse-modal-close"
+                    type="button"
+                    aria-label="Close race details"
+                    onClick={() => setSelectedRace(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="horse-modal-body">
+                  <div
+                    className="race-detail-hero"
+                    style={{
+                      "--race-detail-image": `url("${selectedRace.image}")`,
+                    }}
+                  >
+                    <div>
+                      <span className="race-detail-status">
+                        {selectedRace.status || selectedRace.rawStatus}
+                      </span>
+                      <h4>{selectedRace.name}</h4>
+                    </div>
+                  </div>
+                  <div className="race-detail-grid">
+                    <div className="race-detail-item">
+                      <span>Tournament</span>
+                      <strong>{selectedRace.tournament}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Thời gian</span>
+                      <strong>
+                        {formatRaceDateTime(
+                          selectedRace.sortTime,
+                          selectedRace.time,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Địa điểm</span>
+                      <strong>{selectedRace.venue}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Cự ly</span>
+                      <strong>{selectedRace.distance}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Mặt đường</span>
+                      <strong>{selectedRace.surface}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Số ngựa</span>
+                      <strong>{selectedRace.horseCount || "—"}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Vòng</span>
+                      <strong>{selectedRace.round}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Thứ tự race</span>
+                      <strong>{selectedRace.raceOrder}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Trạng thái</span>
+                      <strong>{selectedRace.rawStatus || "Scheduled"}</strong>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
 
           {isAllHorsesOpen && (
             <div

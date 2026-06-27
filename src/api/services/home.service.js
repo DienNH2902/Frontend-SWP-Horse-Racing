@@ -72,6 +72,19 @@ function normalizeHomeRace(race, tournament, index) {
     distance: distanceLabel,
     surface: race?.surface || course?.surface || course?.trackType || "Track",
     image: race?.image || course?.image || "/goldenhoof-hero.png",
+    tournament:
+      race?.tournamentTitle ||
+      race?.tournamentName ||
+      tournament?.title ||
+      tournament?.name ||
+      "GoldenHoof Tournament",
+    round: race?.roundNumber ?? "—",
+    raceOrder: race?.raceOrder ?? "—",
+    horseCount:
+      race?.horseCount ??
+      race?.totalHorses ??
+      race?.filledSlots ??
+      (Array.isArray(race?.horses) ? race.horses.length : 0),
     sortTime:
       race?.startAt ||
       race?.scheduledAt ||
