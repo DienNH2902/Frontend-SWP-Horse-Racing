@@ -85,9 +85,20 @@ export async function updateTournamentStatus(id, status) {
 }
 
 export async function getTournamentById(id) {
-  const response = await apiClient.get(TOURNAMENT_ENDPOINTS.DETAIL(id), {
-    includeAuth: true,
-  });
+    const response = await apiClient.get(TOURNAMENT_ENDPOINTS.DETAIL(id), {
+        includeAuth: true,
+    });
 
-  return unwrapData(response);
+    return unwrapData(response);
+}
+
+export async function getTournamentParticipants(tournamentId) {
+    const response = await apiClient.get(
+        TOURNAMENT_ENDPOINTS.PARTICIPANTS(tournamentId),
+        {
+            includeAuth: true,
+        }
+    );
+
+    return unwrapCollection(response);
 }

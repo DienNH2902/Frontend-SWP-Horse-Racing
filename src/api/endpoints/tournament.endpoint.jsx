@@ -4,4 +4,7 @@ export const TOURNAMENT_ENDPOINTS = {
   DETAIL: (id) => `/tournaments/${id}`,
 
   STATUS: (id) => `/tournaments/${id}/status`,
+
+  PARTICIPANTS: (tournamentId) =>
+    `/tournaments/${tournamentId}/participants`,
 };

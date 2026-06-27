@@ -25,8 +25,6 @@ import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
 import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
-import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
-import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
 import RefereeResultReview from "../pages/referee/RefereeResultReview";
 import RefereeFinalResults from "../pages/referee/RefereeFinalResults";
 import RoleHome from "../pages/RoleHome";
@@ -275,10 +273,6 @@ export default function AppRoutes() {
           <Route path="referee/races/:id/final" element={<RefereeFinalResults />} />
 
           <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
-
-          <Route path="referee/jockeys/:id" element={<RefereeJockeyDetail />} />
-
-          <Route path="referee/owners/:id" element={<RefereeOwnerDetail />} />
         </Route>
       </Route>
 
