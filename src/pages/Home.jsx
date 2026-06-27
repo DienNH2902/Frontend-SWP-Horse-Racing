@@ -321,7 +321,6 @@ function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
-  const [isAllHorsesOpen, setIsAllHorsesOpen] = useState(false);
   const [selectedHorse, setSelectedHorse] = useState(null);
   const [selectedRace, setSelectedRace] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -333,7 +332,6 @@ function Home() {
     races: [],
     horses: [],
     jockeys: [],
-    standings: [],
     results: [],
     predictors: [],
   });
@@ -352,7 +350,6 @@ function Home() {
                   races: [],
                   horses: [],
                   jockeys: [],
-                  standings: [],
                   results: [],
                   predictors: [],
                 };
@@ -1490,6 +1487,10 @@ function Home() {
           margin-bottom: 28px;
         }
 
+        .lower-grid.results-only {
+          grid-template-columns: 1fr;
+        }
+
         .tabs {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2079,7 +2080,7 @@ function Home() {
                 title="Top Horses"
                 action={{
                   label: "View All Horses",
-                  onClick: () => setIsAllHorsesOpen(true),
+                  href: "/horses",
                 }}
               />
               <div className="horse-filter-bar" aria-label="Horse filters">
@@ -2149,7 +2150,7 @@ function Home() {
             <section className="panel" id="jockeys">
               <SectionTitle
                 title="Top Jockeys"
-                action={{ label: "View All Jockeys", href: "#jockeys" }}
+                action={{ label: "View All Jockeys", href: "/jockeys" }}
               />
               <div className="horse-filter-bar" aria-label="Jockey filters">
                 <input
@@ -2264,74 +2265,6 @@ function Home() {
             </div>
           )}
 
-          {isAllHorsesOpen && (
-            <div
-              className="horse-modal-backdrop"
-              role="presentation"
-              onClick={() => setIsAllHorsesOpen(false)}
-            >
-              <section
-                className="horse-modal"
-                role="dialog"
-                aria-modal="true"
-                aria-label="All horses"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="horse-modal-head">
-                  <h3>All Horses</h3>
-                  <button
-                    className="horse-modal-close"
-                    type="button"
-                    aria-label="Close all horses"
-                    onClick={() => setIsAllHorsesOpen(false)}
-                  >
-                    x
-                  </button>
-                </div>
-                <div className="horse-modal-body">
-                  <div className="horse-grid">
-                    {filteredHorses.map((horse) => (
-                      <article className="horse-card" key={horse.id}>
-                        <div className="horse-photo">
-                          <img src={horse.image} alt={horse.name} />
-                          <span className="rank-badge">{horse.rank}</span>
-                        </div>
-                        <div className="horse-body">
-                          <h3>{horse.name}</h3>
-                      <span className="muted">{horse.breed}</span>
-                          <div className="horse-stat-row">
-                            <span>Owner</span>
-                            <strong>{horse.owner}</strong>
-                          </div>
-                          <div className="horse-stat-row">
-                            <span>Win rate</span>
-                            <strong>{horse.winRate || 0}%</strong>
-                          </div>
-                          <div className="horse-stat-row">
-                            <span>Wins</span>
-                            <strong>{horse.totalWin || 0}</strong>
-                          </div>
-                          <button
-                            className="card-action"
-                            type="button"
-                            onClick={() => setSelectedHorse(horse)}
-                          >
-                            View Profile
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                  {filteredHorses.length === 0 && (
-                    <p className="loading-line">
-                      No horses match the current filters.
-                    </p>
-                  )}
-                </div>
-              </section>
-            </div>
-          )}
-
           {selectedHorse && (
             <div
               className="horse-modal-backdrop"
@@ -2424,60 +2357,11 @@ function Home() {
             </div>
           )}
 
-          <div className="lower-grid">
-            <section className="panel" id="rankings">
-              <SectionTitle title="Leaderboard" />
-              <div
-                className="tabs"
-                role="tablist"
-                aria-label="Leaderboard views"
-              >
-                <button type="button">Horses</button>
-                <button type="button">Jockeys</button>
-              </div>
-              <table className="home-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Horse</th>
-                    <th>Rating</th>
-                    <th>Wins</th>
-                    <th>Places</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {homeData.standings.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.id}</td>
-                      <td>
-                        <span className="horse-name-cell">
-                          <img
-                            className="mini-thumb"
-                            src="/goldenhoof-hero.png"
-                            alt=""
-                          />
-                          {row.horse}
-                        </span>
-                      </td>
-                      <td>{row.rating}</td>
-                      <td>{row.wins}</td>
-                      <td>{row.places}</td>
-                      <td>{row.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <a className="home-panel-link" href="#rankings">
-                View Full Rankings
-                <Icon name="arrow" size={16} />
-              </a>
-            </section>
-
+          <div className="lower-grid results-only">
             <section className="panel" id="results">
               <SectionTitle
                 title="Latest Race Results"
-                action={{ label: "View All Results", href: "#results" }}
+                action={{ label: "View All Results", href: "/race-results" }}
               />
               <div className="result-list">
                 {homeData.results.map((result) => (

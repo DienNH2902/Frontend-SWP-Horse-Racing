@@ -40,6 +40,9 @@ import Wallet from "../pages/Wallet";
 import PaymentResult from "../pages/PaymentResult";
 import Broadcast from "../pages/spectator/Broadcast";
 import LiveRaceChannels from "../pages/spectator/LiveRaceChannels";
+import AllHorses from "../pages/AllHorses";
+import AllJockeys from "../pages/AllJockeys";
+import AllRaceResults from "../pages/AllRaceResults";
 import { getAuthSession } from "../utils/storage";
 
 const OWNER_NAV = [
@@ -122,6 +125,9 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+        <Route path="/horses" element={<AllHorses />} />
+        <Route path="/jockeys" element={<AllJockeys />} />
+        <Route path="/race-results" element={<AllRaceResults />} />
         <Route
           path="notification"
           element={<NotificationHistory allowedRole="Spectator" />}
