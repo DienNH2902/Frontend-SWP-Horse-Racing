@@ -1957,7 +1957,9 @@ function Home() {
                       >
                         {race.status || race.time}
                       </span>
-                      <span>Race {race.id}</span>
+                      <span>
+                        {race.status ? "Đang diễn ra" : "Sắp diễn ra"}
+                      </span>
                     </div>
                     <h3>{race.name}</h3>
                     <span className="muted">{race.venue}</span>
@@ -1974,9 +1976,18 @@ function Home() {
                     {race.status && (
                       <img src={race.image} alt={`${race.name} race`} />
                     )}
-                    <button className="card-action" type="button">
-                      {race.status ? "Watch Live" : "View Details"}
-                    </button>
+                    {race.status && isSpectator ? (
+                      <Link
+                        className="card-action"
+                        to={`/spectator/broadcast/${encodeURIComponent(race.id)}`}
+                      >
+                        Watch Live
+                      </Link>
+                    ) : (
+                      <button className="card-action" type="button">
+                        {race.status ? "Live Race" : "View Details"}
+                      </button>
+                    )}
                   </article>
                 ))}
               </div>

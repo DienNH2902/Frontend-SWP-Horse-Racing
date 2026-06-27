@@ -1,0 +1,3088 @@
+file 1
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Race Broadcast Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #1a1a2e; color: #eee; padding: 20px; }
+    h2 { color: #e94560; margin-bottom: 16px; }
+
+    .row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+
+    input, button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    input { background: #16213e; color: #eee; flex: 1; min-width: 200px; }
+    button {
+      background: #e94560;
+      color: white;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:hover { background: #c73652; }
+    button.green { background: #2ecc71; }
+    button.green:hover { background: #27ae60; }
+    button.gray { background: #555; }
+    button.gray:hover { background: #444; }
+
+    .status {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+    .status.connected { background: #2ecc71; color: #000; }
+    .status.disconnected { background: #e74c3c; color: #fff; }
+
+    /* Track */
+    #track {
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      min-height: 200px;
+    }
+    .lane {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .lane-label {
+      width: 70px;
+      font-size: 11px;
+      color: #aaa;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .lane-track {
+      flex: 1;
+      background: #0f3460;
+      border-radius: 4px;
+      height: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .horse {
+      position: absolute;
+      top: 2px;
+      width: 28px;
+      height: 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: left 0.45s linear;
+      left: 0%;
+    }
+    .lane-progress {
+      width: 48px;
+      font-size: 11px;
+      color: #aaa;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* Log */
+    #log {
+      background: #0d0d1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px;
+      height: 240px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .log-tick    { color: #888; }
+    .log-event   { color: #f39c12; font-weight: bold; }
+    .log-finish  { color: #2ecc71; font-weight: bold; }
+    .log-system  { color: #3498db; }
+    .log-error   { color: #e74c3c; }
+    .log-snap    { color: #9b59b6; }
+
+    /* Result */
+    #result-table {
+      display: none;
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    #result-table h3 { color: #2ecc71; margin-bottom: 8px; }
+    .result-row {
+      display: flex;
+      gap: 12px;
+      padding: 4px 0;
+      border-bottom: 1px solid #222;
+      font-size: 13px;
+    }
+    .rank-1 { color: #f1c40f; }
+    .rank-2 { color: #bdc3c7; }
+    .rank-3 { color: #e67e22; }
+
+    #tick-counter {
+      color: #aaa;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>🏇 Race Broadcast Test</h2>
+
+<!-- Config -->
+<div class="row">
+  <input id="inp-token"  placeholder="JWT Token (không cần Bearer)" />
+  <input id="inp-host"   placeholder="Host (mặc định localhost:9000)" value="localhost:9000" style="max-width:220px" />
+</div>
+<div class="row">
+  <input id="inp-race"   placeholder="Race ID" />
+  <button onclick="connect()"    class="green">Connect WS</button>
+  <button onclick="disconnect()" class="gray">Disconnect</button>
+</div>
+<div class="row">
+  <button onclick="joinRace()">Join Race</button>
+  <button onclick="leaveRace()" class="gray">Leave Race</button>
+</div>
+
+<div id="conn-status" class="status disconnected">● Disconnected</div>
+
+<!-- Track visualization -->
+<div id="track">
+  <div id="tick-counter">Tick: — / —</div>
+  <div id="lanes"></div>
+</div>
+
+<!-- Log -->
+<div id="log"></div>
+
+<!-- Result -->
+<div id="result-table">
+  <h3>🏆 Kết quả đua</h3>
+  <div id="result-rows"></div>
+</div>
+
+<script>
+  let socket = null;
+  let horses = {};       // horseId → { lane, color, name }
+  let maxTick = 0;
+  let currentTick = 0;
+
+  const COLORS = [
+    '#e74c3c','#3498db','#2ecc71','#f39c12',
+    '#9b59b6','#1abc9c','#e67e22','#e91e63'
+  ];
+  const EMOJIS = ['🐴','🐎','🦄','🐴','🐎','🦄','🐴','🐎'];
+
+  // ── Logging ───────────────────────────────────────────────────────────────
+  function log(msg, cls = '') {
+    const el = document.getElementById('log');
+    const line = document.createElement('div');
+    if (cls) line.className = cls;
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // ── Track setup ───────────────────────────────────────────────────────────
+  function initTrack(horseList) {
+    const lanes = document.getElementById('lanes');
+    lanes.innerHTML = '';
+    horses = {};
+
+    horseList.forEach((h, i) => {
+      const color = COLORS[i % COLORS.length];
+      const emoji = EMOJIS[i % EMOJIS.length];
+      horses[h.horseId] = { lane: h.lane, color, emoji, index: i };
+
+      const row = document.createElement('div');
+      row.className = 'lane';
+      row.innerHTML = `
+        <div class="lane-label">Lane ${h.lane}</div>
+        <div class="lane-track" id="track-${h.horseId}">
+          <div class="horse" id="horse-${h.horseId}"
+               style="background:${color}">${emoji}</div>
+        </div>
+        <div class="lane-progress" id="prog-${h.horseId}">0%</div>
+      `;
+      lanes.appendChild(row);
+    });
+  }
+
+  function updateHorse(horseId, progress, instant = false) {
+    const el = document.getElementById(`horse-${horseId}`);
+    const prog = document.getElementById(`prog-${horseId}`);
+    if (!el) return;
+
+    // progress 0→1, track width - horse width = ~calc
+    // left% = progress × (100% - horse_width_percent)
+    const pct = Math.min(progress * 96, 96);
+    if (instant) el.style.transition = 'none';
+    else el.style.transition = 'left 0.45s linear';
+    el.style.left = pct + '%';
+    if (prog) prog.textContent = (progress * 100).toFixed(1) + '%';
+  }
+
+  // ── Connect ───────────────────────────────────────────────────────────────
+  function connect() {
+    if (socket?.connected) { log('Đã connected rồi', 'log-system'); return; }
+
+    const token = document.getElementById('inp-token').value.trim();
+    const host  = document.getElementById('inp-host').value.trim() || 'localhost:9000';
+
+    if (!token) { log('⚠️ Nhập JWT token trước', 'log-error'); return; }
+
+    log(`Connecting to ws://${host}/race ...`, 'log-system');
+
+socket = io(`http://${host}/race`, {
+  auth: { token: `Bearer ${token}` },
+  transports: ['polling', 'websocket'], 
+});
+
+    socket.on('connect', () => {
+      document.getElementById('conn-status').className = 'status connected';
+      document.getElementById('conn-status').textContent = '● Connected: ' + socket.id;
+      log('✅ Connected: ' + socket.id, 'log-system');
+    });
+
+    socket.on('disconnect', () => {
+      document.getElementById('conn-status').className = 'status disconnected';
+      document.getElementById('conn-status').textContent = '● Disconnected';
+      log('❌ Disconnected', 'log-error');
+    });
+
+    socket.on('connect_error', (err) => {
+      log('❌ Connect error: ' + err.message, 'log-error');
+    });
+
+    // ── Events ───────────────────────────────────────────────────────────
+    socket.on('joined', (data) => {
+      log('🏇 Joined race: ' + data.raceId, 'log-system');
+    });
+
+    // Catch-up: join giữa chừng
+    socket.on('race_snapshot', (data) => {
+      log(`📸 Catch-up snapshot tick=${data.tickNumber} (${data.horses.length} ngựa)`, 'log-snap');
+      if (!Object.keys(horses).length) {
+        initTrack(data.horses);
+      }
+      // Teleport ngay, không animate
+      data.horses.forEach(h => updateHorse(h.horseId, h.progress, true));
+      currentTick = data.tickNumber;
+      document.getElementById('tick-counter').textContent =
+        `Tick: ${currentTick} (catch-up)`;
+    });
+
+    // Tick frame mỗi 500ms
+    socket.on('race_tick', (frame) => {
+      currentTick = frame.tickNumber;
+      if (maxTick < currentTick) maxTick = currentTick;
+
+      // Init track lần đầu từ tick 0
+      if (frame.tickNumber === 0 && frame.horses.length) {
+        initTrack(frame.horses);
+        document.getElementById('result-table').style.display = 'none';
+      }
+
+      frame.horses.forEach(h => updateHorse(h.horseId, h.progress));
+
+      document.getElementById('tick-counter').textContent =
+        `Tick: ${currentTick} / ~${maxTick}`;
+
+      // Log thưa hơn (mỗi 10 tick) để không spam
+      if (frame.tickNumber % 10 === 0) {
+        log(`⏱ Tick ${frame.tickNumber}`, 'log-tick');
+      }
+    });
+
+    // Event (stumble/burst/overtake/lead_change)
+    socket.on('race_event', (event) => {
+      const icons = {
+        stumble: '💥', burst: '⚡',
+        overtake: '🔄', lead_change: '🚩'
+      };
+      const icon = icons[event.eventType] || '❓';
+      log(
+        `${icon} [${event.eventType.toUpperCase()}] tick=${event.tickNumber} ` +
+        `horse=${event.primaryHorseId.slice(-6)}` +
+        (event.secondaryHorseId ? ` vs ${event.secondaryHorseId.slice(-6)}` : ''),
+        'log-event'
+      );
+    });
+
+    // Kết thúc
+    socket.on('race_finished', (data) => {
+      log('🏆 RACE FINISHED! Kết quả:', 'log-finish');
+
+      const medals = ['🥇','🥈','🥉'];
+      data.results.forEach(r => {
+        const medal = medals[r.rawRank - 1] || `#${r.rawRank}`;
+        log(`  ${medal} Rank ${r.rawRank}: ${r.horseId.slice(-8)}`, 'log-finish');
+      });
+
+      // Hiện bảng kết quả
+      const table = document.getElementById('result-table');
+      const rows  = document.getElementById('result-rows');
+      table.style.display = 'block';
+      rows.innerHTML = '';
+      data.results.forEach(r => {
+        const cls = r.rawRank <= 3 ? `rank-${r.rawRank}` : '';
+        const medal = medals[r.rawRank - 1] || '';
+        const row = document.createElement('div');
+        row.className = `result-row ${cls}`;
+        row.innerHTML = `
+          <span style="width:30px">${medal}</span>
+          <span style="width:24px">#${r.rawRank}</span>
+          <span>${r.horseId.slice(-12)}</span>
+          <span style="color:#aaa">${new Date(r.finishedTime).toLocaleTimeString()}</span>
+        `;
+        rows.appendChild(row);
+      });
+
+      document.getElementById('tick-counter').textContent =
+        `Tick: ${currentTick} — FINISHED ✅`;
+    });
+  }
+
+  function disconnect() {
+    socket?.disconnect();
+    socket = null;
+  }
+
+  function joinRace() {
+    if (!socket?.connected) { log('⚠️ Connect trước', 'log-error'); return; }
+    const raceId = document.getElementById('inp-race').value.trim();
+    if (!raceId) { log('⚠️ Nhập Race ID', 'log-error'); return; }
+    log(`Joining race ${raceId}...`, 'log-system');
+    socket.emit('join_race', { raceId });
+  }
+
+  function leaveRace() {
+    if (!socket?.connected) return;
+    const raceId = document.getElementById('inp-race').value.trim();
+    socket.emit('leave_race', { raceId });
+    log('Left race ' + raceId, 'log-system');
+  }
+</script>
+</body>
+</html>
+
+
+file2	
+{
+  "results": [
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d20fb",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d06dd1659fd8f71dbd20",
+      "jockeyId": "6a290ce215a18aae926678bd",
+      "rawRank": 1,
+      "finalRank": 1,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:15.000Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d20fc",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d084d1659fd8f71dbd2c",
+      "jockeyId": "6a290cfe15a18aae926678c3",
+      "rawRank": 2,
+      "finalRank": 2,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:15.500Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d20fd",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d09ad1659fd8f71dbd34",
+      "jockeyId": "6a290d0d15a18aae926678c7",
+      "rawRank": 3,
+      "finalRank": 3,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:16.000Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d20fe",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d08bd1659fd8f71dbd30",
+      "jockeyId": "6a290d0615a18aae926678c5",
+      "rawRank": 4,
+      "finalRank": 4,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:16.000Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d20ff",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d074d1659fd8f71dbd24",
+      "jockeyId": "6a290cea15a18aae926678bf",
+      "rawRank": 5,
+      "finalRank": 5,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:16.000Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2100",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d05ed1659fd8f71dbd18",
+      "jockeyId": "6a290cc915a18aae926678b9",
+      "rawRank": 6,
+      "finalRank": 6,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:16.000Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2101",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d07bd1659fd8f71dbd28",
+      "jockeyId": "6a290cf815a18aae926678c1",
+      "rawRank": 7,
+      "finalRank": 7,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:16.500Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2102",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d066d1659fd8f71dbd1c",
+      "jockeyId": "6a290cd415a18aae926678bb",
+      "rawRank": 8,
+      "finalRank": 8,
+      "status": "Pending",
+      "finishedTime": "2026-10-22T08:01:18.000Z",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.018Z",
+      "updatedAt": "2026-06-25T11:20:20.018Z"
+    }
+  ],
+  "stats": [
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d210a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d05ed1659fd8f71dbd18",
+      "jockeyId": "6a290cc915a18aae926678b9",
+      "totalLoad": 465,
+      "baseSpeed": 0.40850000000000003,
+      "acceleration": 0.745,
+      "stamina": 0.53,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2109",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d066d1659fd8f71dbd1c",
+      "jockeyId": "6a290cd415a18aae926678bb",
+      "totalLoad": 440,
+      "baseSpeed": 0.40650000000000003,
+      "acceleration": 0.7949999999999999,
+      "stamina": 0.48000000000000004,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2108",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d06dd1659fd8f71dbd20",
+      "jockeyId": "6a290ce215a18aae926678bd",
+      "totalLoad": 485,
+      "baseSpeed": 0.41050000000000003,
+      "acceleration": 0.705,
+      "stamina": 0.5700000000000001,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2107",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d074d1659fd8f71dbd24",
+      "jockeyId": "6a290cea15a18aae926678bf",
+      "totalLoad": 450,
+      "baseSpeed": 0.40750000000000003,
+      "acceleration": 0.775,
+      "stamina": 0.5,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2106",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d07bd1659fd8f71dbd28",
+      "jockeyId": "6a290cf815a18aae926678c1",
+      "totalLoad": 475,
+      "baseSpeed": 0.40950000000000003,
+      "acceleration": 0.725,
+      "stamina": 0.55,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2105",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d084d1659fd8f71dbd2c",
+      "jockeyId": "6a290cfe15a18aae926678c3",
+      "totalLoad": 458,
+      "baseSpeed": 0.40800000000000003,
+      "acceleration": 0.759,
+      "stamina": 0.516,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2104",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d08bd1659fd8f71dbd30",
+      "jockeyId": "6a290d0615a18aae926678c5",
+      "totalLoad": 495,
+      "baseSpeed": 0.41150000000000003,
+      "acceleration": 0.685,
+      "stamina": 0.5900000000000001,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    },
+    {
+      "_id": "6a3d0ef4e5e8053b0a7d2103",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "horseId": "6a27d09ad1659fd8f71dbd34",
+      "jockeyId": "6a290d0d15a18aae926678c7",
+      "totalLoad": 425,
+      "baseSpeed": 0.4055,
+      "acceleration": 0.825,
+      "stamina": 0.45,
+      "totalWin": 0,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:20.096Z",
+      "updatedAt": "2026-06-25T11:20:20.096Z"
+    }
+  ],
+  "events": [
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d201a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2024",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2056",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2057",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2058",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2059",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d205a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d205b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 1,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d205c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 2,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d205d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 2,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d205e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 2,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d205f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 2,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2060",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 2,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2061",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 3,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2062",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 3,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2063",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 3,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2064",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 3,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2065",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 3,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2066",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 3,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2067",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 4,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2068",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 4,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2069",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 4,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d206a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 4,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d206b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 5,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d206c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 5,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d206d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 5,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d206e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 5,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d206f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 5,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2070",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 7,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2071",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 7,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2072",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 8,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2073",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 8,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2074",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 8,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2075",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 8,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2076",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 9,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2077",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 9,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2078",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 10,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2079",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 10,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d207a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 10,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d207b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 11,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d201b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 13,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2040",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 13,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d207c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 13,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d207d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 13,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d207e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 14,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d204b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 15,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d207f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 15,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2080",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 16,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2081",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 17,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2082",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 18,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d203a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 19,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2045",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 19,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2083",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 19,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2084",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 20,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d201c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 21,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2025",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 23,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d202e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 23,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d204c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 23,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2085",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 23,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2086",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 23,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2087",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 23,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2088",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 24,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2089",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 24,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d208a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 24,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d208b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 24,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d208c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 24,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d208d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 25,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d208e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 25,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d208f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 25,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2090",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 26,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2091",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 27,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2092",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 28,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d201d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 29,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d203b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 29,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2093",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 29,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2094",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 29,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2095",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 30,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2096",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 30,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2097",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 34,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2098",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 35,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2099",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 36,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d204d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 37,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d209a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 37,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2033",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 40,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d209b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 40,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d209c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 40,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d209d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 41,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d204e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 42,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d209e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 43,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d201e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 45,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d209f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 45,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2026",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 46,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d203c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 46,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2046",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 46,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a0",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 46,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a1",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 46,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2034",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 47,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a2",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 47,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a3",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 47,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a4",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 47,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a5",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 48,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a6",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 48,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a7",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 49,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a8",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 50,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20a9",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 50,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20aa",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 50,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ab",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 51,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d202f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 56,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2035",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 56,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ac",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 56,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ad",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 57,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ae",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 60,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20af",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 61,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2041",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 62,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b0",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 63,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d201f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 64,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b1",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 65,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b2",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 67,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b3",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 69,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b4",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 69,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.793Z",
+      "updatedAt": "2026-06-25T11:20:19.793Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d203d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 70,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2027",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 71,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2036",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 73,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2020",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 74,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d204f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 74,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b5",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 74,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b6",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 75,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b7",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 76,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b8",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 76,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20b9",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 77,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2030",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 79,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2047",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 79,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ba",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 79,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20bb",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 80,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20bc",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 80,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2028",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 82,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20bd",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 82,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2031",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 84,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20be",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 85,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20bf",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 85,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c0",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 87,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c1",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 93,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2050",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 95,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c2",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 97,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2021",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 98,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c3",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 98,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c4",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 99,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c5",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 100,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2029",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 101,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c6",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 101,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c7",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 101,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2051",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 102,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d203e",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 105,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2042",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 105,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c8",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 107,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2048",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 108,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20c9",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 109,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ca",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 109,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2037",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 111,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20cb",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 111,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20cc",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 112,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2049",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 113,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20cd",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 113,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ce",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 114,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d202a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 115,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2022",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 116,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2052",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 116,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20cf",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 116,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d0",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 118,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d1",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 119,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d2",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 119,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d3",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 120,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d202b",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 121,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2053",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 122,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2038",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 125,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d4",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 126,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2054",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 127,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d5",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 127,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d6",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 127,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d7",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 128,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d8",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 128,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d202c",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 129,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20d9",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 129,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20da",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 129,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2023",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 130,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.790Z",
+      "updatedAt": "2026-06-25T11:20:19.790Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20db",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 130,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d204a",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 134,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20dc",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 134,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20dd",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 134,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20de",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 134,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20df",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 134,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e0",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 135,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e1",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 135,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.794Z",
+      "updatedAt": "2026-06-25T11:20:19.794Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2055",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 136,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.792Z",
+      "updatedAt": "2026-06-25T11:20:19.792Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e2",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 136,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e3",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 136,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "secondaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d202d",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 139,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e4",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 139,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e5",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 139,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2043",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 140,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e6",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 140,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": "6a27d066d1659fd8f71dbd1c",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e7",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 141,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e8",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 141,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20e9",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 142,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ea",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 144,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20eb",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 145,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ec",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 146,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ed",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 146,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ee",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 146,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20ef",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 146,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2032",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 147,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2039",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 147,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d07bd1659fd8f71dbd28",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d2044",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 147,
+      "eventType": "burst",
+      "primaryHorseId": "6a27d06dd1659fd8f71dbd20",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f0",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 147,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f1",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 148,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f2",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 148,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f3",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 148,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d203f",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 149,
+      "eventType": "stumble",
+      "primaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.791Z",
+      "updatedAt": "2026-06-25T11:20:19.791Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f4",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 149,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f5",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 150,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d074d1659fd8f71dbd24",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f6",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 151,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d084d1659fd8f71dbd2c",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f7",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 151,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f8",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 151,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20f9",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 151,
+      "eventType": "overtake",
+      "primaryHorseId": "6a27d05ed1659fd8f71dbd18",
+      "secondaryHorseId": "6a27d08bd1659fd8f71dbd30",
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    },
+    {
+      "_id": "6a3d0ef3e5e8053b0a7d20fa",
+      "raceId": "6a2bb0267070c17ca5757a0e",
+      "tickNumber": 152,
+      "eventType": "lead_change",
+      "primaryHorseId": "6a27d09ad1659fd8f71dbd34",
+      "secondaryHorseId": null,
+      "__v": 0,
+      "createdAt": "2026-06-25T11:20:19.795Z",
+      "updatedAt": "2026-06-25T11:20:19.795Z"
+    }
+  ]
+}
+
+
+

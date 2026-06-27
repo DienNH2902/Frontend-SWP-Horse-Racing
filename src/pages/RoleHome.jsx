@@ -600,6 +600,9 @@ export default function RoleHome({ allowedRole }) {
           </Link>
           <nav className="role-user-nav" aria-label="Role navigation">
             <Link to="/home">Races</Link>
+            {allowedRole === "Spectator" && (
+              <Link to="/spectator/broadcast">Live Broadcast</Link>
+            )}
             <Link to={profilePath}>Profile</Link>
             <button className="role-btn" type="button" onClick={handleLogout}>
               Logout

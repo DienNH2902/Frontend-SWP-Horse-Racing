@@ -1,67 +1,85 @@
+import { getRacesByTournament } from "./race.service";
+import { getTournaments } from "./tournament.service";
+
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
     window.setTimeout(() => resolve(value), ms);
   });
 
-const raceImages = [
-  "/goldenhoof-hero.png",
-  "/goldenhoof-hero.png",
-  "/goldenhoof-hero.png",
-  "/goldenhoof-hero.png",
-];
+function resolveList(response) {
+  if (Array.isArray(response)) return response;
+  if (!response || typeof response !== "object") return [];
 
-const upcomingRaces = [
-  {
-    id: 4,
-    status: "LIVE",
-    time: null,
-    name: "Emerald Stakes",
-    venue: "Royal Turf Club",
-    distance: "1,600m",
-    surface: "Turf",
-    image: raceImages[0],
-  },
-  {
-    id: 5,
-    status: null,
-    time: "15:15",
-    name: "Golden Mile Cup",
-    venue: "Sunshine Racecourse",
-    distance: "1,600m",
-    surface: "Turf",
-    image: raceImages[1],
-  },
-  {
-    id: 6,
-    status: null,
-    time: "16:00",
-    name: "Thunderbolt Sprint",
-    venue: "Valley Racecourse",
-    distance: "1,200m",
-    surface: "Dirt",
-    image: raceImages[2],
-  },
-  {
-    id: 7,
-    status: null,
-    time: "16:45",
-    name: "Champion's Cup",
-    venue: "Royal Turf Club",
-    distance: "2,400m",
-    surface: "Turf",
-    image: raceImages[3],
-  },
-  {
-    id: 8,
-    status: null,
-    time: "17:30",
-    name: "Victory Purse",
-    venue: "Sunshine Racecourse",
-    distance: "1,800m",
-    surface: "Turf",
-    image: raceImages[0],
-  },
-];
+  for (const key of ["data", "items", "races", "content", "records", "result"]) {
+    if (Array.isArray(response[key])) return response[key];
+    const nested = resolveList(response[key]);
+    if (nested.length) return nested;
+  }
+
+  return [];
+}
+
+function getId(item) {
+  const value = item?._id || item?.id;
+  return typeof value === "object" ? value?._id || value?.id : value;
+}
+
+function formatRaceTime(race) {
+  const startTime =
+    race?.startTime || race?.startAt || race?.scheduledAt || race?.date;
+  if (!startTime) return "TBA";
+
+  const date = new Date(startTime);
+  if (!Number.isNaN(date.getTime())) {
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return String(startTime);
+}
+
+function normalizeHomeRace(race, tournament, index) {
+  const status = String(race?.status || "");
+  const isOngoing = ["ongoing", "live", "in progress", "in_progress"].includes(
+    status.trim().toLowerCase(),
+  );
+  const course = race?.raceCourseId || race?.raceCourse || {};
+  const distance = race?.distance ?? course?.distance;
+  const distanceLabel = distance
+    ? /(?:m|km)$/i.test(String(distance))
+      ? String(distance)
+      : `${distance}m`
+    : "Distance TBA";
+
+  return {
+    id: getId(race),
+    status: isOngoing ? "LIVE" : null,
+    rawStatus: status,
+    time: isOngoing ? null : formatRaceTime(race),
+    name:
+      race?.name ||
+      race?.title ||
+      `Race ${race?.raceOrder || race?.roundNumber || index + 1}`,
+    venue:
+      race?.raceCourseName ||
+      race?.courseName ||
+      course?.name ||
+      tournament?.title ||
+      tournament?.name ||
+      "GoldenHoof Racecourse",
+    distance: distanceLabel,
+    surface: race?.surface || course?.surface || course?.trackType || "Track",
+    image: race?.image || course?.image || "/goldenhoof-hero.png",
+    sortTime:
+      race?.startAt ||
+      race?.scheduledAt ||
+      race?.startTime ||
+      race?.date ||
+      "",
+  };
+}
 
 const topHorses = [
   {
@@ -184,7 +202,60 @@ const topPredictors = [
 ];
 
 export async function getUpcomingRaces() {
-  return delay(upcomingRaces);
+  try {
+    const tournaments = resolveList(await getTournaments());
+    const statuses = ["Ongoing", "Scheduled", "Ready"];
+    const requests = tournaments.flatMap((tournament) => {
+      const tournamentId = getId(tournament);
+      if (!tournamentId) return [];
+
+      return statuses.map(async (status) => {
+        const response = await getRacesByTournament(tournamentId, status);
+        return resolveList(response).map((race, index) =>
+          normalizeHomeRace(race, tournament, index),
+        );
+      });
+    });
+    const responses = await Promise.allSettled(requests);
+    const races = responses
+      .flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+      .filter((race) => {
+        const status = race.rawStatus.trim().toLowerCase();
+        return (
+          race.id &&
+          [
+            "ongoing",
+            "live",
+            "in progress",
+            "in_progress",
+            "scheduled",
+            "ready",
+          ].includes(status)
+        );
+      });
+    const uniqueRaces = Array.from(
+      new Map(races.map((race) => [race.id, race])).values(),
+    );
+
+    return uniqueRaces.sort((first, second) => {
+      if (Boolean(first.status) !== Boolean(second.status)) {
+        return first.status ? -1 : 1;
+      }
+
+      const firstTime = new Date(first.sortTime).getTime();
+      const secondTime = new Date(second.sortTime).getTime();
+      const safeFirstTime = Number.isNaN(firstTime)
+        ? Number.MAX_SAFE_INTEGER
+        : firstTime;
+      const safeSecondTime = Number.isNaN(secondTime)
+        ? Number.MAX_SAFE_INTEGER
+        : secondTime;
+      return safeFirstTime - safeSecondTime;
+    }).slice(0, 5);
+  } catch {
+    // Keep the remaining Home sections usable when race APIs are unavailable.
+    return [];
+  }
 }
 
 export async function getTopHorses() {

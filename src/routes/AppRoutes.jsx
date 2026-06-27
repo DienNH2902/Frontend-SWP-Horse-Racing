@@ -28,7 +28,6 @@ import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
 import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
 import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
 import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
-import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
@@ -39,6 +38,8 @@ import NotificationHistory from "../pages/NotificationPage";
 import MoneyTransactionHistory from "../pages/MoneyTransaction";
 import Wallet from "../pages/Wallet";
 import PaymentResult from "../pages/PaymentResult";
+import Broadcast from "../pages/spectator/Broadcast";
+import LiveRaceChannels from "../pages/spectator/LiveRaceChannels";
 import { getAuthSession } from "../utils/storage";
 
 const OWNER_NAV = [
@@ -128,10 +129,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
-        <Route
-          path="/spectator"
-          element={<RoleHome allowedRole="Spectator" />}
-        />
+        <Route path="/spectator" element={<Navigate to="/profile" replace />} />
         <Route
           path="/spectator/reward"
           element={<SpectatorRewards allowedRole="Spectator" />}
@@ -139,6 +137,14 @@ export default function AppRoutes() {
         <Route
           path="/spectator/points-transaction"
           element={<PointsTransactionHistory allowedRole="Spectator" />}
+        />
+        <Route
+          path="/spectator/broadcast"
+          element={<LiveRaceChannels />}
+        />
+        <Route
+          path="/spectator/broadcast/:raceId"
+          element={<Broadcast />}
         />
       </Route>
 
@@ -274,13 +280,6 @@ export default function AppRoutes() {
 
           <Route path="referee/owners/:id" element={<RefereeOwnerDetail />} />
         </Route>
-      </Route>
-
-      <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
-        <Route
-          path="/spectator"
-          element={<RoleHome allowedRole="Spectator" />}
-        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
