@@ -6,6 +6,7 @@ import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
+import AdminDashboard from "../pages/admin/AdminDashboard";
 import TournamentManagement from "../pages/admin/TournamentManagement";
 import RegistrationManagement from "../pages/admin/RegistrationManagement";
 import RaceManagement from "../pages/admin/RaceManagement";
@@ -97,6 +98,14 @@ function AdminUsersPage() {
     <AdminLayout>
       <UserManagement />
       <JockeyLicenseManagement />
+    </AdminLayout>
+  );
+}
+
+function AdminDashboardPage() {
+  return (
+    <AdminLayout>
+      <AdminDashboard />
     </AdminLayout>
   );
 }
@@ -195,19 +204,11 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
         <Route
           path="/admin"
-          element={
-            <AdminLayout>
-              <UserManagement />
-            </AdminLayout>
-          }
+          element={<AdminDashboardPage />}
         />
         <Route
           path="/admin/dashboard"
-          element={
-            <AdminLayout>
-              <UserManagement />
-            </AdminLayout>
-          }
+          element={<AdminDashboardPage />}
         />
         <Route
           path="/admin/users"
