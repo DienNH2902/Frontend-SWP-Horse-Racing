@@ -10,6 +10,7 @@ import TournamentManagement from "../pages/admin/TournamentManagement";
 import RegistrationManagement from "../pages/admin/RegistrationManagement";
 import RaceManagement from "../pages/admin/RaceManagement";
 import RaceCourseManagement from "../pages/admin/RaceCourseManagement";
+import Prize from "../pages/admin/Prize";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ProtectedRoute from "../pages/auth/components/ProtectedRoute";
@@ -115,6 +116,14 @@ function AdminRaceCoursesPage() {
   );
 }
 
+function AdminPrizePage() {
+  return (
+    <AdminLayout>
+      <Prize />
+    </AdminLayout>
+  );
+}
+
 function LandingRoute() {
   return getAuthSession() ? <Navigate to="/home" replace /> : <Landing />;
 }
@@ -195,6 +204,7 @@ export default function AppRoutes() {
         />
         <Route path="/admin/races" element={<AdminRacesPage />} />
         <Route path="/admin/raceCourse" element={<AdminRaceCoursesPage />} />
+        <Route path="/admin/prize" element={<AdminPrizePage />} />
 
         <Route
           path="/admin/jockey-license"

@@ -222,6 +222,15 @@ function AdminLayout({ children }) {
             Race Course Management
           </Link>
 
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/prize") ? "active" : ""
+            }`}
+            to="/admin/prize"
+          >
+            Prize
+          </Link>
+
           <Button className="admin-home-btn" onClick={() => navigate("/home")}>
             Quay lại Home
           </Button>
