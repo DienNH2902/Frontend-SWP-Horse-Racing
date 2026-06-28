@@ -61,6 +61,24 @@ export async function updateTournament(id, payload) {
     return unwrapData(response);
 }
 
+export async function uploadTournamentBanner(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await apiClient.post(
+        TOURNAMENT_ENDPOINTS.UPLOAD_BANNER,
+        formData,
+        {
+            includeAuth: true,
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }
+    );
+
+    return unwrapData(response);
+}
+
 export async function deleteTournament(id) {
     const response = await apiClient.delete(
         TOURNAMENT_ENDPOINTS.DETAIL(id),
