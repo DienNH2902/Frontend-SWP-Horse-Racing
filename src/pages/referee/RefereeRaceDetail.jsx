@@ -29,6 +29,10 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 
+import RefereeHorseDetailModal from "./RefereeHorseDetailModal";
+import RefereeJockeyDetailModal from "./RefereeJockeyDetailModal";
+import RefereeOwnerDetailModal from "./RefereeOwnerDetailModal";
+
 import {
     getRaceById,
     confirmRaceReady,
@@ -166,6 +170,13 @@ function trackConditionColor(condition) {
 export default function RefereeRaceDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+
+    const [horseOpen, setHorseOpen] = useState(false);
+    const [jockeyOpen, setJockeyOpen] = useState(false);
+    const [ownerOpen, setOwnerOpen] = useState(false);
+
+    const [selectedJockeyId, setSelectedJockeyId] = useState(null);
+    const [selectedHorseId, setSelectedHorseId] = useState(null);
 
     const [condition, setCondition] = useState(null);
 
@@ -372,6 +383,7 @@ export default function RefereeRaceDetail() {
         );
     }, [participants]);
 
+
     const participantMap = useMemo(() => {
         return Object.fromEntries(
             participants.map((item) => [
@@ -380,6 +392,8 @@ export default function RefereeRaceDetail() {
             ])
         );
     }, [participants]);
+
+    const hasFinalResult = finalResults.length > 0;
 
     const renderHorse = (_, record) =>
         participantMap[record.horseId]?.horse?.name ||
@@ -419,11 +433,8 @@ export default function RefereeRaceDetail() {
 
                 return (
                     <Select
-                        value={
-                            checked
-                                ? "Disqualified"
-                                : "Qualified"
-                        }
+                        disabled={hasFinalResult}
+                        value={checked ? "Disqualified" : "Qualified"}
                         style={{
                             width: 160,
                         }}
@@ -514,22 +525,53 @@ export default function RefereeRaceDetail() {
         {
             title: "Horse",
             render: (_, record) => (
-                <Link
-                    to={`/referee/horses/${record.horse.horseId}`}
+                <Button
+                    type="link"
+                    style={{
+                        padding: 0,
+                        fontWeight: 600,
+                    }}
+                    onClick={() => {
+                        setSelectedHorseId(record.horse.horseId);
+                        setHorseOpen(true);
+                    }}
                 >
                     {record.horse.name}
-                </Link>
+                </Button>
             ),
         },
         {
             title: "Jockey",
-            render: (_, record) =>
-                record.jockey.fullName,
+            render: (_, record) => (
+                <Button
+                    type="link"
+                    onClick={() => {
+                        setSelectedJockeyId(record.jockey.jockeyId);
+                        setJockeyOpen(true);
+                    }}
+                >
+                    {record.jockey.fullName}
+                </Button>
+            )
+        },
+        {
+            title: "Owner",
+            render: (_, record) => (
+                <Button
+                    type="link"
+                    onClick={() => {
+                        setSelectedHorseId(record.horse.horseId);
+                        setOwnerOpen(true);
+                    }}
+                >
+                    View Owner
+                </Button>
+            )
         },
         {
             title: "Status",
             render: () => (
-                <Tag color="green">
+                <Tag color="success">
                     Assigned
                 </Tag>
             ),
@@ -725,13 +767,51 @@ export default function RefereeRaceDetail() {
         <Space
             orientation="vertical"
         >
-            <Card>
-                <Space wrap>
-                    <Button
-                        onClick={() =>
-                            navigate(-1)
-                        }
+            <Card
+                style={{
+                    borderRadius: 16,
+                    marginBottom: 16,
+                }}
+            >
+                <Space
+                    direction="vertical"
+                    size={8}
+                >
+                    <Typography.Title
+                        level={2}
+                        style={{ margin: 0 }}
                     >
+                        {race.name}
+                    </Typography.Title>
+
+                    <Typography.Text type="secondary">
+                        {race.tournamentTitle}
+                    </Typography.Text>
+
+                    <Space wrap>
+                        <Tag color={statusColor(race.status)}>
+                            {race.status}
+                        </Tag>
+
+                        <Tag color="blue">
+                            Round {race.roundNumber}
+                        </Tag>
+
+                        <Tag color="purple">
+                            Race #{race.raceOrder}
+                        </Tag>
+                    </Space>
+                </Space>
+            </Card>
+
+            <Card
+                style={{
+                    borderRadius: 16,
+                    marginBottom: 16,
+                }}
+            >
+                <Space wrap>
+                    <Button onClick={() => navigate(-1)}>
                         Back
                     </Button>
 
@@ -761,6 +841,7 @@ export default function RefereeRaceDetail() {
                     >
                         Run Simulation
                     </Button>
+
                     <Button
                         type="primary"
                         loading={startingBroadcast}
@@ -772,15 +853,14 @@ export default function RefereeRaceDetail() {
                     >
                         Start Broadcast
                     </Button>
-
-
                 </Space>
             </Card>
 
-            <Card title={race.name}>
+            <Card title="Race Information">
                 <Descriptions
                     bordered
                     column={2}
+                    size="middle"
                 >
                     <Descriptions.Item label="Status">
                         <Tag
@@ -806,30 +886,38 @@ export default function RefereeRaceDetail() {
 
                     <Descriptions.Item label="Race Course">
                         {raceCourse ? (
-                            <>
-                                <div>
+                            <Space direction="vertical" size={0}>
+                                <Typography.Text strong>
                                     {raceCourse.name}
-                                </div>
+                                </Typography.Text>
 
-                                <div>
+                                <Typography.Text type="secondary">
                                     {raceCourse.location}
-                                </div>
+                                </Typography.Text>
 
-                                <div>
-                                    {raceCourse.distance}m -{" "}
+                                <Tag color="cyan">
+                                    {raceCourse.distance} m
+                                </Tag>
+
+                                <Tag color="processing">
                                     {raceCourse.trackType}
-                                </div>
-                            </>
+                                </Tag>
+                            </Space>
                         ) : (
                             "-"
                         )}
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Referee">
-                        {referee
-                            ? `${referee.fullName}
-                            (${referee.role})`
-                            : "-"}
+                        <Space direction="vertical" size={0}>
+                            <Typography.Text strong>
+                                {referee.fullName}
+                            </Typography.Text>
+
+                            <Tag color="green">
+                                {referee.role}
+                            </Tag>
+                        </Space>
                     </Descriptions.Item>
 
                     <Descriptions.Item label="Date">
@@ -846,23 +934,33 @@ export default function RefereeRaceDetail() {
                 </Descriptions>
             </Card>
 
-            <Card title="Broadcast Status">
-                <Tag
-                    color={
+            <Card
+                title="Broadcast Status"
+                style={{ borderRadius: 16 }}
+            >
+                <Badge
+                    status={
                         broadcastStatus?.isBroadcasting
-                            ? "green"
+                            ? "success"
                             : "default"
                     }
-                >
-                    {broadcastStatus?.isBroadcasting
-                        ? "Broadcasting"
-                        : "Not Broadcasting"}
-                </Tag>
+                    text={
+                        broadcastStatus?.isBroadcasting
+                            ? "Broadcasting"
+                            : "Not Broadcasting"
+                    }
+                />
             </Card>
 
             <Row gutter={16}>
                 <Col span={6}>
-                    <Card>
+                    <Card
+                        bordered={false}
+                        style={{
+                            borderRadius: 16,
+                            textAlign: "center",
+                        }}
+                    >
                         <Statistic
                             title="Horses"
                             value={participants.length}
@@ -871,7 +969,13 @@ export default function RefereeRaceDetail() {
                 </Col>
 
                 <Col span={6}>
-                    <Card>
+                    <Card
+                        bordered={false}
+                        style={{
+                            borderRadius: 16,
+                            textAlign: "center",
+                        }}
+                    >
                         <Statistic
                             title="Filled Slots"
                             value={race.filledSlots ?? 0}
@@ -880,7 +984,13 @@ export default function RefereeRaceDetail() {
                 </Col>
 
                 <Col span={6}>
-                    <Card>
+                    <Card
+                        bordered={false}
+                        style={{
+                            borderRadius: 16,
+                            textAlign: "center",
+                        }}
+                    >
                         <Statistic
                             title="Available Slots"
                             value={race.availableSlots ?? 0}
@@ -889,7 +999,13 @@ export default function RefereeRaceDetail() {
                 </Col>
 
                 <Col span={6}>
-                    <Card>
+                    <Card
+                        bordered={false}
+                        style={{
+                            borderRadius: 16,
+                            textAlign: "center",
+                        }}
+                    >
                         <Statistic
                             title="Total Bettors"
                             value={race.totalBettors ?? 0}
@@ -898,7 +1014,10 @@ export default function RefereeRaceDetail() {
                 </Col>
             </Row>
 
-            <Card title="Participants">
+            <Card
+                title="Participants"
+                style={{ borderRadius: 16 }}
+            >
                 {participants.length ===
                     0 ? (
                     <Empty
@@ -906,6 +1025,8 @@ export default function RefereeRaceDetail() {
                     />
                 ) : (
                     <Table
+                        bordered
+                        size="middle"
                         rowKey={(record) => record.registrationId}
                         columns={
                             participantColumns
@@ -918,8 +1039,15 @@ export default function RefereeRaceDetail() {
                 )}
             </Card>
 
-            <Card title="Current Condition">
-                <Descriptions bordered column={3}>
+            <Card
+                title="Current Race Condition"
+                style={{ borderRadius: 16 }}
+            >
+                <Descriptions
+                    bordered
+                    column={3}
+                    size="middle"
+                >
                     <Descriptions.Item label="Weather">
                         {condition?.weather || "-"}
                     </Descriptions.Item>
@@ -946,7 +1074,10 @@ export default function RefereeRaceDetail() {
                 </Descriptions>
             </Card>
 
-            <Card title="Race Condition">
+            <Card
+                title="Update Race Condition"
+                style={{ borderRadius: 16 }}
+            >
                 <Form
                     form={conditionForm}
                     layout="vertical"
@@ -995,17 +1126,19 @@ export default function RefereeRaceDetail() {
                     <Button
                         type="primary"
                         htmlType="submit"
-                        loading={
-                            savingCondition
-                        }
+                        loading={savingCondition}
+                        size="large"
                     >
                         Save Condition
                     </Button>
                 </Form>
             </Card>
 
-            <Card title="Timeline">
-                <Timeline
+            <Card
+                title="Race Timeline"
+                style={{ borderRadius: 16 }}
+            >
+                <Timeline mode="left"
                     items={[
                         {
                             color: "green",
@@ -1044,25 +1177,28 @@ export default function RefereeRaceDetail() {
                 />
             </Card>
 
-            <Card title="Result Review">
-                <Space orientation="vertical">
-                    <Typography.Text>
-                        Open the Result Review page to:
-                        <br />
-                        • Review Raw Results
-                        <br />
-                        • Write Referee Report
-                        <br />
-                        • Confirm race result
-                    </Typography.Text>
+            <Card
+                style={{
+                    borderRadius: 16,
+                    textAlign: "center",
+                }}
+            >
+                <Typography.Title level={4}>
+                    Race Result Review
+                </Typography.Title>
 
-                    <Button
-                        type="primary"
-                        onClick={() => setReviewOpen(true)}
-                    >
-                        Open Result Review
-                    </Button>
-                </Space>
+                <Typography.Paragraph type="secondary">
+                    Review raw rankings, submit referee reports,
+                    and confirm the final race results.
+                </Typography.Paragraph>
+
+                <Button
+                    type="primary"
+                    size="large"
+                    onClick={() => setReviewOpen(true)}
+                >
+                    Open Review Center
+                </Button>
             </Card>
             <Modal
                 title="Result Review"
@@ -1094,9 +1230,8 @@ export default function RefereeRaceDetail() {
                                         <Button
                                             type="primary"
                                             loading={confirmLoading}
-                                            onClick={
-                                                handleConfirmFinalResult
-                                            }
+                                            disabled={hasFinalResult}
+                                            onClick={handleConfirmFinalResult}
                                         >
                                             Confirm Final Result
                                         </Button>
@@ -1157,6 +1292,31 @@ export default function RefereeRaceDetail() {
                     ]}
                 />
             </Modal>
+            <RefereeHorseDetailModal
+                open={horseOpen}
+                horseId={selectedHorseId}
+                onClose={() => {
+                    setHorseOpen(false);
+                    setSelectedHorseId(null);
+                }}
+            />
+
+            <RefereeJockeyDetailModal
+                open={jockeyOpen}
+                jockeyId={selectedJockeyId}
+                onClose={() => {
+                    setJockeyOpen(false);
+                    setSelectedJockeyId(null);
+                }} />
+
+            <RefereeOwnerDetailModal
+                open={ownerOpen}
+                horseId={selectedHorseId}
+                onClose={() => {
+                    setOwnerOpen(false);
+                    setSelectedHorseId(null);
+                }}
+            />
         </Space>
     );
 }
