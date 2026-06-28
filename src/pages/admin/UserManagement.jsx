@@ -81,9 +81,25 @@ function getTimeValue(value) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
+function getObjectIdTime(value) {
+  if (typeof value !== "string" || !/^[a-f\d]{24}$/i.test(value)) {
+    return 0;
+  }
+
+  return parseInt(value.slice(0, 8), 16) * 1000;
+}
+
 function sortNewestUserFirst(a, b) {
-  const aTime = getTimeValue(a.createdAt || a.updatedAt || a.dateOfBirth);
-  const bTime = getTimeValue(b.createdAt || b.updatedAt || b.dateOfBirth);
+  const aTime = Math.max(
+    getTimeValue(a.createdAt),
+    getTimeValue(a.updatedAt),
+    getObjectIdTime(a.id),
+  );
+  const bTime = Math.max(
+    getTimeValue(b.createdAt),
+    getTimeValue(b.updatedAt),
+    getObjectIdTime(b.id),
+  );
 
   return bTime - aTime;
 }

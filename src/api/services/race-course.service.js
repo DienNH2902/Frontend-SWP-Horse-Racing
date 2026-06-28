@@ -1,14 +1,46 @@
 import { apiClient } from "../client";
 
+const RACE_COURSE_ROOT = "/race-courses";
+
 export const getRaceCourses = async () => {
-    const response = await apiClient.get("/race-courses");
+    const response = await apiClient.get(RACE_COURSE_ROOT, {
+        includeAuth: true,
+    });
+
     return response.data;
 };
 
 export const getRaceCourseById = async (id) => {
     const response = await apiClient.get(
-        `/race-courses/${id}`
+        `${RACE_COURSE_ROOT}/${id}`,
+        {
+            includeAuth: true,
+        }
     );
+
+    return response.data;
+};
+
+export const createRaceCourse = async (payload) => {
+    const response = await apiClient.post(RACE_COURSE_ROOT, payload, {
+        includeAuth: true,
+    });
+
+    return response.data;
+};
+
+export const updateRaceCourse = async (id, payload) => {
+    const response = await apiClient.put(`${RACE_COURSE_ROOT}/${id}`, payload, {
+        includeAuth: true,
+    });
+
+    return response.data;
+};
+
+export const deleteRaceCourse = async (id) => {
+    const response = await apiClient.delete(`${RACE_COURSE_ROOT}/${id}`, {
+        includeAuth: true,
+    });
 
     return response.data;
 };

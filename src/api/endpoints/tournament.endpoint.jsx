@@ -4,4 +4,6 @@ export const TOURNAMENT_ENDPOINTS = {
   DETAIL: (id) => `/tournaments/${id}`,
 
   STATUS: (id) => `/tournaments/${id}/status`,
+
+  ADVANCEMENTS: (id) => `/tournaments/${id}/advancements`,
 };
