@@ -18,18 +18,24 @@ import {
     Typography,
     message,
     Select,
+    Modal,
+    Tabs,
 } from "antd";
 import {
     CheckCircleOutlined,
-    ClockCircleOutlined,
+    PlayCircleOutlined,
     ReloadOutlined,
 } from "@ant-design/icons";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import {
     getRaceById,
     confirmRaceReady,
+    runSimulation,
+    startRaceBroadcast,
+    replayRaceBroadcast,
+    getBroadcastStatus,
 } from "../../api/services/race.service";
 
 import {
@@ -46,8 +52,47 @@ import {
 import { getRaceCourseById } from "../../api/services/race-course.service";
 import {
     getUserById,
-    getUsers,
 } from "../../api/services/user.service";
+
+import {
+    getRawResults,
+    getFinalResults,
+    confirmRawResults,
+} from "../../api/services/rawResult.service";
+
+import {
+    getTournamentParticipants,
+} from "../../api/services/tournament.service";
+
+function getHorseName(record) {
+    return (
+        participantMap[record.horseId]?.horse?.name ||
+        horseMap[record.horseId] ||
+        record.horseId
+    );
+}
+
+function getJockeyName(record) {
+    return (
+        participantMap[record.horseId]?.jockey?.fullName ||
+        jockeyMap[record.jockeyId] ||
+        record.jockeyId
+    );
+}
+
+function renderResultStatus(status) {
+    return (
+        <Tag
+            color={
+                status === "Confirmed"
+                    ? "green"
+                    : "red"
+            }
+        >
+            {status}
+        </Tag>
+    );
+}
 
 function statusColor(status) {
     switch (status) {
@@ -69,6 +114,34 @@ function statusColor(status) {
         default:
             return "default";
     }
+}
+
+function validateReady() {
+    if (!race.raceCourseId) {
+        message.warning("Please assign a race course first.");
+        return false;
+    }
+
+    if (participants.length < 2) {
+        message.warning(
+            "At least 2 horses must be registered."
+        );
+        return false;
+    }
+
+    if (
+        !condition ||
+        !condition.weather ||
+        condition.windSpeed === undefined ||
+        !condition.trackCondition
+    ) {
+        message.warning(
+            "Please complete race conditions."
+        );
+        return false;
+    }
+
+    return true;
 }
 
 function trackConditionColor(condition) {
@@ -96,13 +169,30 @@ export default function RefereeRaceDetail() {
 
     const [condition, setCondition] = useState(null);
 
+    const [reviewOpen, setReviewOpen] = useState(false);
+
     const [race, setRace] = useState(null);
+
+    const [participants, setParticipants] = useState([]);
 
     const [referee, setReferee] = useState(null);
 
     const [raceCourse, setRaceCourse] = useState(null);
 
-    const [users, setUsers] = useState([]);
+    const [rawResults, setRawResults] =
+        useState([]);
+
+    const [confirmLoading, setConfirmLoading] =
+        useState(false);
+
+    const [finalResults, setFinalResults] =
+        useState([]);
+
+    const [disqualifiedHorseIds, setDisqualifiedHorseIds] =
+        useState([]);
+
+    const [confirmingResult, setConfirmingResult] =
+        useState(false);
 
     const [loading, setLoading] =
         useState(true);
@@ -113,6 +203,15 @@ export default function RefereeRaceDetail() {
 
     const [confirmingReady, setConfirmingReady] =
         useState(false);
+
+    const [runningSimulation, setRunningSimulation] =
+        useState(false);
+
+    const [startingBroadcast, setStartingBroadcast] =
+        useState(false);
+
+    const [broadcastStatus, setBroadcastStatus] =
+        useState(null);
 
     const [reportLoading, setReportLoading] =
         useState(false);
@@ -135,12 +234,38 @@ export default function RefereeRaceDetail() {
             setLoading(true);
 
             const raceData = await getRaceById(id);
+            console.log(raceData);
+
+            console.log("Race Data:", raceData);
+
+            console.log(
+                "Referee ID:",
+                raceData.refereeId
+            );
+
+            console.log(
+                "Race Course ID:",
+                raceData.raceCourseId
+            );
 
             setRace(raceData);
 
-            const promises = [];
+            const tournamentParticipants =
+                await getTournamentParticipants(
+                    raceData.tournamentId
+                );
 
-            promises.push(getUsers());
+            const raceParticipants =
+                tournamentParticipants.filter(
+                    (item) => item.raceId === raceData._id
+                );
+
+            setParticipants(raceParticipants);
+
+            console.log(raceParticipants.length);
+            console.log(raceParticipants);
+
+            const promises = [];
 
             if (raceData.refereeId) {
                 promises.push(
@@ -170,31 +295,54 @@ export default function RefereeRaceDetail() {
                 )
             );
 
+            promises.push(
+                getRawResults(id).catch(error => {
+                    console.error("Raw Result", error);
+                    return [];
+                })
+            );
+
+            promises.push(
+                getFinalResults(id).catch(
+                    () => []
+                )
+            );
+
+            promises.push(
+                getBroadcastStatus(id).catch(
+                    () => null
+                )
+            );
+
             const [
-                usersData,
                 refereeData,
                 raceCourseData,
                 conditionData,
+                rawResultsData,
+                finalResultsData,
+                broadcastData,
             ] = await Promise.all(promises);
 
-            setUsers(usersData || []);
+            console.log("Referee:", refereeData);
+            console.log("Race Course:", raceCourseData);
 
             setReferee(refereeData);
             setRaceCourse(raceCourseData);
+            setRawResults(rawResultsData || []);
+            setFinalResults(finalResultsData || []);
+            setBroadcastStatus(broadcastData);
 
             if (conditionData) {
                 setCondition(conditionData);
 
                 conditionForm.setFieldsValue({
-                    weather:
-                        conditionData.weather,
+                    weather: conditionData.weather,
                     trackCondition:
                         conditionData.trackCondition,
                     windSpeed:
                         conditionData.windSpeed,
                 });
             }
-
         } catch (error) {
             console.error(error);
 
@@ -204,26 +352,42 @@ export default function RefereeRaceDetail() {
         } finally {
             setLoading(false);
         }
-
     }
 
-    const participants =
-        race?.horses || [];
-
-    const horseMap =
-        Object.fromEntries(
-            participants.map((horse) => [
-                horse.horseId,
-                horse.name,
+    const horseMap = useMemo(() => {
+        return Object.fromEntries(
+            participants.map((item) => [
+                item.horse.horseId,
+                item.horse.name,
             ])
         );
+    }, [participants]);
 
-    const jockeyMap = Object.fromEntries(
-        users.map((user) => [
-            user._id,
-            user.fullName,
-        ])
-    );
+    const jockeyMap = useMemo(() => {
+        return Object.fromEntries(
+            participants.map((item) => [
+                item.jockey.jockeyId,
+                item.jockey.fullName,
+            ])
+        );
+    }, [participants]);
+
+    const participantMap = useMemo(() => {
+        return Object.fromEntries(
+            participants.map((item) => [
+                item.horse.horseId,
+                item,
+            ])
+        );
+    }, [participants]);
+
+    const renderHorse = (_, record) =>
+        participantMap[record.horseId]?.horse?.name ||
+        record.horseId;
+
+    const renderJockey = (_, record) =>
+        participantMap[record.horseId]?.jockey?.fullName ||
+        record.jockeyId;
 
     const rawColumns = [
         {
@@ -232,9 +396,11 @@ export default function RefereeRaceDetail() {
         },
         {
             title: "Horse",
-            render: (_, record) =>
-                horseMap[record.horseId] ||
-                record.horseId,
+            render: renderHorse,
+        },
+        {
+            title: "Jockey",
+            render: renderJockey,
         },
         {
             title: "Finish Time",
@@ -243,19 +409,72 @@ export default function RefereeRaceDetail() {
                 new Date(value).toLocaleString(),
         },
         {
-            title: "Status",
-            dataIndex: "status",
-            render: (status) => (
-                <Tag
-                    color={
-                        status === "Confirmed"
-                            ? "green"
-                            : "red"
-                    }
-                >
-                    {status}
-                </Tag>
-            ),
+            title: "Result",
+            render: (_, record) => {
+
+                const checked =
+                    disqualifiedHorseIds.includes(
+                        record.horseId
+                    );
+
+                return (
+                    <Select
+                        value={
+                            checked
+                                ? "Disqualified"
+                                : "Qualified"
+                        }
+                        style={{
+                            width: 160,
+                        }}
+                        onChange={(value) => {
+
+                            if (
+                                value ===
+                                "Disqualified"
+                            ) {
+
+                                setDisqualifiedHorseIds(
+                                    (
+                                        prev
+                                    ) => [
+                                            ...prev,
+                                            record.horseId,
+                                        ]
+                                );
+
+                            } else {
+
+                                setDisqualifiedHorseIds(
+                                    (
+                                        prev
+                                    ) =>
+                                        prev.filter(
+                                            (
+                                                id
+                                            ) =>
+                                                id !==
+                                                record.horseId
+                                        )
+                                );
+
+                            }
+
+                        }}
+                        options={[
+                            {
+                                value:
+                                    "Qualified",
+                            },
+                            {
+                                value:
+                                    "Disqualified",
+                            },
+                        ]}
+                    />
+                );
+
+            },
         },
     ];
 
@@ -269,9 +488,11 @@ export default function RefereeRaceDetail() {
         },
         {
             title: "Horse",
-            render: (_, record) =>
-                horseMap[record.horseId] ||
-                record.horseId,
+            render: renderHorse,
+        },
+        {
+            title: "Jockey",
+            render: renderJockey,
         },
         {
             title: "Raw Rank",
@@ -280,17 +501,7 @@ export default function RefereeRaceDetail() {
         {
             title: "Status",
             dataIndex: "status",
-            render: (status) => (
-                <Tag
-                    color={
-                        status === "Confirmed"
-                            ? "green"
-                            : "red"
-                    }
-                >
-                    {status}
-                </Tag>
-            ),
+            render: renderResultStatus
         },
     ];
 
@@ -304,26 +515,22 @@ export default function RefereeRaceDetail() {
             title: "Horse",
             render: (_, record) => (
                 <Link
-                    to={`/referee/horses/${record.horseId}`}
+                    to={`/referee/horses/${record.horse.horseId}`}
                 >
-                    {record.name}
+                    {record.horse.name}
                 </Link>
             ),
         },
         {
             title: "Jockey",
             render: (_, record) =>
-                record.jockeyId
-                    ? jockeyMap[record.jockeyId] ||
-                    record.jockeyId
-                    : "Not Assigned",
+                record.jockey.fullName,
         },
         {
             title: "Status",
-            dataIndex: "status",
-            render: (status) => (
+            render: () => (
                 <Tag color="green">
-                    {status}
+                    Assigned
                 </Tag>
             ),
         },
@@ -366,35 +573,70 @@ export default function RefereeRaceDetail() {
                 setSavingCondition(false);
             }
         };
-    const handleConfirmReady =
+
+    const handleConfirmReady = async () => {
+        if (!validateReady()) return;
+
+        try {
+            setConfirmingReady(true);
+
+            await confirmRaceReady(id);
+
+            message.success("Race confirmed ready.");
+
+            loadData();
+        } catch (error) {
+            message.error(
+                error.response?.data?.message ||
+                "Cannot confirm race."
+            );
+        } finally {
+            setConfirmingReady(false);
+        }
+    };
+
+    const handleRunSimulation = async () => {
+        try {
+            setRunningSimulation(true);
+
+            await runSimulation(id);
+
+            message.success(
+                "Simulation completed successfully."
+            );
+
+            await loadData();
+        } catch (error) {
+            message.error(
+                error.response?.data?.message ||
+                "Cannot run simulation."
+            );
+        } finally {
+            setRunningSimulation(false);
+        }
+    };
+
+    const handleStartBroadcast =
         async () => {
             try {
-                setConfirmingReady(true);
+                setStartingBroadcast(true);
 
-                if (!condition) {
-                    return message.warning(
-                        "Please create race condition first."
-                    );
-                }
-
-                await confirmRaceReady(id);
+                await startRaceBroadcast(id);
 
                 message.success(
-                    "Race confirmed ready."
+                    "Broadcast started."
                 );
 
-                loadData();
+                await loadData();
             } catch (error) {
                 message.error(
-                    error.response?.data
-                        ?.message ||
-                    "Cannot confirm race."
+                    error.response?.data?.message ||
+                    "Cannot start broadcast."
                 );
             } finally {
-                setConfirmingReady(false);
+                setStartingBroadcast(false);
             }
         };
-
 
     const handleSubmitReport =
         async (values) => {
@@ -419,6 +661,47 @@ export default function RefereeRaceDetail() {
                 setReportLoading(false);
             }
         };
+
+    const handleConfirmFinalResult = async () => {
+
+        try {
+
+            setConfirmLoading(true);
+
+            console.log("Race:", id);
+
+            console.log(disqualifiedHorseIds);
+
+            const result =
+                await confirmRawResults(
+                    id,
+                    disqualifiedHorseIds
+                );
+
+            console.log(result);
+
+            message.success(result.message);
+
+            setFinalResults(result.finalRankings);
+
+            await loadData();
+
+        } catch (error) {
+
+            console.log(error.response?.data);
+
+            message.error(
+                error.response?.data?.message ??
+                "Cannot confirm result."
+            );
+
+        } finally {
+
+            setConfirmLoading(false);
+
+        }
+
+    };
 
     if (loading) {
         return (
@@ -461,21 +744,33 @@ export default function RefereeRaceDetail() {
 
                     <Button
                         type="primary"
-                        icon={
-                            <CheckCircleOutlined />
-                        }
-                        loading={
-                            confirmingReady
-                        }
-                        disabled={
-                            race.status !==
-                            "Scheduled"
-                        }
-                        onClick={
-                            handleConfirmReady
-                        }
+                        icon={<CheckCircleOutlined />}
+                        loading={confirmingReady}
+                        disabled={race.status !== "Scheduled"}
+                        onClick={handleConfirmReady}
                     >
                         Confirm Ready
+                    </Button>
+
+                    <Button
+                        type="primary"
+                        icon={<PlayCircleOutlined />}
+                        loading={runningSimulation}
+                        disabled={race.status !== "Ready"}
+                        onClick={handleRunSimulation}
+                    >
+                        Run Simulation
+                    </Button>
+                    <Button
+                        type="primary"
+                        loading={startingBroadcast}
+                        disabled={
+                            race.status !== "Simulated" ||
+                            broadcastStatus?.isBroadcasting
+                        }
+                        onClick={handleStartBroadcast}
+                    >
+                        Start Broadcast
                     </Button>
 
 
@@ -551,6 +846,20 @@ export default function RefereeRaceDetail() {
                 </Descriptions>
             </Card>
 
+            <Card title="Broadcast Status">
+                <Tag
+                    color={
+                        broadcastStatus?.isBroadcasting
+                            ? "green"
+                            : "default"
+                    }
+                >
+                    {broadcastStatus?.isBroadcasting
+                        ? "Broadcasting"
+                        : "Not Broadcasting"}
+                </Tag>
+            </Card>
+
             <Row gutter={16}>
                 <Col span={6}>
                     <Card>
@@ -597,9 +906,7 @@ export default function RefereeRaceDetail() {
                     />
                 ) : (
                     <Table
-                        rowKey={(record) =>
-                            record.horseId
-                        }
+                        rowKey={(record) => record.registrationId}
                         columns={
                             participantColumns
                         }
@@ -643,9 +950,8 @@ export default function RefereeRaceDetail() {
                 <Form
                     form={conditionForm}
                     layout="vertical"
-                    onFinish={
-                        handleSaveCondition
-                    }
+                    disabled={race.status !== "Scheduled"}
+                    onFinish={handleSaveCondition}
                 >
                     <Form.Item
                         label="Weather"
@@ -752,16 +1058,105 @@ export default function RefereeRaceDetail() {
 
                     <Button
                         type="primary"
-                        onClick={() =>
-                            navigate(
-                                `/referee/races/${id}/results`
-                            )
-                        }
+                        onClick={() => setReviewOpen(true)}
                     >
                         Open Result Review
                     </Button>
                 </Space>
             </Card>
+            <Modal
+                title="Result Review"
+                open={reviewOpen}
+                onCancel={() => setReviewOpen(false)}
+                footer={null}
+                width={1400}
+            >
+                <Tabs
+                    items={[
+                        {
+                            key: "raw",
+                            label: "Raw Results",
+                            children: (
+                                <>
+                                    <Table
+                                        rowKey="_id"
+                                        columns={rawColumns}
+                                        dataSource={rawResults}
+                                        pagination={false}
+                                    />
+
+                                    <div
+                                        style={{
+                                            marginTop: 16,
+                                            textAlign: "right",
+                                        }}
+                                    >
+                                        <Button
+                                            type="primary"
+                                            loading={confirmLoading}
+                                            onClick={
+                                                handleConfirmFinalResult
+                                            }
+                                        >
+                                            Confirm Final Result
+                                        </Button>
+                                    </div>
+                                </>
+                            ),
+                        },
+                        {
+                            key: "report",
+                            label: "Referee Report",
+                            children: (
+                                <Form
+                                    form={reportForm}
+                                    layout="vertical"
+                                    onFinish={handleSubmitReport}
+                                >
+                                    <Form.Item
+                                        name="summary"
+                                        label="Summary"
+                                        rules={[
+                                            {
+                                                required: true,
+                                            },
+                                        ]}
+                                    >
+                                        <Input.TextArea rows={4} />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="note"
+                                        label="Note"
+                                    >
+                                        <Input.TextArea rows={4} />
+                                    </Form.Item>
+
+                                    <Button
+                                        type="primary"
+                                        htmlType="submit"
+                                        loading={reportLoading}
+                                    >
+                                        Submit Report
+                                    </Button>
+                                </Form>
+                            ),
+                        },
+                        {
+                            key: "final",
+                            label: "Final Results",
+                            children: (
+                                <Table
+                                    rowKey="_id"
+                                    columns={finalColumns}
+                                    dataSource={finalResults}
+                                    pagination={false}
+                                />
+                            ),
+                        },
+                    ]}
+                />
+            </Modal>
         </Space>
     );
 }
