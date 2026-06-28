@@ -57,14 +57,16 @@ export const createRaceBatch = async (payload) => {
 };
 
 export const createRound2Race = async (tournamentId, payload) => {
+    const params = {
+        startTime: payload.startTime,
+        date: payload.date,
+    };
+
     const response = await apiClient.post(
         RACE_ENDPOINTS.ROUND_2(tournamentId),
         {},
         {
-            params: {
-                startTime: payload.startTime,
-                date: payload.date,
-            },
+            params,
             includeAuth: true,
         }
     );

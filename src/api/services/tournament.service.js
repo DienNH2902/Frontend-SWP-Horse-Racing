@@ -91,3 +91,14 @@ export async function getTournamentById(id) {
 
   return unwrapData(response);
 }
+
+export async function getTournamentAdvancements(id) {
+  const response = await apiClient.get(
+    TOURNAMENT_ENDPOINTS.ADVANCEMENTS(id),
+    {
+      includeAuth: true,
+    }
+  );
+
+  return unwrapCollection(response);
+}

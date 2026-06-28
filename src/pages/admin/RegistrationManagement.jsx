@@ -27,6 +27,7 @@ import {
   getRegistrations,
   rejectRegistration,
 } from "../../api/services/registration.service";
+import { getRacesByTournament } from "../../api/services/race.service";
 
 const { Title, Text } = Typography;
 
@@ -70,9 +71,25 @@ function getTimeValue(value) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
+function getObjectIdTime(value) {
+  if (typeof value !== "string" || !/^[a-f\d]{24}$/i.test(value)) {
+    return 0;
+  }
+
+  return parseInt(value.slice(0, 8), 16) * 1000;
+}
+
 function sortNewestRegistrationFirst(a, b) {
-  const aTime = getTimeValue(a.registeredAt || a.createdAt);
-  const bTime = getTimeValue(b.registeredAt || b.createdAt);
+  const aTime = Math.max(
+    getTimeValue(a.registeredAt),
+    getTimeValue(a.createdAt),
+    getObjectIdTime(a.id),
+  );
+  const bTime = Math.max(
+    getTimeValue(b.registeredAt),
+    getTimeValue(b.createdAt),
+    getObjectIdTime(b.id),
+  );
 
   return bTime - aTime;
 }
@@ -112,31 +129,45 @@ function normalizeRegistration(item, index) {
   };
 }
 
+function normalizeRaceOption(item, index) {
+  const id = item?._id || item?.id || `race-${index}`;
+  const name = item?.name || `Race ${index + 1}`;
+  const round = item?.roundNumber ? `Round ${item.roundNumber}` : "";
+  const order = item?.raceOrder ? `Race ${item.raceOrder}` : "";
+  const startTime = formatDate(item?.startTime || item?.date);
+  const details = [round, order, startTime !== "N/A" ? startTime : ""]
+    .filter(Boolean)
+    .join(" - ");
+
+  return {
+    label: details ? `${name} (${details})` : name,
+    value: id,
+  };
+}
+
 function RegistrationManagement() {
   const [confirmForm] = Form.useForm();
   const [rejectForm] = Form.useForm();
 
   const [registrations, setRegistrations] = useState([]);
+  const [raceOptions, setRaceOptions] = useState([]);
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterTournamentId, setFilterTournamentId] = useState("");
+  const [searchText, setSearchText] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRaces, setIsLoadingRaces] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [detailRegistration, setDetailRegistration] = useState(null);
   const [confirmingRegistration, setConfirmingRegistration] = useState(null);
   const [rejectingRegistration, setRejectingRegistration] = useState(null);
 
-  async function loadRegistrations(
-    status = filterStatus,
-    tournamentId = filterTournamentId,
-  ) {
+  async function loadRegistrations(status = filterStatus) {
     setIsLoading(true);
 
     try {
       const response = await getRegistrations({
         status,
-        tournamentId,
       });
 
       setRegistrations(
@@ -168,13 +199,46 @@ function RegistrationManagement() {
     }
   }
 
+  async function loadRaceOptions(tournamentId, currentRaceId = "") {
+    if (!tournamentId) {
+      setRaceOptions([]);
+      return;
+    }
+
+    setIsLoadingRaces(true);
+
+    try {
+      const response = await getRacesByTournament(tournamentId);
+      const options = resolveList(response).map(normalizeRaceOption);
+
+      if (
+        currentRaceId &&
+        !options.some((option) => option.value === currentRaceId)
+      ) {
+        options.unshift({
+          label: `Current race (${currentRaceId})`,
+          value: currentRaceId,
+        });
+      }
+
+      setRaceOptions(options);
+    } catch (error) {
+      setRaceOptions([]);
+      message.error(error?.message || "Unable to load races");
+    } finally {
+      setIsLoadingRaces(false);
+    }
+  }
+
   function openConfirmModal(record) {
     setConfirmingRegistration(record);
+    setRaceOptions([]);
     confirmForm.resetFields();
     confirmForm.setFieldsValue({
       raceId: record.raceId || "",
       gateNumber: record.gateNumber !== "N/A" ? record.gateNumber : undefined,
     });
+    loadRaceOptions(record.tournamentId, record.raceId);
   }
 
   async function handleConfirm() {
@@ -237,6 +301,28 @@ function RegistrationManagement() {
       setIsSaving(false);
     }
   }
+
+  const filteredRegistrations = useMemo(() => {
+    const normalizedSearchText = searchText.trim().toLowerCase();
+
+    if (!normalizedSearchText) {
+      return registrations;
+    }
+
+    return registrations.filter((registration) =>
+      [
+        registration.tournamentTitle,
+        registration.horseName,
+        registration.jockeyName,
+        registration.ownerName,
+        registration.status,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(normalizedSearchText),
+        ),
+    );
+  }, [registrations, searchText]);
 
   const columns = useMemo(
     () => [
@@ -407,19 +493,16 @@ function RegistrationManagement() {
             ]}
             onChange={(value) => {
               setFilterStatus(value);
-              loadRegistrations(value, filterTournamentId);
+              loadRegistrations(value);
             }}
           />
 
           <Input
             allowClear
-            placeholder="Tournament ID"
-            value={filterTournamentId}
+            placeholder="Search by name"
+            value={searchText}
             style={{ width: 260 }}
-            onChange={(event) => setFilterTournamentId(event.target.value)}
-            onPressEnter={() =>
-              loadRegistrations(filterStatus, filterTournamentId)
-            }
+            onChange={(event) => setSearchText(event.target.value)}
           />
 
           <Button
@@ -433,8 +516,8 @@ function RegistrationManagement() {
             className="registration-management-primary"
             onClick={() => {
               setFilterStatus("");
-              setFilterTournamentId("");
-              loadRegistrations("", "");
+              setSearchText("");
+              loadRegistrations("");
             }}
           >
             Reset
@@ -446,7 +529,7 @@ function RegistrationManagement() {
         <Table
           className="registration-management-table"
           columns={columns}
-          dataSource={registrations}
+          dataSource={filteredRegistrations}
           loading={isLoading}
           pagination={{
             pageSize: 10,
@@ -466,44 +549,20 @@ function RegistrationManagement() {
       >
         {detailRegistration && (
           <Descriptions bordered column={1} size="middle">
-            <Descriptions.Item label="ID">
-              {detailRegistration._id}
-            </Descriptions.Item>
-
             <Descriptions.Item label="Tournament">
               {detailRegistration.tournamentTitle}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Tournament ID">
-              {detailRegistration.tournamentId}
             </Descriptions.Item>
 
             <Descriptions.Item label="Horse">
               {detailRegistration.horseName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Horse ID">
-              {detailRegistration.horseId}
-            </Descriptions.Item>
-
             <Descriptions.Item label="Jockey">
               {detailRegistration.jockeyName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Jockey ID">
-              {detailRegistration.jockeyId}
-            </Descriptions.Item>
-
             <Descriptions.Item label="Owner">
               {detailRegistration.ownerName}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Owner ID">
-              {detailRegistration.ownerId}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Race ID">
-              {detailRegistration.raceId || "N/A"}
             </Descriptions.Item>
 
             <Descriptions.Item label="Gate Number">
@@ -554,11 +613,17 @@ function RegistrationManagement() {
       >
         <Form form={confirmForm} layout="vertical">
           <Form.Item
-            label="Race ID"
+            label="Race"
             name="raceId"
-            rules={[{ required: true, message: "Race ID is required" }]}
+            rules={[{ required: true, message: "Race is required" }]}
           >
-            <Input placeholder="Enter race ID" />
+            <Select
+              showSearch
+              loading={isLoadingRaces}
+              optionFilterProp="label"
+              options={raceOptions}
+              placeholder="Select race"
+            />
           </Form.Item>
 
           <Form.Item

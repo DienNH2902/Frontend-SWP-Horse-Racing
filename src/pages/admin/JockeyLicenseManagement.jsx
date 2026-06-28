@@ -42,9 +42,70 @@ function formatDate(value) {
   }).format(date);
 }
 
+function getTimeValue(value) {
+  if (!value) return 0;
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? 0 : value.getTime();
+  }
+
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    const dateParts = trimmedValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+    if (dateParts) {
+      const [, day, month, year] = dateParts;
+      const date = new Date(Number(year), Number(month) - 1, Number(day));
+
+      return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+    }
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function getObjectIdTime(value) {
+  if (typeof value !== "string" || !/^[a-f\d]{24}$/i.test(value)) {
+    return 0;
+  }
+
+  return parseInt(value.slice(0, 8), 16) * 1000;
+}
+
+function getNewestLicenseTime(licenses = []) {
+  return licenses.reduce((latest, license) => {
+    const licenseTime = Math.max(
+      getObjectIdTime(license?._id),
+      getObjectIdTime(license?.id),
+      getObjectIdTime(license?.licenseId),
+      getTimeValue(license?.createdAt),
+      getTimeValue(license?.uploadedAt),
+      getTimeValue(license?.submittedAt),
+      getTimeValue(license?.registeredAt),
+      getTimeValue(license?.requestedAt),
+    );
+
+    return Math.max(latest, licenseTime);
+  }, 0);
+}
+
+function sortNewestJockeyFirst(a, b) {
+  return b.sortTime - a.sortTime;
+}
+
 function normalizeJockey(jockey, index) {
   const id = pick(jockey, ["id", "_id", "userId"], `jockey-${index}`);
   const profileId = pick(jockey, ["profileId", "jockeyProfileId"], "");
+  const licenses = Array.isArray(jockey?.licenses)
+    ? [...jockey.licenses].sort((a, b) => {
+        const aTime = getNewestLicenseTime([a]);
+        const bTime = getNewestLicenseTime([b]);
+
+        return bTime - aTime;
+      })
+    : [];
 
   return {
     key: id,
@@ -67,9 +128,33 @@ function normalizeJockey(jockey, index) {
     weight: jockey?.weight || "N/A",
     height: jockey?.height || "N/A",
     jockeyStatus: jockey?.jockeyStatus || "Pending_Approval",
-    licenses: Array.isArray(jockey?.licenses) ? jockey.licenses : [],
+    licenses,
     winRate: jockey?.winRate || 0,
     reputationPoints: jockey?.reputationPoints || 0,
+    sortTime: Math.max(
+      getObjectIdTime(id),
+      getObjectIdTime(profileId),
+      getTimeValue(
+        pick(
+          jockey,
+          [
+            "createdAt",
+            "submittedAt",
+            "registeredAt",
+            "requestedAt",
+          ],
+          "",
+        ),
+      ),
+      getTimeValue(
+        pick(
+          jockey?.profile,
+          ["createdAt", "submittedAt", "registeredAt", "requestedAt"],
+          "",
+        ),
+      ),
+      getNewestLicenseTime(licenses),
+    ),
   };
 }
 
@@ -107,7 +192,7 @@ function JockeyLicenseManagement() {
     setIsLoading(true);
     try {
       const data = await getJockeysWithLicenses();
-      setJockeys(data.map(normalizeJockey));
+      setJockeys(data.map(normalizeJockey).sort(sortNewestJockeyFirst));
     } catch (error) {
       message.error(error?.message || "Unable to load jockeys");
     } finally {
@@ -202,6 +287,12 @@ function JockeyLicenseManagement() {
         dataIndex: "licenses",
         width: 130,
         render: (licenses) => <Tag color="blue">{licenses.length} active</Tag>,
+      },
+      {
+        title: "Latest",
+        dataIndex: "sortTime",
+        width: 130,
+        render: (sortTime) => (sortTime ? formatDate(sortTime) : "N/A"),
       },
       {
         title: "Jockey Status",
