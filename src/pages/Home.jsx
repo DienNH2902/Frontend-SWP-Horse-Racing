@@ -1899,6 +1899,11 @@ function Home() {
           </nav>
 
           <div className="home-actions">
+            {isSpectator && (
+              <Link className="home-live-btn home-bet-btn" to="/spectator/bets">
+                Bet Points
+              </Link>
+            )}
             <Link className="home-live-btn" to="/spectator/broadcast">
               <i aria-hidden="true" />
               Live Broadcast

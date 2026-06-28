@@ -38,6 +38,7 @@ import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
 import RewardManagement from "../pages/admin/RewardManagement";
 import SpectatorRewards from "../pages/spectator/SpectatorReward";
 import PointsTransactionHistory from "../pages/spectator/PointsTransaction";
+import SpectatorBetting from "../pages/spectator/SpectatorBetting";
 import NotificationHistory from "../pages/NotificationPage";
 import MoneyTransactionHistory from "../pages/MoneyTransaction";
 import Wallet from "../pages/Wallet";
@@ -177,6 +178,7 @@ export default function AppRoutes() {
           path="/spectator/points-transaction"
           element={<PointsTransactionHistory allowedRole="Spectator" />}
         />
+        <Route path="/spectator/bets" element={<SpectatorBetting />} />
       </Route>
 
       <Route

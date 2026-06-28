@@ -639,6 +639,14 @@ function Profile() {
             <span>GoldenHoof</span>
           </Link>
           <Space>
+            {userRole === "SPECTATOR" && (
+              <Button
+                className="profile-primary"
+                onClick={() => navigate("/spectator/bets")}
+              >
+                Bet Points
+              </Button>
+            )}
             {/* <Button
               className="profile-primary"
               onClick={() => navigate("/spectator/broadcast")}
