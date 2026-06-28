@@ -26,10 +26,18 @@ export default function OwnerHorseRegister() {
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
   const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
   const navigate = useNavigate();
 
   async function handleImageUpload({ file, onSuccess, onError }) {
+    if (!file.type?.startsWith("image/")) {
+      const error = new Error("Please select a valid image file");
+      messageApi.error(error.message);
+      onError(error);
+      return;
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       const error = new Error("Image must be smaller than 5MB");
       messageApi.error(error.message);
@@ -60,13 +68,21 @@ export default function OwnerHorseRegister() {
   }
 
   async function handleSubmit(values) {
+    if (!values.imageUrl) {
+      messageApi.error("Horse image is required");
+      return;
+    }
+
     try {
+      setIsSubmitting(true);
       await createHorse(toHorseCreatePayload(values));
       messageApi.success("Horse registered");
 
       navigate("/owner/horses");
     } catch (error) {
       messageApi.error(error.message || "Could not register horse.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -137,10 +153,17 @@ export default function OwnerHorseRegister() {
           <Form.Item
             name="imageUrl"
             hidden
-            rules={[{ required: true, message: "Upload horse image" }]}
+            rules={[{ required: true, message: "Upload a horse image" }]}
           >
             <Input />
           </Form.Item>
+
+          <Typography.Text strong>
+            Horse image <span style={{ color: "#ff4d4f" }}>*</span>
+          </Typography.Text>
+          <Typography.Paragraph type="secondary" style={{ margin: "4px 0 10px" }}>
+            You must upload an image before registering the horse.
+          </Typography.Paragraph>
 
           <Upload
             name="file"
@@ -167,7 +190,12 @@ export default function OwnerHorseRegister() {
           )}
 
           <Space wrap>
-            <Button type="primary" htmlType="submit">
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={isSubmitting}
+              disabled={isUploading || !imagePreview}
+            >
               Register horse
             </Button>
             <Button onClick={() => navigate("/owner/horses")}>Cancel</Button>

@@ -384,6 +384,42 @@ function Profile() {
           background: #fff;
         }
 
+        .spectator-profile-nav {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          margin-bottom: 26px;
+        }
+
+        .spectator-profile-nav a {
+          display: grid;
+          gap: 5px;
+          min-height: 86px;
+          align-content: center;
+          padding: 16px;
+          border: 1px solid #bdeee5;
+          border-radius: 10px;
+          color: #06332e;
+          background: #f3fffc;
+          text-decoration: none;
+          transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .spectator-profile-nav a:hover {
+          border-color: #00a98c;
+          transform: translateY(-2px);
+        }
+
+        .spectator-profile-nav strong {
+          font-size: 15px;
+          font-weight: 950;
+        }
+
+        .spectator-profile-nav span {
+          color: #52726e;
+          font-size: 12px;
+        }
+
         .profile-section-title.ant-typography {
           margin: 0 0 18px;
           color: #06332e;
@@ -508,6 +544,7 @@ function Profile() {
             flex-direction: column;
           }
           .profile-content { padding: 22px; }
+          .spectator-profile-nav { grid-template-columns: 1fr; }
           .profile-form-grid {
             grid-template-columns: 1fr;
           }
@@ -602,6 +639,12 @@ function Profile() {
             <span>GoldenHoof</span>
           </Link>
           <Space>
+            {/* <Button
+              className="profile-primary"
+              onClick={() => navigate("/spectator/broadcast")}
+            >
+              Live Broadcast
+            </Button> */}
             <Button
               className="profile-secondary"
               onClick={() => navigate("/home")}
@@ -675,6 +718,21 @@ function Profile() {
                 </div>
 
                 <div className="profile-content">
+                  {/* {userRole === "SPECTATOR" && (
+                    <nav
+                      className="spectator-profile-nav"
+                      aria-label="Spectator features"
+                    >
+                      <Link to="/spectator/reward">
+                        <strong>🎁 Phần thưởng</strong>
+                        <span>Xem và đổi phần thưởng Spectator</span>
+                      </Link>
+                      <Link to="/spectator/points-transaction">
+                        <strong>⭐ Lịch sử điểm</strong>
+                        <span>Theo dõi giao dịch điểm của bạn</span>
+                      </Link>
+                    </nav>
+                  )} */}
                   {/* --- KHU VỰC HIỂN THỊ STREAK STATUS --- */}
                   {streakData && (
                     <div className="streak-container">

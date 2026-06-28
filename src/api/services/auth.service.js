@@ -100,3 +100,8 @@ export async function registerJockey(payload) {
   const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_JOCKEY, payload);
   return response.data;
 }
+
+export async function registerReferee(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_REFEREE, payload);
+  return response.data;
+}

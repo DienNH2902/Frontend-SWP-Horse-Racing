@@ -66,6 +66,12 @@ function isJockeyUser(user) {
   return role.includes("jockey");
 }
 
+function normalizeImageSource(value) {
+  if (typeof value !== "string") return value || undefined;
+
+  return value.trim() || undefined;
+}
+
 function normalizeHorse(horse) {
   return {
     ...horse,
@@ -160,7 +166,9 @@ function normalizeJockey(jockey) {
     fullName: pickFirstValue(jockey, ["fullName", "name"], "Unnamed jockey"),
     email: pickFirstValue(jockey, ["email"], "N/A"),
     phoneNumber: pickFirstValue(jockey, ["phoneNumber", "phone"], "N/A"),
-    avatar: pickFirstValue(jockey, ["avatar", "avatarUrl", "imageUrl"], ""),
+    avatar: normalizeImageSource(
+      pickFirstValue(jockey, ["avatar", "avatarUrl", "imageUrl"], undefined),
+    ),
     weight: pickFirstValue(jockey, ["weight"], pickFirstValue(profile, ["weight"], "N/A")),
     height: pickFirstValue(jockey, ["height"], pickFirstValue(profile, ["height"], "N/A")),
     winRate: pickFirstValue(jockey, ["winRate"], pickFirstValue(profile, ["winRate"], 0)),
@@ -172,6 +180,12 @@ function normalizeJockey(jockey) {
 function formatRate(value) {
   if (value === undefined || value === null || value === "") return "0%";
   return String(value).includes("%") ? value : `${value}%`;
+}
+
+function toSortableNumber(value) {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : 0;
 }
 
 export default function OwnerJockeyRaceWorkspace() {
@@ -367,7 +381,7 @@ export default function OwnerJockeyRaceWorkspace() {
       width: 260,
       render: (value, record) => (
         <Space align="center" style={{ minWidth: 0 }}>
-          <Avatar size={44} src={record.avatar}>
+          <Avatar size={44} src={record.avatar || undefined}>
             {String(value || "?").charAt(0)}
           </Avatar>
           <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
@@ -382,8 +396,22 @@ export default function OwnerJockeyRaceWorkspace() {
       ),
     },
     { title: "Phone", dataIndex: "phoneNumber", width: 130 },
-    { title: "Weight", dataIndex: "weight", width: 90 },
-    { title: "Height", dataIndex: "height", width: 90 },
+    {
+      title: "Weight",
+      dataIndex: "weight",
+      width: 90,
+      sorter: (first, second) =>
+        toSortableNumber(first.weight) - toSortableNumber(second.weight),
+      sortDirections: ["ascend", "descend"],
+    },
+    {
+      title: "Height",
+      dataIndex: "height",
+      width: 90,
+      sorter: (first, second) =>
+        toSortableNumber(first.height) - toSortableNumber(second.height),
+      sortDirections: ["ascend", "descend"],
+    },
     {
       title: "Win rate",
       dataIndex: "winRate",
@@ -718,7 +746,7 @@ export default function OwnerJockeyRaceWorkspace() {
         </Form>
       </Card>
 
-      <Card title="Contracts and tournament registration">
+      {/* <Card title="Contracts and tournament registration">
         <Table
           rowKey="id"
           loading={loading}
@@ -736,7 +764,7 @@ export default function OwnerJockeyRaceWorkspace() {
           dataSource={workspace.schedules}
           pagination={{ pageSize: 5, showSizeChanger: false }}
         />
-      </Card>
+      </Card> */}
 
       <Modal
         open={Boolean(licenseJockey)}
