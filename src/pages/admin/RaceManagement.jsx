@@ -29,9 +29,13 @@ import {
   getRaceById,
   getRacesByTournament,
 } from "../../api/services/race.service";
+import { getHorseById } from "../../api/services/horse.service";
 import { getRaceCourseById } from "../../api/services/race-course.service";
 import { getTournaments } from "../../api/services/tournament.service";
-import { getUsersByRole } from "../../api/services/user.service";
+import {
+  getUserById,
+  getUsersByRole,
+} from "../../api/services/user.service";
 
 const { Title, Text } = Typography;
 
@@ -54,6 +58,17 @@ function resolveList(response) {
 
 function getId(item, fallback) {
   return item?._id || item?.id || fallback;
+}
+
+function unwrapEntity(response) {
+  return (
+    response?.data?.data ||
+    response?.data ||
+    response?.result ||
+    response?.user ||
+    response?.horse ||
+    response
+  );
 }
 
 function getPersonName(item) {
@@ -181,10 +196,47 @@ function normalizeRace(item, index) {
     refereeConfirmedAt: item?.refereeConfirmedAt || "",
     simulatedAt: item?.simulatedAt || "",
     createdAt: item?.createdAt || "",
-    horses: item?.horses || [],
+    participants: item?.participants || item?.horses || [],
     totalSlots: item?.totalSlots,
     filledSlots: item?.filledSlots,
     availableSlots: item?.availableSlots,
+  };
+}
+
+async function resolveParticipant(participant, index) {
+  const horseReference = participant?.horseId || participant?.horse;
+  const jockeyReference = participant?.jockeyId || participant?.jockey;
+  const horseId =
+    typeof horseReference === "string"
+      ? horseReference
+      : getId(horseReference, "");
+  const jockeyId =
+    typeof jockeyReference === "string"
+      ? jockeyReference
+      : getId(jockeyReference, "");
+
+  const [horseResult, jockeyResult] = await Promise.allSettled([
+    horseReference && typeof horseReference === "object"
+      ? Promise.resolve(horseReference)
+      : horseId
+        ? getHorseById(horseId)
+        : Promise.resolve({}),
+    jockeyReference && typeof jockeyReference === "object"
+      ? Promise.resolve(jockeyReference)
+      : jockeyId
+        ? getUserById(jockeyId)
+        : Promise.resolve({}),
+  ]);
+  const horse =
+    horseResult.status === "fulfilled" ? unwrapEntity(horseResult.value) : {};
+  const jockey =
+    jockeyResult.status === "fulfilled" ? unwrapEntity(jockeyResult.value) : {};
+
+  return {
+    key: `${participant?.gateNumber ?? index}-${horseId}-${jockeyId}`,
+    gateNumber: participant?.gateNumber ?? "N/A",
+    horseName: horse?.name || "N/A",
+    jockeyName: getPersonName(jockey) || "N/A",
   };
 }
 
@@ -361,8 +413,11 @@ function RaceManagement() {
     try {
       const response = await getRaceById(record.id);
       const nextRace = normalizeRace(response, 0);
+      const participants = await Promise.all(
+        nextRace.participants.map(resolveParticipant),
+      );
 
-      setDetailRace(nextRace);
+      setDetailRace({ ...nextRace, participants });
       loadRaceCourseNames([nextRace]);
     } catch (error) {
       message.error(error?.message || "Unable to load race detail");
@@ -989,10 +1044,11 @@ function RaceManagement() {
         title="Race Detail"
         open={Boolean(detailRace)}
         footer={null}
-        width={800}
+        width={900}
         onCancel={() => setDetailRace(null)}
       >
         {detailRace && (
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
           <Descriptions bordered column={1} size="middle">
             <Descriptions.Item label="Name">
               {detailRace.name}
@@ -1034,7 +1090,7 @@ function RaceManagement() {
               {detailRace.availableSlots ?? "N/A"}
             </Descriptions.Item>
             <Descriptions.Item label="Horses">
-              {detailRace.horses.length}
+              {detailRace.participants.length}
             </Descriptions.Item>
             <Descriptions.Item label="Referee Confirmed At">
               {formatDateTime(detailRace.refereeConfirmedAt)}
@@ -1046,6 +1102,33 @@ function RaceManagement() {
               {formatDateTime(detailRace.createdAt)}
             </Descriptions.Item>
           </Descriptions>
+
+          <Table
+            rowKey="key"
+            size="small"
+            pagination={false}
+            dataSource={detailRace.participants}
+            locale={{ emptyText: "No participants in this race" }}
+            columns={[
+              {
+                title: "Gate",
+                dataIndex: "gateNumber",
+                width: 100,
+                sorter: (a, b) => Number(a.gateNumber) - Number(b.gateNumber),
+                defaultSortOrder: "ascend",
+              },
+              {
+                title: "Horse",
+                dataIndex: "horseName",
+                render: (value) => <Text strong>{value}</Text>,
+              },
+              {
+                title: "Jockey",
+                dataIndex: "jockeyName",
+              },
+            ]}
+          />
+          </Space>
         )}
       </Modal>
     </section>

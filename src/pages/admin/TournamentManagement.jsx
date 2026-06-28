@@ -10,14 +10,20 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
   message,
 } from "antd";
-import { DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EyeOutlined,
+  TrophyOutlined,
+} from "@ant-design/icons";
 import "antd/dist/reset.css";
 import {
   createTournament,
   deleteTournament,
+  getTournamentAdvancements,
   getTournamentById,
   getTournaments,
   updateTournament,
@@ -46,6 +52,31 @@ function resolveList(response) {
 function formatMoney(value) {
   if (value === undefined || value === null) return "N/A";
   return Number(value).toLocaleString("vi-VN") + " VND";
+}
+
+function formatDateTime(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function normalizeAdvancement(item, index) {
+  const horse = item?.horseId || item?.horse || {};
+  const fromRace = item?.fromRaceId || item?.fromRace || {};
+
+  return {
+    key: item?._id || item?.id || `advancement-${index}`,
+    horseName: horse?.name || "N/A",
+    horseColor: horse?.color || "N/A",
+    fromRaceName: fromRace?.name || "N/A",
+    advancedAt: item?.advancedAt || item?.createdAt || "",
+  };
 }
 
 function statusColor(status) {
@@ -119,6 +150,9 @@ function TournamentManagement() {
 
   const [detailTournament, setDetailTournament] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [advancementTournament, setAdvancementTournament] = useState(null);
+  const [advancements, setAdvancements] = useState([]);
+  const [isAdvancementsLoading, setIsAdvancementsLoading] = useState(false);
 
   async function loadTournaments(status = filterStatus) {
     setIsLoading(true);
@@ -244,6 +278,28 @@ function TournamentManagement() {
     }
   }
 
+  async function openAdvancementsModal(record) {
+    setAdvancementTournament(record);
+    setAdvancements([]);
+    setIsAdvancementsLoading(true);
+
+    try {
+      const response = await getTournamentAdvancements(record.id);
+      const nextAdvancements = resolveList(response)
+        .map(normalizeAdvancement)
+        .sort(
+          (a, b) =>
+            new Date(b.advancedAt).getTime() - new Date(a.advancedAt).getTime(),
+        );
+
+      setAdvancements(nextAdvancements);
+    } catch (error) {
+      message.error(error?.message || "Unable to load advancements");
+    } finally {
+      setIsAdvancementsLoading(false);
+    }
+  }
+
   async function handleDeleteTournament(record) {
     setIsSaving(true);
 
@@ -306,6 +362,14 @@ function TournamentManagement() {
               icon={<EyeOutlined />}
               onClick={() => openDetailModal(record)}
             />
+
+            <Tooltip title="View advancements">
+              <Button
+                type="text"
+                icon={<TrophyOutlined />}
+                onClick={() => openAdvancementsModal(record)}
+              />
+            </Tooltip>
 
             <Button
               className="tournament-management-link-btn"
@@ -574,6 +638,48 @@ function TournamentManagement() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`Advancements - ${advancementTournament?.title || ""}`}
+        open={Boolean(advancementTournament)}
+        footer={null}
+        width={850}
+        onCancel={() => {
+          setAdvancementTournament(null);
+          setAdvancements([]);
+        }}
+        destroyOnClose
+      >
+        <Table
+          rowKey="key"
+          loading={isAdvancementsLoading}
+          dataSource={advancements}
+          pagination={false}
+          locale={{ emptyText: "No horses have advanced yet" }}
+          columns={[
+            {
+              title: "Horse",
+              dataIndex: "horseName",
+              render: (value) => <Text strong>{value}</Text>,
+            },
+            {
+              title: "Color",
+              dataIndex: "horseColor",
+              width: 140,
+            },
+            {
+              title: "From Race",
+              dataIndex: "fromRaceName",
+            },
+            {
+              title: "Advanced At",
+              dataIndex: "advancedAt",
+              width: 180,
+              render: formatDateTime,
+            },
+          ]}
+        />
       </Modal>
 
       <Modal
