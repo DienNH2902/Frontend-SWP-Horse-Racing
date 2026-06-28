@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getRacesByTournament } from "../../api/services/race.service";
 import { getTournaments } from "../../api/services/tournament.service";
@@ -147,6 +147,7 @@ export default function LiveRaceChannels() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
+  const initialLoadStartedRef = useRef(false);
 
   const loadLiveRaces = useCallback(async () => {
     setIsLoading(true);
@@ -158,17 +159,9 @@ export default function LiveRaceChannels() {
         tournaments.map(async (tournament) => {
           const tournamentId = getId(tournament);
           if (!tournamentId) return [];
-          const responses = await Promise.allSettled(
-            ["Ongoing", "Finished"].map((status) =>
-              getRacesByTournament(tournamentId, status),
-            ),
-          );
-          return responses.flatMap((response) =>
-            response.status === "fulfilled"
-              ? resolveList(response.value).map((race, index) =>
-                  normalizeRace(race, tournament, index),
-                )
-              : [],
+          const response = await getRacesByTournament(tournamentId);
+          return resolveList(response).map((race, index) =>
+            normalizeRace(race, tournament, index),
           );
         }),
       );
@@ -212,6 +205,8 @@ export default function LiveRaceChannels() {
   }, []);
 
   useEffect(() => {
+    if (initialLoadStartedRef.current) return;
+    initialLoadStartedRef.current = true;
     loadLiveRaces();
   }, [loadLiveRaces]);
 

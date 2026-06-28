@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { Link, useParams } from "react-router-dom";
 import { getRaceById } from "../../api/services/race.service";
+import { getSimulationResult } from "../../api/services/simulation.service";
 import { getAccessToken } from "../../utils/storage";
 import "./Broadcast.css";
 
@@ -186,6 +187,27 @@ function normalizeResults(response) {
   return [];
 }
 
+const RESULT_RETRY_DELAYS_MS = [0, 300, 800, 1500];
+
+async function fetchPersistedResults(raceId) {
+  let latestResults = [];
+
+  for (const delay of RESULT_RETRY_DELAYS_MS) {
+    if (delay) {
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+    }
+
+    try {
+      latestResults = normalizeResults(await getSimulationResult(raceId));
+      if (latestResults.length) return latestResults;
+    } catch {
+      // The result may not be persisted yet when race_finished first arrives.
+    }
+  }
+
+  return latestResults;
+}
+
 function readCachedResults(raceId) {
   try {
     const cached = JSON.parse(
@@ -206,6 +228,15 @@ function saveCachedResults(raceId, results) {
     );
   } catch {
     // The API remains the primary persisted source when storage is unavailable.
+  }
+}
+
+function clearCachedResults(raceId) {
+  if (!raceId) return;
+  try {
+    window.localStorage.removeItem(`${RESULT_CACHE_PREFIX}${raceId}`);
+  } catch {
+    // A live socket session can continue even when storage is unavailable.
   }
 }
 
@@ -244,6 +275,7 @@ export default function Broadcast() {
   const requestedRaceRef = useRef("");
   const trackInitializedRef = useRef(false);
   const finishedRef = useRef(false);
+  const sessionVersionRef = useRef(0);
   const logIdRef = useRef(0);
 
   const addLog = useCallback((message, type = "system", eventType = "") => {
@@ -261,14 +293,29 @@ export default function Broadcast() {
   }, []);
 
   const resetRace = useCallback(() => {
+    sessionVersionRef.current += 1;
     activeRaceRef.current = "";
     requestedRaceRef.current = "";
     trackInitializedRef.current = false;
+    finishedRef.current = false;
     setJoinedRaceId("");
     setHorses([]);
     setCurrentTick(null);
     setIsCatchUp(false);
+    setIsFinished(false);
+    setResults([]);
   }, []);
+
+  const beginLiveSession = useCallback(() => {
+    // A race can be simulated again with the same raceId. Any incoming live
+    // frame is newer than the browser cache, even when the backend result was
+    // deleted outside this tab.
+    clearCachedResults(raceId);
+    sessionVersionRef.current += 1;
+    finishedRef.current = false;
+    setIsFinished(false);
+    setResults([]);
+  }, [raceId]);
 
   const initializeTrack = useCallback((horseList) => {
     if (!Array.isArray(horseList) || !horseList.length) return;
@@ -375,12 +422,12 @@ export default function Broadcast() {
     });
 
     socket.on("race_snapshot", (data) => {
-      if (finishedRef.current || !Array.isArray(data?.horses)) return;
-      finishedRef.current = false;
-      setIsFinished(false);
-      setResults([]);
+      if (!Array.isArray(data?.horses)) return;
 
-      if (!trackInitializedRef.current) initializeTrack(data.horses);
+      if (finishedRef.current || !trackInitializedRef.current) {
+        beginLiveSession();
+        initializeTrack(data.horses);
+      }
       updateTrack(data.horses, true);
       setCurrentTick(data.tickNumber);
       setIsCatchUp(true);
@@ -391,13 +438,18 @@ export default function Broadcast() {
     });
 
     socket.on("race_tick", (frame) => {
-      if (finishedRef.current || !Array.isArray(frame?.horses)) return;
+      if (!Array.isArray(frame?.horses)) return;
 
-      // A regular race creates lanes exactly once, from tick zero.
-      if (frame.tickNumber === 0 && !trackInitializedRef.current) {
+      // A live tick is authoritative evidence of a running simulation. The
+      // extra checks cover both a rerun with the same raceId and joining after
+      // tick zero when no snapshot was delivered.
+      if (
+        frame.tickNumber === 0 ||
+        finishedRef.current ||
+        !trackInitializedRef.current
+      ) {
+        beginLiveSession();
         initializeTrack(frame.horses);
-        setResults([]);
-        setIsFinished(false);
       }
 
       if (!trackInitializedRef.current) return;
@@ -431,7 +483,8 @@ export default function Broadcast() {
       );
     });
 
-    socket.on("race_finished", (data) => {
+    socket.on("race_finished", async (data) => {
+      const finishedSessionVersion = sessionVersionRef.current;
       finishedRef.current = true;
       setIsFinished(true);
       setIsCatchUp(false);
@@ -439,10 +492,24 @@ export default function Broadcast() {
       const sortedResults = normalizeResults(data?.results || data);
       setResults(sortedResults);
       saveCachedResults(raceId, sortedResults);
+      try {
+        const simulationResults = await fetchPersistedResults(raceId);
+        if (
+          simulationResults.length &&
+          finishedRef.current &&
+          sessionVersionRef.current === finishedSessionVersion
+        ) {
+          setResults(simulationResults);
+          saveCachedResults(raceId, simulationResults);
+        }
+      } catch {
+        // Keep the socket result when the persisted simulation is unavailable.
+      }
       addLog(`Race kết thúc · nhận ${sortedResults.length} kết quả`, "finish");
     });
   }, [
     addLog,
+    beginLiveSession,
     host,
     initializeTrack,
     raceId,
