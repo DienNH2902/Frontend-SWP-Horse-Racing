@@ -29,8 +29,6 @@ import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
 import RefereeTournamentList from "../pages/referee/RefereeTournamentList";
 import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
-import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
-import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
 import RefereeResultReview from "../pages/referee/RefereeResultReview";
 import RefereeFinalResults from "../pages/referee/RefereeFinalResults";
 import RoleHome from "../pages/RoleHome";
