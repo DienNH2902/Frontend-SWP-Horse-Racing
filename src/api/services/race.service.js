@@ -97,15 +97,3 @@ export const assignRaceCourse = async (raceId, raceCourseId) => {
 
     return response.data;
 };
-
-export const bulkAssignRaceHorses = async (raceId, registrationIds) => {
-    const response = await apiClient.post(
-        RACE_ENDPOINTS.BULK_ASSIGN_HORSES(raceId),
-        { registrationIds },
-        {
-            includeAuth: true,
-        }
-    );
-
-    return response.data;
-};

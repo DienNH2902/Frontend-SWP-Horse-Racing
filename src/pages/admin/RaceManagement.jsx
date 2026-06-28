@@ -13,7 +13,6 @@ import {
   message,
 } from "antd";
 import {
-  AppstoreAddOutlined,
   EyeOutlined,
   FieldTimeOutlined,
   FlagOutlined,
@@ -23,14 +22,16 @@ import "antd/dist/reset.css";
 import {
   assignRaceCourse,
   assignRaceReferee,
-  bulkAssignRaceHorses,
   createRaceBatch,
   createRound2Race,
   getRaceById,
   getRacesByTournament,
 } from "../../api/services/race.service";
 import { getHorseById } from "../../api/services/horse.service";
-import { getRaceCourseById } from "../../api/services/race-course.service";
+import {
+  getRaceCourseById,
+  getRaceCourses,
+} from "../../api/services/race-course.service";
 import { getTournaments } from "../../api/services/tournament.service";
 import {
   getUserById,
@@ -260,23 +261,16 @@ function normalizeTournamentOption(item, index) {
   };
 }
 
-function parseRegistrationIds(value = "") {
-  return value
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function RaceManagement() {
   const [searchForm] = Form.useForm();
   const [batchForm] = Form.useForm();
   const [round2Form] = Form.useForm();
   const [refereeForm] = Form.useForm();
   const [raceCourseForm] = Form.useForm();
-  const [horsesForm] = Form.useForm();
 
   const [races, setRaces] = useState([]);
   const [referees, setReferees] = useState([]);
+  const [raceCourses, setRaceCourses] = useState([]);
   const [raceCoursesById, setRaceCoursesById] = useState({});
   const [tournaments, setTournaments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -287,7 +281,6 @@ function RaceManagement() {
   const [isRound2ModalOpen, setIsRound2ModalOpen] = useState(false);
   const [assigningRefereeRace, setAssigningRefereeRace] = useState(null);
   const [assigningCourseRace, setAssigningCourseRace] = useState(null);
-  const [assigningHorsesRace, setAssigningHorsesRace] = useState(null);
 
   async function loadReferees() {
     try {
@@ -295,6 +288,36 @@ function RaceManagement() {
       setReferees(resolveList(response).map(normalizeReferee));
     } catch (error) {
       message.error(error?.message || "Unable to load referees");
+    }
+  }
+
+  async function loadRaceCourses() {
+    try {
+      const response = await getRaceCourses();
+      const courses = resolveList(response);
+      const options = courses.map((course, index) => {
+        const id = getId(course, `race-course-${index}`);
+        const name = getRaceCourseName(course) || "Unnamed race course";
+        const location = course?.location ? ` - ${course.location}` : "";
+
+        return {
+          label: `${name}${location}`,
+          value: id,
+        };
+      });
+
+      setRaceCourses(options);
+      setRaceCoursesById((current) => ({
+        ...current,
+        ...Object.fromEntries(
+          courses.map((course, index) => [
+            getId(course, `race-course-${index}`),
+            getRaceCourseName(course) || "N/A",
+          ]),
+        ),
+      }));
+    } catch (error) {
+      message.error(error?.message || "Unable to load race courses");
     }
   }
 
@@ -377,6 +400,7 @@ function RaceManagement() {
 
   useEffect(() => {
     loadReferees();
+    loadRaceCourses();
     loadTournaments();
   }, []);
 
@@ -438,13 +462,8 @@ function RaceManagement() {
     setAssigningCourseRace(record);
     raceCourseForm.resetFields();
     raceCourseForm.setFieldsValue({
-      raceCourseId: record.raceCourseId || "",
+      raceCourseId: record.raceCourseId || undefined,
     });
-  }
-
-  function openBulkAssignHorsesModal(record) {
-    setAssigningHorsesRace(record);
-    horsesForm.resetFields();
   }
 
   async function handleCreateBatch() {
@@ -521,30 +540,6 @@ function RaceManagement() {
       await loadRaces();
     } catch (error) {
       message.error(error?.message || "Unable to assign race course");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleBulkAssignHorses() {
-    const values = await horsesForm.validateFields();
-    const registrationIds = parseRegistrationIds(values.registrationIds);
-
-    if (registrationIds.length === 0) {
-      message.error("Please enter at least one registration");
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      await bulkAssignRaceHorses(assigningHorsesRace.id, registrationIds);
-      message.success("Horses assigned");
-      setAssigningHorsesRace(null);
-      horsesForm.resetFields();
-      await loadRaces();
-    } catch (error) {
-      message.error(error?.message || "Unable to assign horses");
     } finally {
       setIsSaving(false);
     }
@@ -655,11 +650,6 @@ function RaceManagement() {
               onClick={() => openAssignRaceCourseModal(record)}
             />
 
-            <Button
-              type="text"
-              icon={<AppstoreAddOutlined />}
-              onClick={() => openBulkAssignHorsesModal(record)}
-            />
           </Space>
         ),
       },
@@ -1010,31 +1000,12 @@ function RaceManagement() {
             name="raceCourseId"
             rules={[{ required: true, message: "Race course is required" }]}
           >
-            <Input placeholder="Enter race course" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title="Bulk Assign Horses"
-        open={Boolean(assigningHorsesRace)}
-        okText="Assign"
-        cancelText="Cancel"
-        confirmLoading={isSaving}
-        onOk={handleBulkAssignHorses}
-        onCancel={() => setAssigningHorsesRace(null)}
-      >
-        <Form form={horsesForm} layout="vertical">
-          <Form.Item
-            label="Registrations"
-            name="registrationIds"
-            rules={[
-              { required: true, message: "Registrations are required" },
-            ]}
-          >
-            <Input.TextArea
-              rows={6}
-              placeholder={"one registration per line\nor,separate,by,comma"}
+            <Select
+              showSearch
+              placeholder="Select race course"
+              optionFilterProp="label"
+              options={raceCourses}
+              notFoundContent="No race courses found"
             />
           </Form.Item>
         </Form>
