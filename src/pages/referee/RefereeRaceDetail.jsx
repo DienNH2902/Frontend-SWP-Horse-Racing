@@ -57,6 +57,7 @@ import {
 import {
     getRawResults,
     getFinalResults,
+    confirmRawResults,
 } from "../../api/services/rawResult.service";
 
 import {
@@ -181,8 +182,17 @@ export default function RefereeRaceDetail() {
     const [rawResults, setRawResults] =
         useState([]);
 
+    const [confirmLoading, setConfirmLoading] =
+        useState(false);
+
     const [finalResults, setFinalResults] =
         useState([]);
+
+    const [disqualifiedHorseIds, setDisqualifiedHorseIds] =
+        useState([]);
+
+    const [confirmingResult, setConfirmingResult] =
+        useState(false);
 
     const [loading, setLoading] =
         useState(true);
@@ -224,6 +234,19 @@ export default function RefereeRaceDetail() {
             setLoading(true);
 
             const raceData = await getRaceById(id);
+            console.log(raceData);
+
+            console.log("Race Data:", raceData);
+
+            console.log(
+                "Referee ID:",
+                raceData.refereeId
+            );
+
+            console.log(
+                "Race Course ID:",
+                raceData.raceCourseId
+            );
 
             setRace(raceData);
 
@@ -238,6 +261,9 @@ export default function RefereeRaceDetail() {
                 );
 
             setParticipants(raceParticipants);
+
+            console.log(raceParticipants.length);
+            console.log(raceParticipants);
 
             const promises = [];
 
@@ -270,9 +296,10 @@ export default function RefereeRaceDetail() {
             );
 
             promises.push(
-                getRawResults(id).catch(
-                    () => []
-                )
+                getRawResults(id).catch(error => {
+                    console.error("Raw Result", error);
+                    return [];
+                })
             );
 
             promises.push(
@@ -282,11 +309,12 @@ export default function RefereeRaceDetail() {
             );
 
             promises.push(
-                getBroadcastStatus(id).catch(() => null)
+                getBroadcastStatus(id).catch(
+                    () => null
+                )
             );
 
             const [
-                usersData,
                 refereeData,
                 raceCourseData,
                 conditionData,
@@ -294,6 +322,9 @@ export default function RefereeRaceDetail() {
                 finalResultsData,
                 broadcastData,
             ] = await Promise.all(promises);
+
+            console.log("Referee:", refereeData);
+            console.log("Race Course:", raceCourseData);
 
             setReferee(refereeData);
             setRaceCourse(raceCourseData);
@@ -378,9 +409,72 @@ export default function RefereeRaceDetail() {
                 new Date(value).toLocaleString(),
         },
         {
-            title: "Status",
-            dataIndex: "status",
-            render: renderResultStatus
+            title: "Result",
+            render: (_, record) => {
+
+                const checked =
+                    disqualifiedHorseIds.includes(
+                        record.horseId
+                    );
+
+                return (
+                    <Select
+                        value={
+                            checked
+                                ? "Disqualified"
+                                : "Qualified"
+                        }
+                        style={{
+                            width: 160,
+                        }}
+                        onChange={(value) => {
+
+                            if (
+                                value ===
+                                "Disqualified"
+                            ) {
+
+                                setDisqualifiedHorseIds(
+                                    (
+                                        prev
+                                    ) => [
+                                            ...prev,
+                                            record.horseId,
+                                        ]
+                                );
+
+                            } else {
+
+                                setDisqualifiedHorseIds(
+                                    (
+                                        prev
+                                    ) =>
+                                        prev.filter(
+                                            (
+                                                id
+                                            ) =>
+                                                id !==
+                                                record.horseId
+                                        )
+                                );
+
+                            }
+
+                        }}
+                        options={[
+                            {
+                                value:
+                                    "Qualified",
+                            },
+                            {
+                                value:
+                                    "Disqualified",
+                            },
+                        ]}
+                    />
+                );
+
+            },
         },
     ];
 
@@ -567,6 +661,47 @@ export default function RefereeRaceDetail() {
                 setReportLoading(false);
             }
         };
+
+    const handleConfirmFinalResult = async () => {
+
+        try {
+
+            setConfirmLoading(true);
+
+            console.log("Race:", id);
+
+            console.log(disqualifiedHorseIds);
+
+            const result =
+                await confirmRawResults(
+                    id,
+                    disqualifiedHorseIds
+                );
+
+            console.log(result);
+
+            message.success(result.message);
+
+            setFinalResults(result.finalRankings);
+
+            await loadData();
+
+        } catch (error) {
+
+            console.log(error.response?.data);
+
+            message.error(
+                error.response?.data?.message ??
+                "Cannot confirm result."
+            );
+
+        } finally {
+
+            setConfirmLoading(false);
+
+        }
+
+    };
 
     if (loading) {
         return (
@@ -942,12 +1077,31 @@ export default function RefereeRaceDetail() {
                             key: "raw",
                             label: "Raw Results",
                             children: (
-                                <Table
-                                    rowKey="_id"
-                                    columns={rawColumns}
-                                    dataSource={rawResults}
-                                    pagination={false}
-                                />
+                                <>
+                                    <Table
+                                        rowKey="_id"
+                                        columns={rawColumns}
+                                        dataSource={rawResults}
+                                        pagination={false}
+                                    />
+
+                                    <div
+                                        style={{
+                                            marginTop: 16,
+                                            textAlign: "right",
+                                        }}
+                                    >
+                                        <Button
+                                            type="primary"
+                                            loading={confirmLoading}
+                                            onClick={
+                                                handleConfirmFinalResult
+                                            }
+                                        >
+                                            Confirm Final Result
+                                        </Button>
+                                    </div>
+                                </>
                             ),
                         },
                         {
