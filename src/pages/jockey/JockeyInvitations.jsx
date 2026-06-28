@@ -17,6 +17,8 @@ import {
   getJockeyInvitationContract,
   respondToJockeyInvitation,
 } from "../../api/services/jockey.service";
+import { getTournamentById } from "../../api/services/tournament.service";
+import { getUserById } from "../../api/services/user.service";
 
 const statusColor = {
   Pending: "gold",
@@ -26,6 +28,18 @@ const statusColor = {
 
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString("vi-VN")} VND`;
+}
+
+function formatContractDate(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function pickFirstValue(source, keys, fallback = "") {
@@ -38,18 +52,56 @@ function pickFirstValue(source, keys, fallback = "") {
   return fallback;
 }
 
+function getReferenceId(reference) {
+  if (!reference) return "";
+  if (typeof reference === "string") return reference;
+
+  return pickFirstValue(reference, ["id", "_id", "userId"], "");
+}
+
+function unwrapUser(response) {
+  return (
+    response?.data?.data ||
+    response?.data ||
+    response?.result ||
+    response?.user ||
+    response
+  );
+}
+
 function normalizeInvitation(invitation = {}) {
-  const owner = invitation.owner || invitation.ownerInfo || invitation.horseOwner || {};
+  const ownerReference =
+    invitation.owner ||
+    invitation.ownerInfo ||
+    invitation.horseOwner ||
+    invitation.horseOwnerInfo ||
+    invitation.ownerId ||
+    invitation.horseOwnerId ||
+    {};
+  const owner =
+    typeof ownerReference === "object" ? ownerReference : {};
   const horse = invitation.horse || invitation.horseInfo || {};
-  const tournament = invitation.tournament || invitation.tournamentInfo || {};
+  const tournamentReference =
+    invitation.tournament ||
+    invitation.tournamentInfo ||
+    invitation.tournamentId ||
+    {};
+  const tournament =
+    typeof tournamentReference === "object" ? tournamentReference : {};
 
   return {
     ...invitation,
     id: pickFirstValue(invitation, ["id", "_id", "invitationId"]),
+    ownerId:
+      getReferenceId(ownerReference) ||
+      pickFirstValue(invitation, ["ownerId", "horseOwnerId"], ""),
+    tournamentId:
+      getReferenceId(tournamentReference) ||
+      pickFirstValue(invitation, ["tournamentId"], ""),
     owner: pickFirstValue(
       invitation,
-      ["ownerName", "horseOwnerName"],
-      pickFirstValue(owner, ["fullName", "name"], "N/A"),
+      ["ownerName", "horseOwnerName", "ownerFullName", "horseOwnerFullName"],
+      pickFirstValue(owner, ["fullName", "name", "displayName"], "N/A"),
     ),
     horse: pickFirstValue(invitation, ["horseName"], pickFirstValue(horse, ["name", "horseName"], "N/A")),
     tournament: pickFirstValue(
@@ -67,6 +119,77 @@ function normalizeInvitation(invitation = {}) {
     jockeyCompensationRate: pickFirstValue(invitation, ["jockeyCompensationRate"], 0),
     sentAt: pickFirstValue(invitation, ["sentAt", "createdAt", "createdDate"], ""),
   };
+}
+
+async function resolveInvitationTournamentData(invitations) {
+  const tournamentCache = new Map();
+
+  return Promise.all(
+    invitations.map(async (invitation) => {
+      const needsTournament =
+        invitation.tournament === "N/A" || invitation.location === "N/A";
+
+      if (!needsTournament || !invitation.tournamentId) {
+        return invitation;
+      }
+
+      try {
+        if (!tournamentCache.has(invitation.tournamentId)) {
+          tournamentCache.set(
+            invitation.tournamentId,
+            getTournamentById(invitation.tournamentId),
+          );
+        }
+
+        const tournament = await tournamentCache.get(invitation.tournamentId);
+
+        return {
+          ...invitation,
+          tournament:
+            invitation.tournament !== "N/A"
+              ? invitation.tournament
+              : pickFirstValue(tournament, ["title", "name"], "N/A"),
+          location:
+            invitation.location !== "N/A"
+              ? invitation.location
+              : pickFirstValue(tournament, ["location", "venue"], "N/A"),
+        };
+      } catch {
+        return invitation;
+      }
+    }),
+  );
+}
+
+async function resolveInvitationOwnerNames(invitations) {
+  const ownerCache = new Map();
+
+  return Promise.all(
+    invitations.map(async (invitation) => {
+      if (invitation.owner !== "N/A" || !invitation.ownerId) {
+        return invitation;
+      }
+
+      try {
+        if (!ownerCache.has(invitation.ownerId)) {
+          ownerCache.set(invitation.ownerId, getUserById(invitation.ownerId));
+        }
+
+        const owner = unwrapUser(await ownerCache.get(invitation.ownerId));
+
+        return {
+          ...invitation,
+          owner: pickFirstValue(
+            owner,
+            ["fullName", "name", "displayName", "email"],
+            "N/A",
+          ),
+        };
+      } catch {
+        return invitation;
+      }
+    }),
+  );
 }
 
 function normalizeStatus(status) {
@@ -105,7 +228,9 @@ export default function JockeyInvitations() {
 
     try {
       const data = await getJockeyInvitations();
-      setInvitations(data.map(normalizeInvitation));
+      const normalized = data.map(normalizeInvitation);
+      const withOwners = await resolveInvitationOwnerNames(normalized);
+      setInvitations(await resolveInvitationTournamentData(withOwners));
     } catch (error) {
       setErrorMessage(error.message || "Could not load invitations.");
     } finally {
@@ -141,7 +266,12 @@ export default function JockeyInvitations() {
 
     try {
       const detail = await getJockeyInvitationById(invitation.id);
-      setSelectedDetail(normalizeInvitation(detail));
+      const detailsWithOwners = await resolveInvitationOwnerNames([
+        normalizeInvitation(detail),
+      ]);
+      const [resolvedDetail] =
+        await resolveInvitationTournamentData(detailsWithOwners);
+      setSelectedDetail(resolvedDetail);
     } catch (error) {
       messageApi.error(error.message || "Could not load invitation detail.");
     } finally {
@@ -154,7 +284,28 @@ export default function JockeyInvitations() {
 
     try {
       const contract = await getJockeyInvitationContract(invitation.id);
-      setSelectedContract(contract);
+      let jockeyName = "Jockey";
+
+      if (contract?.jockeyId) {
+        try {
+          const jockey = unwrapUser(await getUserById(contract.jockeyId));
+          jockeyName = pickFirstValue(
+            jockey,
+            ["fullName", "name", "displayName", "email"],
+            jockeyName,
+          );
+        } catch {
+          // The contract remains usable even if the user lookup fails.
+        }
+      }
+
+      setSelectedContract({
+        ...contract,
+        ownerName: invitation.owner,
+        jockeyName,
+        horseName: invitation.horse,
+        tournamentName: invitation.tournament,
+      });
     } catch (error) {
       messageApi.error(error.message || "Could not load invitation contract.");
     } finally {
@@ -168,9 +319,9 @@ export default function JockeyInvitations() {
       dataIndex: "tournament",
       render: (value, record) => (
         <Space direction="vertical" size={0}>
-          <Typography.Text strong>{value}</Typography.Text>
+          <Typography.Text strong>{record.owner}</Typography.Text>
           <Typography.Text type="secondary">
-            {record.owner} invited you to ride {record.horse}
+            {record.message}
           </Typography.Text>
         </Space>
       ),
@@ -319,22 +470,112 @@ export default function JockeyInvitations() {
       </Modal>
 
       <Modal
-        title="Invitation contract"
+        title={null}
         open={Boolean(selectedContract)}
         footer={null}
         onCancel={() => setSelectedContract(null)}
         destroyOnHidden
+        width={760}
       >
         {selectedContract && (
-          <Descriptions bordered column={1} size="small">
-            {Object.entries(selectedContract).map(([key, value]) => (
-              <Descriptions.Item key={key} label={key}>
-                {typeof value === "object" && value !== null
-                  ? JSON.stringify(value)
-                  : String(value ?? "N/A")}
-              </Descriptions.Item>
-            ))}
-          </Descriptions>
+          <div
+            style={{
+              overflow: "hidden",
+              border: "1px solid #ccefe7",
+              borderRadius: 12,
+              background: "#fff",
+            }}
+          >
+            <div
+              style={{
+                padding: "28px 30px",
+                color: "#fff",
+                background: "linear-gradient(135deg, #06332e, #087a6d)",
+                textAlign: "center",
+              }}
+            >
+              <Typography.Text
+                style={{
+                  color: "#69f8dd",
+                  fontSize: 12,
+                  fontWeight: 900,
+                  letterSpacing: 2,
+                }}
+              >
+                GOLDENHOOF OFFICIAL AGREEMENT
+              </Typography.Text>
+              <Typography.Title
+                level={2}
+                style={{ margin: "8px 0 12px", color: "#fff" }}
+              >
+                Jockey Service Contract
+              </Typography.Title>
+              <Tag color={selectedContract.status === "ACTIVE" ? "green" : "default"}>
+                {selectedContract.status || "N/A"}
+              </Tag>
+            </div>
+
+            <div style={{ padding: 28 }}>
+              <Typography.Title level={5}>Contract parties</Typography.Title>
+              <Descriptions bordered column={{ xs: 1, sm: 2 }} size="small">
+                <Descriptions.Item label="Horse Owner">
+                  <Typography.Text strong>
+                    {selectedContract.ownerName || "N/A"}
+                  </Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Jockey">
+                  <Typography.Text strong>
+                    {selectedContract.jockeyName || "N/A"}
+                  </Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Horse">
+                  {selectedContract.horseName || "N/A"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tournament">
+                  {selectedContract.tournamentName || "N/A"}
+                </Descriptions.Item>
+              </Descriptions>
+
+              <Typography.Title level={5} style={{ marginTop: 24 }}>
+                Financial terms
+              </Typography.Title>
+              <Descriptions bordered column={{ xs: 1, sm: 2 }} size="small">
+                <Descriptions.Item label="Contract Amount" span={2}>
+                  <Typography.Text strong style={{ color: "#087a6d", fontSize: 18 }}>
+                    {formatMoney(selectedContract.contractAmount)}
+                  </Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Owner Share">
+                  {selectedContract.ownerShareRate ?? 0}%
+                </Descriptions.Item>
+                <Descriptions.Item label="Jockey Share">
+                  {selectedContract.jockeyShareRate ?? 0}%
+                </Descriptions.Item>
+                <Descriptions.Item label="Owner Compensation">
+                  {selectedContract.ownerCompensationRate ?? 0}%
+                </Descriptions.Item>
+                <Descriptions.Item label="Jockey Compensation">
+                  {selectedContract.jockeyCompensationRate ?? 0}%
+                </Descriptions.Item>
+              </Descriptions>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  marginTop: 24,
+                  paddingTop: 18,
+                  borderTop: "1px solid #d9eee9",
+                  color: "#52726e",
+                  fontSize: 13,
+                }}
+              >
+                <span>Signed: {formatContractDate(selectedContract.signedAt)}</span>
+                <span>Contract ID: {selectedContract._id || "N/A"}</span>
+              </div>
+            </div>
+          </div>
         )}
       </Modal>
     </Space>

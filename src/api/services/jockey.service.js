@@ -246,7 +246,7 @@ export async function respondToJockeyInvitation(invitationId, status) {
 }
 
 export async function getJockeyInvitationContract(invitationId) {
-  const response = await apiClient.get(JOCKEY_INVITATION_ENDPOINTS.RESPOND(invitationId), {
+  const response = await apiClient.get(JOCKEY_INVITATION_ENDPOINTS.CONTRACT(invitationId), {
     includeAuth: true,
   });
 

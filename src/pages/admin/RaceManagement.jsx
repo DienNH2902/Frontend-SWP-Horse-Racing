@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Button,
+  DatePicker,
   Descriptions,
   Form,
   Input,
@@ -19,6 +20,7 @@ import {
   FlagOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
 import "antd/dist/reset.css";
 import {
   assignRaceCourse,
@@ -149,9 +151,14 @@ function buildStartDateTime(dateValue, timeValue) {
 }
 
 function normalizeRacePayload(race) {
+  const date = dayjs.isDayjs(race.date)
+    ? race.date.format("YYYY-MM-DD")
+    : race.date;
+
   return {
     ...race,
-    startTime: buildStartDateTime(race.date, race.startTime),
+    date,
+    startTime: buildStartDateTime(date, race.startTime),
   };
 }
 
@@ -389,7 +396,7 @@ function RaceManagement() {
       races: [
         {
           name: "Vong 1 - Race 1",
-          date: "",
+          date: null,
           startTime: "",
         },
       ],
@@ -401,7 +408,7 @@ function RaceManagement() {
     round2Form.resetFields();
     round2Form.setFieldsValue({
       tournamentId: searchForm.getFieldValue("tournamentId") || "",
-      date: "",
+      date: null,
       startTime: "",
     });
     setIsRound2ModalOpen(true);
@@ -472,13 +479,14 @@ function RaceManagement() {
 
   async function handleCreateRound2() {
     const values = await round2Form.validateFields();
+    const date = values.date.format("YYYY-MM-DD");
 
     setIsSaving(true);
 
     try {
       await createRound2Race(values.tournamentId, {
-        startTime: buildStartDateTime(values.date, values.startTime),
-        date: values.date,
+        startTime: buildStartDateTime(date, values.startTime),
+        date,
       });
       message.success("Round 2 race created");
       setIsRound2ModalOpen(false);
@@ -889,7 +897,11 @@ function RaceManagement() {
                       name={[name, "date"]}
                       rules={[{ required: true, message: "Date is required" }]}
                     >
-                      <Input placeholder="2026-07-15" />
+                      <DatePicker
+                        format="DD/MM/YYYY"
+                        placeholder="DD/MM/YYYY"
+                        style={{ width: "100%" }}
+                      />
                     </Form.Item>
 
                     <Form.Item
@@ -916,7 +928,7 @@ function RaceManagement() {
                   onClick={() =>
                     add({
                       name: `Vong 1 - Race ${fields.length + 1}`,
-                      date: "",
+                      date: null,
                       startTime: "",
                     })
                   }
@@ -957,7 +969,11 @@ function RaceManagement() {
             name="date"
             rules={[{ required: true, message: "Date is required" }]}
           >
-            <Input type="date" placeholder="2027-07-20" />
+            <DatePicker
+              format="DD/MM/YYYY"
+              placeholder="DD/MM/YYYY"
+              style={{ width: "100%" }}
+            />
           </Form.Item>
 
           <Form.Item

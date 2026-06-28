@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Button,
+  DatePicker,
   Form,
   Input,
   InputNumber,
@@ -12,13 +13,17 @@ import {
   Tag,
   Tooltip,
   Typography,
+  Upload,
   message,
 } from "antd";
 import {
   DeleteOutlined,
   EyeOutlined,
   TrophyOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import "antd/dist/reset.css";
 import {
   createTournament,
@@ -26,9 +31,12 @@ import {
   getTournamentAdvancements,
   getTournamentById,
   getTournaments,
+  uploadTournamentBanner,
   updateTournament,
   updateTournamentStatus,
 } from "../../api/services/tournament.service";
+
+dayjs.extend(customParseFormat);
 
 const { Title, Text } = Typography;
 
@@ -64,6 +72,29 @@ function formatDateTime(value) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
+}
+
+function toDatePickerValue(value) {
+  if (!value) return null;
+
+  const parsed =
+    dayjs(value, "DD/MM/YYYY", true).isValid()
+      ? dayjs(value, "DD/MM/YYYY", true)
+      : dayjs(value);
+
+  return parsed.isValid() ? parsed : null;
+}
+
+function getUploadedBannerUrl(response) {
+  if (typeof response === "string") return response;
+
+  return (
+    response?.imageUrl ||
+    response?.bannerUrl ||
+    response?.url ||
+    response?.path ||
+    ""
+  );
 }
 
 function normalizeAdvancement(item, index) {
@@ -142,6 +173,8 @@ function TournamentManagement() {
   const [filterStatus, setFilterStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const bannerUrl = Form.useWatch("imageUrl", form);
 
   const [isTournamentModalOpen, setIsTournamentModalOpen] = useState(false);
   const [editingTournament, setEditingTournament] = useState(null);
@@ -175,10 +208,7 @@ function TournamentManagement() {
     setEditingTournament(null);
     form.resetFields();
     form.setFieldsValue({
-      imageUrl: "",
-      totalRounds: 2,
       horsesPerRace: 8,
-      totalRaces: 2,
       entryFee: 500000,
     });
     setIsTournamentModalOpen(true);
@@ -213,12 +243,10 @@ function TournamentManagement() {
         title: tournament.title,
         description: tournament.description,
         imageUrl: tournament.imageUrl,
-        startDate: tournament.startDate,
-        endDate: tournament.endDate,
+        startDate: toDatePickerValue(tournament.startDate),
+        endDate: toDatePickerValue(tournament.endDate),
         location: tournament.location,
-        totalRounds: tournament.totalRounds,
         horsesPerRace: tournament.horsesPerRace,
-        totalRaces: tournament.totalRaces,
         entryFee: tournament.entryFee,
       });
     } catch (error) {
@@ -230,15 +258,26 @@ function TournamentManagement() {
 
   async function handleSaveTournament() {
     const values = await form.validateFields();
+    const payload = {
+      ...values,
+      startDate: values.startDate.format("DD/MM/YYYY"),
+      endDate: values.endDate.format("DD/MM/YYYY"),
+      ...(!editingTournament
+        ? {
+            totalRounds: 2,
+            totalRaces: 3,
+          }
+        : {}),
+    };
 
     setIsSaving(true);
 
     try {
       if (editingTournament) {
-        await updateTournament(editingTournament.id, values);
+        await updateTournament(editingTournament.id, payload);
         message.success("Tournament updated");
       } else {
-        await createTournament(values);
+        await createTournament(payload);
         message.success("Tournament created");
       }
 
@@ -250,6 +289,35 @@ function TournamentManagement() {
       message.error(error?.message || "Unable to save tournament");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleBannerUpload({ file, onSuccess, onError }) {
+    if (!file.type?.startsWith("image/")) {
+      const error = new Error("Banner must be an image file");
+      message.error(error.message);
+      onError(error);
+      return;
+    }
+
+    setIsUploadingBanner(true);
+
+    try {
+      const response = await uploadTournamentBanner(file);
+      const imageUrl = getUploadedBannerUrl(response);
+
+      if (!imageUrl) {
+        throw new Error("Upload response does not contain an image URL");
+      }
+
+      form.setFieldValue("imageUrl", imageUrl);
+      message.success("Tournament banner uploaded");
+      onSuccess(response);
+    } catch (error) {
+      message.error(error?.message || "Unable to upload tournament banner");
+      onError(error);
+    } finally {
+      setIsUploadingBanner(false);
     }
   }
 
@@ -568,8 +636,44 @@ function TournamentManagement() {
             <Input.TextArea rows={3} />
           </Form.Item>
 
-          <Form.Item label="Image URL" name="imageUrl">
-            <Input />
+          <Form.Item
+            label="Tournament Banner"
+            required
+          >
+            <Form.Item
+              name="imageUrl"
+              noStyle
+              rules={[{ required: true, message: "Tournament banner is required" }]}
+            >
+              <Input type="hidden" />
+            </Form.Item>
+            <Upload
+              accept="image/*"
+              customRequest={handleBannerUpload}
+              maxCount={1}
+              showUploadList={false}
+            >
+              <Button
+                icon={<UploadOutlined />}
+                loading={isUploadingBanner}
+              >
+                Upload Banner
+              </Button>
+            </Upload>
+            {bannerUrl ? (
+              <img
+                src={bannerUrl}
+                alt="Tournament banner preview"
+                style={{
+                  width: "100%",
+                  height: 150,
+                  display: "block",
+                  marginTop: 12,
+                  borderRadius: 8,
+                  objectFit: "cover",
+                }}
+              />
+            ) : null}
           </Form.Item>
 
           <Form.Item
@@ -577,7 +681,11 @@ function TournamentManagement() {
             name="startDate"
             rules={[{ required: true, message: "Start date is required" }]}
           >
-            <Input placeholder="dd/MM/yyyy" />
+            <DatePicker
+              format="DD/MM/YYYY"
+              placeholder="DD/MM/YYYY"
+              style={{ width: "100%" }}
+            />
           </Form.Item>
 
           <Form.Item
@@ -585,7 +693,11 @@ function TournamentManagement() {
             name="endDate"
             rules={[{ required: true, message: "End date is required" }]}
           >
-            <Input placeholder="dd/MM/yyyy" />
+            <DatePicker
+              format="DD/MM/YYYY"
+              placeholder="DD/MM/YYYY"
+              style={{ width: "100%" }}
+            />
           </Form.Item>
 
           <Form.Item
@@ -596,16 +708,20 @@ function TournamentManagement() {
             <Input />
           </Form.Item>
 
-          <Form.Item label="Total Rounds" name="totalRounds">
-            <InputNumber min={1} style={{ width: "100%" }} />
-          </Form.Item>
-
-          <Form.Item label="Horses Per Race" name="horsesPerRace">
-            <InputNumber min={1} style={{ width: "100%" }} />
-          </Form.Item>
-
-          <Form.Item label="Total Races" name="totalRaces">
-            <InputNumber min={1} style={{ width: "100%" }} />
+          <Form.Item
+            label="Horses Per Race"
+            name="horsesPerRace"
+            rules={[
+              { required: true, message: "Horses per race is required" },
+              {
+                type: "number",
+                min: 8,
+                max: 10,
+                message: "Horses per race must be between 8 and 10",
+              },
+            ]}
+          >
+            <InputNumber min={8} max={10} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Entry Fee" name="entryFee">
