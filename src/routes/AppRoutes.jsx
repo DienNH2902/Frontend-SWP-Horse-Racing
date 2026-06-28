@@ -128,6 +128,8 @@ export default function AppRoutes() {
         <Route path="/horses" element={<AllHorses />} />
         <Route path="/jockeys" element={<AllJockeys />} />
         <Route path="/race-results" element={<AllRaceResults />} />
+        <Route path="/spectator/broadcast" element={<LiveRaceChannels />} />
+        <Route path="/spectator/broadcast/:raceId" element={<Broadcast />} />
         <Route
           path="notification"
           element={<NotificationHistory allowedRole="Spectator" />}
@@ -143,14 +145,6 @@ export default function AppRoutes() {
         <Route
           path="/spectator/points-transaction"
           element={<PointsTransactionHistory allowedRole="Spectator" />}
-        />
-        <Route
-          path="/spectator/broadcast"
-          element={<LiveRaceChannels />}
-        />
-        <Route
-          path="/spectator/broadcast/:raceId"
-          element={<Broadcast />}
         />
       </Route>
 

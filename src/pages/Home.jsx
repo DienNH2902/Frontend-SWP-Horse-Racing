@@ -1323,31 +1323,46 @@ function Home() {
           font-size: 14px;
         }
 
-        .race-facts {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          margin-top: 14px;
-          color: #41605d;
-          font-size: 13px;
-          font-weight: 800;
-        }
-
-        .race-facts span {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-        }
-
-        .race-card img {
+        .race-preview {
+          position: relative;
           width: 100%;
-          height: 94px;
-          margin: 18px 0 0;
-          border-radius: 7px;
+          height: 148px;
+          margin: 18px 0 12px;
+          overflow: hidden;
+          border: 1px solid rgba(6, 103, 85, 0.12);
+          border-radius: 10px;
+          background: #dff5f0;
+          box-shadow: 0 10px 24px rgba(6, 51, 46, 0.12);
+        }
+
+        .race-preview::after {
+          position: absolute;
+          inset: 0;
+          content: "";
+          pointer-events: none;
+          background:
+            linear-gradient(180deg, transparent 58%, rgba(1, 31, 28, 0.28)),
+            linear-gradient(90deg, rgba(9, 78, 68, 0.08), transparent 45%);
+        }
+
+        .race-preview img {
+          width: 100%;
+          height: 100%;
+          display: block;
           object-fit: cover;
+          object-position: 50% 43%;
+          transform: scale(1.01);
+          transition: transform 280ms ease, filter 280ms ease;
+        }
+
+        .race-card:hover .race-preview img {
+          filter: saturate(1.06) contrast(1.03);
+          transform: scale(1.045);
         }
 
         .card-action {
+          display: grid;
+          place-items: center;
           width: 100%;
           min-height: 42px;
           margin-top: auto;
@@ -1357,6 +1372,51 @@ function Home() {
           background: #f3fffc;
           font-weight: 950;
           cursor: pointer;
+        }
+
+        .card-action.live-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          border-color: #0ba98f;
+          color: #fff;
+          background: linear-gradient(135deg, #16b99e, #078574);
+          box-shadow: 0 9px 20px rgba(10, 153, 130, 0.25);
+          text-decoration: none;
+          transition:
+            transform 180ms ease,
+            box-shadow 180ms ease,
+            filter 180ms ease;
+        }
+
+        .card-action.live-action::before {
+          width: 8px;
+          height: 8px;
+          flex: 0 0 8px;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+          content: "";
+          animation: live-action-pulse 1.2s ease-in-out infinite;
+        }
+
+        .card-action.live-action:hover {
+          color: #fff;
+          filter: brightness(1.08);
+          transform: translateY(-2px);
+          box-shadow: 0 13px 26px rgba(10, 153, 130, 0.34);
+        }
+
+        @keyframes live-action-pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.55;
+            transform: scale(0.72);
+          }
         }
 
         .dashboard-grid {
@@ -1839,12 +1899,10 @@ function Home() {
           </nav>
 
           <div className="home-actions">
-            {isSpectator && (
-              <Link className="home-live-btn" to="/spectator/broadcast">
-                <i aria-hidden="true" />
-                Live Broadcast
-              </Link>
-            )}
+            <Link className="home-live-btn" to="/spectator/broadcast">
+              <i aria-hidden="true" />
+              Live Broadcast
+            </Link>
             <div className="nav-dropdown-wrap">
               <button
                 className={`home-icon-btn notification-trigger ${
@@ -2078,22 +2136,14 @@ function Home() {
                     </div>
                     <h3>{race.name}</h3>
                     <span className="muted">{race.venue}</span>
-                    <div className="race-facts">
-                      <span>
-                        <Icon name="clock" size={15} />
-                        {race.distance}
-                      </span>
-                      <span>
-                        <Icon name="map" size={15} />
-                        {race.surface}
-                      </span>
-                    </div>
                     {race.status && (
-                      <img src={race.image} alt={`${race.name} race`} />
+                      <div className="race-preview">
+                        <img src={race.image} alt={`${race.name} race`} />
+                      </div>
                     )}
-                    {race.status && isSpectator ? (
+                    {race.status ? (
                       <Link
-                        className="card-action"
+                        className="card-action live-action"
                         to={`/spectator/broadcast/${encodeURIComponent(race.id)}`}
                       >
                         Watch Live

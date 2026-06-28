@@ -639,14 +639,12 @@ function Profile() {
             <span>GoldenHoof</span>
           </Link>
           <Space>
-            {userRole === "SPECTATOR" && (
-              <Button
-                className="profile-primary"
-                onClick={() => navigate("/spectator/broadcast")}
-              >
-                Live Broadcast
-              </Button>
-            )}
+            {/* <Button
+              className="profile-primary"
+              onClick={() => navigate("/spectator/broadcast")}
+            >
+              Live Broadcast
+            </Button> */}
             <Button
               className="profile-secondary"
               onClick={() => navigate("/home")}
@@ -720,7 +718,7 @@ function Profile() {
                 </div>
 
                 <div className="profile-content">
-                  {userRole === "SPECTATOR" && (
+                  {/* {userRole === "SPECTATOR" && (
                     <nav
                       className="spectator-profile-nav"
                       aria-label="Spectator features"
@@ -734,7 +732,7 @@ function Profile() {
                         <span>Theo dõi giao dịch điểm của bạn</span>
                       </Link>
                     </nav>
-                  )}
+                  )} */}
                   {/* --- KHU VỰC HIỂN THỊ STREAK STATUS --- */}
                   {streakData && (
                     <div className="streak-container">

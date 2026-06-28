@@ -1,4 +1,5 @@
 import { getRacesByTournament } from "./race.service";
+import { getRaceCourses } from "./race-course.service";
 import { getTournaments } from "./tournament.service";
 
 const delay = (value, ms = 180) =>
@@ -24,6 +25,21 @@ function getId(item) {
   return typeof value === "object" ? value?._id || value?.id : value;
 }
 
+function resolveRaceCourse(race, raceCoursesById) {
+  const populatedCourse =
+    [race?.raceCourse, race?.raceCourseId].find(
+      (value) => value && typeof value === "object",
+    ) || {};
+  const courseId =
+    getId(race?.raceCourseId) ||
+    getId(race?.raceCourse) ||
+    race?.raceCourseId ||
+    race?.raceCourse;
+  const fetchedCourse = raceCoursesById.get(String(courseId || "")) || {};
+
+  return { ...fetchedCourse, ...populatedCourse };
+}
+
 function formatRaceTime(race) {
   const startTime =
     race?.startTime || race?.startAt || race?.scheduledAt || race?.date;
@@ -40,12 +56,12 @@ function formatRaceTime(race) {
   return String(startTime);
 }
 
-function normalizeHomeRace(race, tournament, index) {
+function normalizeHomeRace(race, tournament, index, raceCourse) {
   const status = String(race?.status || "");
   const isOngoing = ["ongoing", "live", "in progress", "in_progress"].includes(
     status.trim().toLowerCase(),
   );
-  const course = race?.raceCourseId || race?.raceCourse || {};
+  const course = raceCourse || {};
   const distance = race?.distance ?? course?.distance;
   const distanceLabel = distance
     ? /(?:m|km)$/i.test(String(distance))
@@ -167,8 +183,8 @@ export async function getTopJockeys() {
   return delay(topJockeys);
 }
 
-function normalizeFinishedRace(race, tournament, index) {
-  const course = race?.raceCourseId || race?.raceCourse || {};
+function normalizeFinishedRace(race, tournament, index, raceCourse) {
+  const course = raceCourse || {};
   const results =
     race?.results ||
     race?.rankings ||
@@ -256,7 +272,16 @@ async function loadRaceCollections() {
   raceCollectionsExpiresAt = Date.now() + HOME_RACE_CACHE_MS;
   raceCollectionsPromise = (async () => {
     try {
-      const tournaments = resolveList(await getTournaments());
+      const [tournamentResponse, raceCourseResponse] = await Promise.all([
+        getTournaments(),
+        getRaceCourses().catch(() => []),
+      ]);
+      const tournaments = resolveList(tournamentResponse);
+      const raceCoursesById = new Map(
+        resolveList(raceCourseResponse)
+          .filter((course) => getId(course))
+          .map((course) => [String(getId(course)), course]),
+      );
       const responses = await Promise.allSettled(
         tournaments.map(async (tournament) => {
           const tournamentId = getId(tournament);
@@ -287,7 +312,14 @@ async function loadRaceCollections() {
               String(race?.status || "").trim().toLowerCase(),
             ),
           )
-          .map((race, index) => normalizeHomeRace(race, tournament, index)),
+          .map((race, index) =>
+            normalizeHomeRace(
+              race,
+              tournament,
+              index,
+              resolveRaceCourse(race, raceCoursesById),
+            ),
+          ),
       );
       const finished = groups.flatMap(({ tournament, races }) =>
         races
@@ -297,7 +329,12 @@ async function loadRaceCollections() {
             ),
           )
           .map((race, index) =>
-            normalizeFinishedRace(race, tournament, index),
+            normalizeFinishedRace(
+              race,
+              tournament,
+              index,
+              resolveRaceCourse(race, raceCoursesById),
+            ),
           ),
       );
 
