@@ -50,6 +50,7 @@ import AllHorses from "../pages/AllHorses";
 import AllJockeys from "../pages/AllJockeys";
 import AllRaceResults from "../pages/AllRaceResults";
 import { getAuthSession } from "../utils/storage";
+import AdminWithdrawalManagement from "../pages/admin/AdminWithdrawalManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -202,14 +203,8 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
-        <Route
-          path="/admin"
-          element={<AdminDashboardPage />}
-        />
-        <Route
-          path="/admin/dashboard"
-          element={<AdminDashboardPage />}
-        />
+        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         <Route
           path="/admin/users"
           element={
@@ -259,6 +254,15 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <RegistrationManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/withdrawal"
+          element={
+            <AdminLayout>
+              <AdminWithdrawalManagement />
             </AdminLayout>
           }
         />
@@ -314,9 +318,15 @@ export default function AppRoutes() {
 
           <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
 
-          <Route path="referee/races/:id/results" element={<RefereeResultReview />} />
+          <Route
+            path="referee/races/:id/results"
+            element={<RefereeResultReview />}
+          />
 
-          <Route path="referee/races/:id/final" element={<RefereeFinalResults />} />
+          <Route
+            path="referee/races/:id/final"
+            element={<RefereeFinalResults />}
+          />
 
           <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
         </Route>
