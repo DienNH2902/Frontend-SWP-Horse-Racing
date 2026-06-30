@@ -80,6 +80,7 @@ export default function NotificationHistory() {
     // Tài chính
     Deposit_success: { text: "Nạp tiền thành công", color: "cyan" },
     Deposit_failed: { text: "Nạp tiền thất bại", color: "volcano" },
+    Create_withdraw_success: { text: "Tạo đơn rút tiền thành công", color: "green" },
     Withdraw_success: { text: "Rút tiền thành công", color: "green" },
     Withdraw_failed: { text: "Rút tiền thất bại", color: "red" },
     Contract_paid: { text: "Thanh toán hợp đồng", color: "orange" },
