@@ -9,28 +9,31 @@ import {
   InputNumber,
   Form,
   Alert,
+  Input,
 } from "antd";
 import {
   ArrowLeftOutlined,
   WalletOutlined,
   DollarOutlined,
-  LockOutlined,
-  HistoryOutlined, // Import icon lịch sử
+  HistoryOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getProfile } from "../api/services/auth.service";
 import { createDepositPayment } from "../api/services/wallet.service";
+import { requestWithdrawal } from "../api/services/withdrawal.service";
 
 const { Text, Title, Paragraph } = Typography;
 
 export default function Wallet() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [form] = Form.useForm();
+  const [depositForm] = Form.useForm();
+  const [withdrawForm] = Form.useForm();
 
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [callbackStatus, setCallbackStatus] = useState(null);
 
   async function loadProfileData() {
@@ -65,6 +68,28 @@ export default function Wallet() {
       message.error(error?.message || "Deposit transaction error");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleWithdraw(values) {
+    setIsWithdrawing(true);
+    try {
+      const res = await requestWithdrawal({
+        bankName: values.bankName,
+        accountNumber: values.accountNumber,
+        accountName: values.accountName,
+        amount: values.amount,
+        content: values.content,
+      });
+      message.success(
+        res?.message || "Withdrawal request submitted successfully!",
+      );
+      withdrawForm.resetFields();
+      loadProfileData(); // Reload lại số dư sau khi tạo lệnh
+    } catch (error) {
+      message.error(error?.message || "Withdrawal transaction error");
+    } finally {
+      setIsWithdrawing(false);
     }
   }
 
@@ -181,6 +206,7 @@ export default function Wallet() {
           grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
           gap: 32px;
           margin-top: 24px;
+          align-items: stretch; /* Đảm bảo các cột kéo giãn bằng nhau */
         }
         @media (max-width: 500px) {
           .wallet-grid {
@@ -195,6 +221,20 @@ export default function Wallet() {
           backdrop-filter: blur(20px);
           box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
           padding: 12px;
+          display: flex;
+          flex-direction: column;
+        }
+        .action-card .ant-card-body {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        .action-card .ant-card-body > form {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          justify-content: space-between;
+          flex: 1;
         }
         .action-card .ant-card-head {
           border-bottom: 1px solid rgba(105, 248, 221, 0.15) !important;
@@ -206,29 +246,56 @@ export default function Wallet() {
           text-transform: uppercase;
         }
 
-        .wallet-input-number {
+        /* Đồng bộ màu text hiển thị trong các ô input sẫm màu */
+        .wallet-input-number, .wallet-text-input {
           width: 100% !important;
           background: rgba(0, 32, 28, 0.6) !important;
           border: 2px solid rgba(105, 248, 221, 0.25) !important;
           color: #ffffff !important;
           border-radius: 8px !important;
+        }
+        
+        .wallet-input-number {
           height: 50px !important;
           display: flex !important;
           align-items: center !important;
         }
-        .wallet-input-number input {
+        .wallet-input-number input, .wallet-text-input {
           color: #ffffff !important;
-          font-size: 18px !important;
-          font-weight: 700 !important;
+          font-size: 16px !important;
+          font-weight: 600 !important;
+        }
+        .wallet-input-number input {
           height: 46px !important;
         }
-        .wallet-input-number:hover, .wallet-input-number-focused {
+        .wallet-text-input {
+          padding: 10px 14px !important;
+        }
+        .wallet-text-input::placeholder {
+          color: rgba(255, 255, 255, 0.35) !important;
+        }
+        .wallet-input-number::placeholder {
+          color: rgba(255, 255, 255, 0.35) !important;
+        }
+        
+        /* Chỉnh màu text cho nhãn Addon Vạn năng (VND) */
+        .ant-input-number-group-addon {
+          background: rgba(0, 68, 60, 0.9) !important;
+          color: #69f8dd !important;
+          border: 2px solid rgba(105, 248, 221, 0.25) !important;
+          border-left: none !important;
+          font-weight: 700;
+        }
+
+        .wallet-input-number:hover, .wallet-input-number-focused,
+        .wallet-text-input:hover, .wallet-text-input:focus {
           border-color: #69f8dd !important;
+          box-shadow: none !important;
         }
         .input-label {
           color: #cdf5ee;
           font-size: 14px;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
           display: block;
           font-weight: 600;
         }
@@ -242,7 +309,7 @@ export default function Wallet() {
           font-size: 15px;
           letter-spacing: 1px;
           transition: all 0.2s ease;
-          margin-top: 16px;
+          margin-top: auto; /* Đẩy nút xuống sát đáy card */
         }
         .btn-deposit {
           background: #69f8dd !important;
@@ -254,10 +321,21 @@ export default function Wallet() {
           background: #86ffea !important;
           transform: scale(1.01);
         }
-        .btn-withdraw-disabled {
-          background: rgba(255, 255, 255, 0.05) !important;
-          border: 2px solid rgba(255, 255, 255, 0.1) !important;
-          color: rgba(244, 255, 251, 0.3) !important;
+        .btn-withdraw {
+          background: #ffb936 !important;
+          border: transparent !important;
+          color: #062724 !important;
+          box-shadow: 0 4px 12px rgba(255, 185, 54, 0.2);
+        }
+        .btn-withdraw:hover {
+          background: #ffca65 !important;
+          transform: scale(1.01);
+        }
+
+        /* Định dạng các ô báo lỗi của Form */
+        .ant-form-item-explain-error {
+          color: #ff7875 !important;
+          margin-top: 4px;
         }
 
         .wallet-loading-container {
@@ -314,7 +392,6 @@ export default function Wallet() {
             </Paragraph>
           </header>
 
-          {/* Gom cụm số dư và nút chuyển hướng lịch sử vào một Wrapper */}
           <div className="balance-section-wrapper">
             <div className="balance-widgets-group">
               {/* Real Balance */}
@@ -352,7 +429,6 @@ export default function Wallet() {
               </div>
             </div>
 
-            {/* NÚT ĐI TỚI TRANG LỊCH SỬ GIAO DỊCH */}
             <Button
               type="default"
               icon={<HistoryOutlined />}
@@ -373,45 +449,47 @@ export default function Wallet() {
             {/* BLOCK DEPOSIT */}
             <Card title="Deposit Funds" className="action-card">
               <Form
-                form={form}
+                form={depositForm}
                 layout="vertical"
                 onFinish={handleDeposit}
                 initialValues={{ amount: 50000 }}
               >
-                <span className="input-label">Deposit Amount (VND)</span>
-                <Form.Item
-                  name="amount"
-                  rules={[
-                    { required: true, message: "Please input amount" },
-                    {
-                      type: "number",
-                      min: 10000,
-                      message: "Minimum deposit is 10,000 VND",
-                    },
-                    {
-                      type: "number",
-                      max: 100000000,
-                      message: "Maximum deposit is 100,000,000 VND",
-                    },
-                  ]}
-                >
-                  <InputNumber
-                    controls={false}
-                    className="wallet-input-number"
-                    formatter={(value) =>
-                      `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-                    addonAfter="VND"
-                  />
-                </Form.Item>
+                <div>
+                  <span className="input-label">Deposit Amount (VND)</span>
+                  <Form.Item
+                    name="amount"
+                    rules={[
+                      { required: true, message: "Please input amount" },
+                      {
+                        type: "number",
+                        min: 10000,
+                        message: "Minimum deposit is 10,000 VND",
+                      },
+                      {
+                        type: "number",
+                        max: 100000000,
+                        message: "Maximum deposit is 100,000,000 VND",
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      controls={false}
+                      className="wallet-input-number"
+                      formatter={(value) =>
+                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }
+                      parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                      addonAfter="VND"
+                    />
+                  </Form.Item>
 
-                <div style={{ marginBottom: "16px" }}>
-                  <Text style={{ color: "#a3c2ba", fontSize: "13px" }}>
-                    * Payment gateway processes through{" "}
-                    <strong>VNPay Gateway Secure</strong>. Default sandbox bank
-                    entity: <strong>NCB Bank</strong>.
-                  </Text>
+                  <div style={{ marginBottom: "24px" }}>
+                    <Text style={{ color: "#a3c2ba", fontSize: "13px" }}>
+                      * Payment gateway processes through{" "}
+                      <strong>VNPay Gateway Secure</strong>. Default sandbox
+                      bank entity: <strong>NCB Bank</strong>.
+                    </Text>
+                  </div>
                 </div>
 
                 <Button
@@ -426,55 +504,112 @@ export default function Wallet() {
             </Card>
 
             {/* BLOCK WITHDRAW */}
-            <Card
-              title="Withdraw Money"
-              className="action-card"
-              style={{ opacity: 0.65 }}
-            >
-              <span className="input-label">Withdrawal Amount (VND)</span>
-              <InputNumber
-                className="wallet-input-number"
-                disabled
-                placeholder="0"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                }
-              />
-
-              <div
-                style={{
-                  marginTop: "20px",
-                  textAlign: "center",
-                  padding: "16px 0",
-                }}
+            <Card title="Withdraw Money" className="action-card">
+              <Form
+                form={withdrawForm}
+                layout="vertical"
+                onFinish={handleWithdraw}
               >
-                <Space direction="vertical" size="small">
-                  <LockOutlined
-                    style={{ fontSize: "28px", color: "#ffb936" }}
-                  />
-                  <Text
-                    style={{
-                      color: "#ffb936",
-                      fontWeight: "700",
-                      textTransform: "uppercase",
-                    }}
+                <div style={{ width: "100%" }}>
+                  <span className="input-label">Bank Name</span>
+                  <Form.Item
+                    name="bankName"
+                    rules={[
+                      { required: true, message: "Please enter bank name" },
+                    ]}
                   >
-                    Feature Coming Soon
-                  </Text>
-                  <Text style={{ color: "#a3c2ba", fontSize: "13px" }}>
-                    Withdraw system implementation is currently pending
-                    administrative payment profiles setup.
-                  </Text>
-                </Space>
-              </div>
+                    <Input
+                      placeholder="e.g. Vietcombank,  MBbank"
+                      className="wallet-text-input"
+                    />
+                  </Form.Item>
 
-              <Button
-                className="action-btn btn-withdraw-disabled"
-                disabled
-                icon={<LockOutlined />}
-              >
-                Withdraw Request
-              </Button>
+                  <span className="input-label">Account Number</span>
+                  <Form.Item
+                    name="accountNumber"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please enter account number",
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="e.g. 1023456789"
+                      className="wallet-text-input"
+                    />
+                  </Form.Item>
+
+                  <span className="input-label">Account Holder Name</span>
+                  <Form.Item
+                    name="accountName"
+                    rules={[
+                      { required: true, message: "Please enter account name" },
+                    ]}
+                  >
+                    <Input
+                      placeholder="e.g. NGUYEN VAN A"
+                      className="wallet-text-input"
+                    />
+                  </Form.Item>
+
+                  <span className="input-label">Withdrawal Amount (VND)</span>
+                  <Form.Item
+                    name="amount"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please input withdrawal amount",
+                      },
+                      {
+                        type: "number",
+                        min: 1000,
+                        message: "Minimum withdrawal is 1,000 VND",
+                      },
+                      {
+                        validator: (_, value) => {
+                          if (value && value > (profile?.balance || 0)) {
+                            return Promise.reject(
+                              new Error("Insufficient available balance"),
+                            );
+                          }
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      controls={false}
+                      className="wallet-input-number"
+                      placeholder="Enter amount"
+                      formatter={(value) =>
+                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }
+                      parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                      addonAfter="VND"
+                    />
+                  </Form.Item>
+
+                  <span className="input-label">Notes / Description</span>
+                  <Form.Item name="content">
+                    <Input.TextArea
+                      placeholder="Reason for withdrawal request..."
+                      className="wallet-text-input"
+                      rows={2}
+                      style={{ resize: "none" }}
+                    />
+                  </Form.Item>
+                </div>
+
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  className="action-btn btn-withdraw"
+                  loading={isWithdrawing}
+                >
+                  Withdraw Request
+                </Button>
+              </Form>
             </Card>
           </div>
         )}
