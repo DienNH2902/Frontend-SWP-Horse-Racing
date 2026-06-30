@@ -157,10 +157,7 @@ function AdminLayout({ children }) {
 
           <Link
             className={`admin-nav-item ${
-              isActive("/admin") ||
-              isActive("/admin/dashboard")
-                ? "active"
-                : ""
+              isActive("/admin") || isActive("/admin/dashboard") ? "active" : ""
             }`}
             to="/admin/dashboard"
           >
@@ -192,6 +189,15 @@ function AdminLayout({ children }) {
             to="/admin/reward"
           >
             Reward Management
+          </Link>
+
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/withdrawal") ? "active" : ""
+            }`}
+            to="/admin/withdrawal"
+          >
+            Withdrawal Management
           </Link>
 
           <Link
