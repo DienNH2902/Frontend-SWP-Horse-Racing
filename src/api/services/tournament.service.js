@@ -61,6 +61,24 @@ export async function updateTournament(id, payload) {
     return unwrapData(response);
 }
 
+export async function uploadTournamentBanner(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await apiClient.post(
+        TOURNAMENT_ENDPOINTS.UPLOAD_BANNER,
+        formData,
+        {
+            includeAuth: true,
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }
+    );
+
+    return unwrapData(response);
+}
+
 export async function deleteTournament(id) {
     const response = await apiClient.delete(
         TOURNAMENT_ENDPOINTS.DETAIL(id),
@@ -85,11 +103,11 @@ export async function updateTournamentStatus(id, status) {
 }
 
 export async function getTournamentById(id) {
-  const response = await apiClient.get(TOURNAMENT_ENDPOINTS.DETAIL(id), {
-    includeAuth: true,
-  });
+    const response = await apiClient.get(TOURNAMENT_ENDPOINTS.DETAIL(id), {
+        includeAuth: true,
+    });
 
-  return unwrapData(response);
+    return unwrapData(response);
 }
 
 export async function getTournamentAdvancements(id) {
@@ -101,4 +119,14 @@ export async function getTournamentAdvancements(id) {
   );
 
   return unwrapCollection(response);
+}
+export async function getTournamentParticipants(tournamentId) {
+    const response = await apiClient.get(
+        TOURNAMENT_ENDPOINTS.PARTICIPANTS(tournamentId),
+        {
+            includeAuth: true,
+        }
+    );
+
+    return unwrapCollection(response);
 }

@@ -16,6 +16,17 @@ import {
   markNotificationAsRead,
 } from "../api/services/notification.service";
 
+function formatRaceDateTime(value, fallback = "TBA") {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function Icon({ name, size = 24 }) {
   const common = {
     width: size,
@@ -306,12 +317,29 @@ function normalizeHomeJockey(jockey = {}, index = 0) {
   };
 }
 
+const HOME_DIRECTORY_CACHE_MS = 30_000;
+let homeDirectoryPromise = null;
+let homeDirectoryExpiresAt = 0;
+
+function loadHomeDirectories() {
+  if (homeDirectoryPromise && Date.now() < homeDirectoryExpiresAt) {
+    return homeDirectoryPromise;
+  }
+
+  homeDirectoryExpiresAt = Date.now() + HOME_DIRECTORY_CACHE_MS;
+  homeDirectoryPromise = Promise.allSettled([
+    getHorses(),
+    getUsersByRole("Jockey"),
+  ]);
+  return homeDirectoryPromise;
+}
+
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
-  const [isAllHorsesOpen, setIsAllHorsesOpen] = useState(false);
   const [selectedHorse, setSelectedHorse] = useState(null);
+  const [selectedRace, setSelectedRace] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [horseSortBy, setHorseSortBy] = useState("winRate");
   const [minHorseWinRate, setMinHorseWinRate] = useState("");
@@ -321,7 +349,6 @@ function Home() {
     races: [],
     horses: [],
     jockeys: [],
-    standings: [],
     results: [],
     predictors: [],
   });
@@ -330,55 +357,46 @@ function Home() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.allSettled([getHomePageData(), getHorses(), getUsersByRole("Jockey")])
-      .then(([homeResult, horsesResult, jockeysResult]) => {
-        if (isMounted) {
-          const data =
-            homeResult.status === "fulfilled"
-              ? homeResult.value
-              : {
-                  races: [],
-                  horses: [],
-                  jockeys: [],
-                  standings: [],
-                  results: [],
-                  predictors: [],
-                };
-          const apiHorses =
-            horsesResult.status === "fulfilled" &&
-            Array.isArray(horsesResult.value)
-              ? horsesResult.value.map(normalizeHomeHorse)
-              : data.horses.map(normalizeHomeHorse);
-          const apiJockeys =
-            jockeysResult.status === "fulfilled" &&
-            Array.isArray(jockeysResult.value)
-              ? jockeysResult.value
-                  .map(normalizeHomeJockey)
-                  .filter((jockey) =>
-                    ALLOWED_JOCKEY_STATUSES.has(
-                      String(jockey.status).toLowerCase(),
-                    ),
-                  )
-              : data.jockeys.map(normalizeHomeJockey);
-
-          setHomeData({
-            ...data,
-            horses: apiHorses.map((horse, index) => ({
-              ...horse,
-              rank: index + 1,
-            })),
-            jockeys: apiJockeys.map((jockey, index) => ({
-              ...jockey,
-              rank: index + 1,
-            })),
-          });
-        }
+    getHomePageData()
+      .then((data) => {
+        if (!isMounted) return;
+        setHomeData((current) => ({ ...current, ...data }));
+      })
+      .catch(() => {
+        // Each directory below still renders independently when race data fails.
       })
       .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       });
+
+    loadHomeDirectories().then(([horsesResult, jockeysResult]) => {
+      if (!isMounted) return;
+      const horses =
+        horsesResult.status === "fulfilled" &&
+        Array.isArray(horsesResult.value)
+          ? horsesResult.value.map(normalizeHomeHorse)
+          : [];
+      const jockeys =
+        jockeysResult.status === "fulfilled" &&
+        Array.isArray(jockeysResult.value)
+          ? jockeysResult.value
+              .map(normalizeHomeJockey)
+              .filter((jockey) =>
+                ALLOWED_JOCKEY_STATUSES.has(
+                  String(jockey.status).toLowerCase(),
+                ),
+              )
+          : [];
+
+      setHomeData((current) => ({
+        ...current,
+        horses: horses.map((horse, index) => ({ ...horse, rank: index + 1 })),
+        jockeys: jockeys.map((jockey, index) => ({
+          ...jockey,
+          rank: index + 1,
+        })),
+      }));
+    });
 
     return () => {
       isMounted = false;
@@ -585,6 +603,30 @@ function Home() {
           display: flex;
           align-items: center;
           gap: 14px;
+        }
+
+        .home-live-btn {
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 0 13px;
+          border: 1px solid rgba(105, 248, 221, 0.55);
+          border-radius: 8px;
+          color: #06332e;
+          background: #69f8dd;
+          font-size: 12px;
+          font-weight: 950;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
+        .home-live-btn i {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #dc2626;
+          box-shadow: 0 0 8px #ef4444;
         }
 
         .home-icon-btn {
@@ -1062,6 +1104,68 @@ function Home() {
           overflow-y: auto;
         }
 
+        .race-detail-hero {
+          position: relative;
+          min-height: 220px;
+          display: flex;
+          align-items: flex-end;
+          overflow: hidden;
+          padding: 24px;
+          border-radius: 8px;
+          color: #f4fffb;
+          background:
+            linear-gradient(0deg, rgba(0, 45, 40, 0.92), rgba(0, 45, 40, 0.1)),
+            var(--race-detail-image) center / cover;
+        }
+
+        .race-detail-hero h4 {
+          margin: 8px 0 0;
+          color: #fff;
+          font-size: clamp(25px, 4vw, 38px);
+          font-weight: 950;
+        }
+
+        .race-detail-status {
+          display: inline-flex;
+          padding: 6px 9px;
+          border-radius: 999px;
+          color: #06332e;
+          background: #69f8dd;
+          font-size: 11px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .race-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          margin-top: 16px;
+        }
+
+        .race-detail-item {
+          display: grid;
+          gap: 6px;
+          min-height: 78px;
+          align-content: center;
+          padding: 13px;
+          border: 1px solid #d9f3ed;
+          border-radius: 8px;
+          background: #fafffe;
+        }
+
+        .race-detail-item span {
+          color: #6a817e;
+          font-size: 11px;
+          font-weight: 850;
+          text-transform: uppercase;
+        }
+
+        .race-detail-item strong {
+          color: #06332e;
+          font-size: 14px;
+        }
+
         .horse-profile {
           display: grid;
           grid-template-columns: 280px 1fr;
@@ -1219,31 +1323,46 @@ function Home() {
           font-size: 14px;
         }
 
-        .race-facts {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          margin-top: 14px;
-          color: #41605d;
-          font-size: 13px;
-          font-weight: 800;
-        }
-
-        .race-facts span {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-        }
-
-        .race-card img {
+        .race-preview {
+          position: relative;
           width: 100%;
-          height: 94px;
-          margin: 18px 0 0;
-          border-radius: 7px;
+          height: 148px;
+          margin: 18px 0 12px;
+          overflow: hidden;
+          border: 1px solid rgba(6, 103, 85, 0.12);
+          border-radius: 10px;
+          background: #dff5f0;
+          box-shadow: 0 10px 24px rgba(6, 51, 46, 0.12);
+        }
+
+        .race-preview::after {
+          position: absolute;
+          inset: 0;
+          content: "";
+          pointer-events: none;
+          background:
+            linear-gradient(180deg, transparent 58%, rgba(1, 31, 28, 0.28)),
+            linear-gradient(90deg, rgba(9, 78, 68, 0.08), transparent 45%);
+        }
+
+        .race-preview img {
+          width: 100%;
+          height: 100%;
+          display: block;
           object-fit: cover;
+          object-position: 50% 43%;
+          transform: scale(1.01);
+          transition: transform 280ms ease, filter 280ms ease;
+        }
+
+        .race-card:hover .race-preview img {
+          filter: saturate(1.06) contrast(1.03);
+          transform: scale(1.045);
         }
 
         .card-action {
+          display: grid;
+          place-items: center;
           width: 100%;
           min-height: 42px;
           margin-top: auto;
@@ -1253,6 +1372,51 @@ function Home() {
           background: #f3fffc;
           font-weight: 950;
           cursor: pointer;
+        }
+
+        .card-action.live-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          border-color: #0ba98f;
+          color: #fff;
+          background: linear-gradient(135deg, #16b99e, #078574);
+          box-shadow: 0 9px 20px rgba(10, 153, 130, 0.25);
+          text-decoration: none;
+          transition:
+            transform 180ms ease,
+            box-shadow 180ms ease,
+            filter 180ms ease;
+        }
+
+        .card-action.live-action::before {
+          width: 8px;
+          height: 8px;
+          flex: 0 0 8px;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+          content: "";
+          animation: live-action-pulse 1.2s ease-in-out infinite;
+        }
+
+        .card-action.live-action:hover {
+          color: #fff;
+          filter: brightness(1.08);
+          transform: translateY(-2px);
+          box-shadow: 0 13px 26px rgba(10, 153, 130, 0.34);
+        }
+
+        @keyframes live-action-pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.55;
+            transform: scale(0.72);
+          }
         }
 
         .dashboard-grid {
@@ -1414,6 +1578,10 @@ function Home() {
           grid-template-columns: 1fr 1.15fr;
           gap: 20px;
           margin-bottom: 28px;
+        }
+
+        .lower-grid.results-only {
+          grid-template-columns: 1fr;
         }
 
         .tabs {
@@ -1696,6 +1864,7 @@ function Home() {
           .home-table td:nth-child(6) { display: none; }
           .prediction-band { padding: 26px; }
           .horse-modal-backdrop { padding: 14px; }
+          .race-detail-grid { grid-template-columns: 1fr 1fr; }
           .horse-profile { grid-template-columns: 1fr; }
           .horse-profile-stats,
           .horse-profile-details { grid-template-columns: 1fr; }
@@ -1730,6 +1899,15 @@ function Home() {
           </nav>
 
           <div className="home-actions">
+            {isSpectator && (
+              <Link className="home-live-btn home-bet-btn" to="/spectator/bets">
+                Bet Points
+              </Link>
+            )}
+            <Link className="home-live-btn" to="/spectator/broadcast">
+              <i aria-hidden="true" />
+              Live Broadcast
+            </Link>
             <div className="nav-dropdown-wrap">
               <button
                 className={`home-icon-btn notification-trigger ${
@@ -1957,26 +2135,33 @@ function Home() {
                       >
                         {race.status || race.time}
                       </span>
-                      <span>Race {race.id}</span>
+                      <span>
+                        {race.status ? "Đang diễn ra" : "Sắp diễn ra"}
+                      </span>
                     </div>
                     <h3>{race.name}</h3>
                     <span className="muted">{race.venue}</span>
-                    <div className="race-facts">
-                      <span>
-                        <Icon name="clock" size={15} />
-                        {race.distance}
-                      </span>
-                      <span>
-                        <Icon name="map" size={15} />
-                        {race.surface}
-                      </span>
-                    </div>
                     {race.status && (
-                      <img src={race.image} alt={`${race.name} race`} />
+                      <div className="race-preview">
+                        <img src={race.image} alt={`${race.name} race`} />
+                      </div>
                     )}
-                    <button className="card-action" type="button">
-                      {race.status ? "Watch Live" : "View Details"}
-                    </button>
+                    {race.status ? (
+                      <Link
+                        className="card-action live-action"
+                        to={`/spectator/broadcast/${encodeURIComponent(race.id)}`}
+                      >
+                        Watch Live
+                      </Link>
+                    ) : (
+                      <button
+                        className="card-action"
+                        type="button"
+                        onClick={() => setSelectedRace(race)}
+                      >
+                        {race.status ? "Live Race" : "View Details"}
+                      </button>
+                    )}
                   </article>
                 ))}
               </div>
@@ -1989,7 +2174,7 @@ function Home() {
                 title="Top Horses"
                 action={{
                   label: "View All Horses",
-                  onClick: () => setIsAllHorsesOpen(true),
+                  href: "/horses",
                 }}
               />
               <div className="horse-filter-bar" aria-label="Horse filters">
@@ -2059,7 +2244,7 @@ function Home() {
             <section className="panel" id="jockeys">
               <SectionTitle
                 title="Top Jockeys"
-                action={{ label: "View All Jockeys", href: "#jockeys" }}
+                action={{ label: "View All Jockeys", href: "/jockeys" }}
               />
               <div className="horse-filter-bar" aria-label="Jockey filters">
                 <input
@@ -2088,69 +2273,87 @@ function Home() {
             </section>
           </div>
 
-          {isAllHorsesOpen && (
+          {selectedRace && (
             <div
               className="horse-modal-backdrop"
               role="presentation"
-              onClick={() => setIsAllHorsesOpen(false)}
+              onClick={() => setSelectedRace(null)}
             >
               <section
                 className="horse-modal"
                 role="dialog"
                 aria-modal="true"
-                aria-label="All horses"
+                aria-label={`${selectedRace.name} details`}
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="horse-modal-head">
-                  <h3>All Horses</h3>
+                  <h3>Race Details</h3>
                   <button
                     className="horse-modal-close"
                     type="button"
-                    aria-label="Close all horses"
-                    onClick={() => setIsAllHorsesOpen(false)}
+                    aria-label="Close race details"
+                    onClick={() => setSelectedRace(null)}
                   >
-                    x
+                    ×
                   </button>
                 </div>
                 <div className="horse-modal-body">
-                  <div className="horse-grid">
-                    {filteredHorses.map((horse) => (
-                      <article className="horse-card" key={horse.id}>
-                        <div className="horse-photo">
-                          <img src={horse.image} alt={horse.name} />
-                          <span className="rank-badge">{horse.rank}</span>
-                        </div>
-                        <div className="horse-body">
-                          <h3>{horse.name}</h3>
-                      <span className="muted">{horse.breed}</span>
-                          <div className="horse-stat-row">
-                            <span>Owner</span>
-                            <strong>{horse.owner}</strong>
-                          </div>
-                          <div className="horse-stat-row">
-                            <span>Win rate</span>
-                            <strong>{horse.winRate || 0}%</strong>
-                          </div>
-                          <div className="horse-stat-row">
-                            <span>Wins</span>
-                            <strong>{horse.totalWin || 0}</strong>
-                          </div>
-                          <button
-                            className="card-action"
-                            type="button"
-                            onClick={() => setSelectedHorse(horse)}
-                          >
-                            View Profile
-                          </button>
-                        </div>
-                      </article>
-                    ))}
+                  <div
+                    className="race-detail-hero"
+                    style={{
+                      "--race-detail-image": `url("${selectedRace.image}")`,
+                    }}
+                  >
+                    <div>
+                      <span className="race-detail-status">
+                        {selectedRace.status || selectedRace.rawStatus}
+                      </span>
+                      <h4>{selectedRace.name}</h4>
+                    </div>
                   </div>
-                  {filteredHorses.length === 0 && (
-                    <p className="loading-line">
-                      No horses match the current filters.
-                    </p>
-                  )}
+                  <div className="race-detail-grid">
+                    <div className="race-detail-item">
+                      <span>Tournament</span>
+                      <strong>{selectedRace.tournament}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Thời gian</span>
+                      <strong>
+                        {formatRaceDateTime(
+                          selectedRace.sortTime,
+                          selectedRace.time,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Địa điểm</span>
+                      <strong>{selectedRace.venue}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Cự ly</span>
+                      <strong>{selectedRace.distance}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Mặt đường</span>
+                      <strong>{selectedRace.surface}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Số ngựa</span>
+                      <strong>{selectedRace.horseCount || "—"}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Vòng</span>
+                      <strong>{selectedRace.round}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Thứ tự race</span>
+                      <strong>{selectedRace.raceOrder}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Trạng thái</span>
+                      <strong>{selectedRace.rawStatus || "Scheduled"}</strong>
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>
@@ -2248,60 +2451,11 @@ function Home() {
             </div>
           )}
 
-          <div className="lower-grid">
-            <section className="panel" id="rankings">
-              <SectionTitle title="Leaderboard" />
-              <div
-                className="tabs"
-                role="tablist"
-                aria-label="Leaderboard views"
-              >
-                <button type="button">Horses</button>
-                <button type="button">Jockeys</button>
-              </div>
-              <table className="home-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Horse</th>
-                    <th>Rating</th>
-                    <th>Wins</th>
-                    <th>Places</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {homeData.standings.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.id}</td>
-                      <td>
-                        <span className="horse-name-cell">
-                          <img
-                            className="mini-thumb"
-                            src="/goldenhoof-hero.png"
-                            alt=""
-                          />
-                          {row.horse}
-                        </span>
-                      </td>
-                      <td>{row.rating}</td>
-                      <td>{row.wins}</td>
-                      <td>{row.places}</td>
-                      <td>{row.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <a className="home-panel-link" href="#rankings">
-                View Full Rankings
-                <Icon name="arrow" size={16} />
-              </a>
-            </section>
-
+          <div className="lower-grid results-only">
             <section className="panel" id="results">
               <SectionTitle
                 title="Latest Race Results"
-                action={{ label: "View All Results", href: "#results" }}
+                action={{ label: "View All Results", href: "/race-results" }}
               />
               <div className="result-list">
                 {homeData.results.map((result) => (

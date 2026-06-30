@@ -33,11 +33,14 @@ export async function getUsers() {
 }
 
 export async function getUserById(id) {
-  const response = await apiClient.get(USER_ENDPOINTS.DETAIL(id), {
-    includeAuth: true,
-  });
+  const response = await apiClient.get(
+    USER_ENDPOINTS.DETAIL(id),
+    {
+      includeAuth: true,
+    }
+  );
 
-  return response.data;
+  return unwrapData(response);
 }
 
 export async function searchUsersByName(fullName) {

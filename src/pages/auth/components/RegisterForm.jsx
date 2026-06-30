@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import {
   registerHorseOwner,
   registerJockey,
+  registerReferee,
   registerSpectator,
 } from "../../../api/services/auth.service";
 
@@ -100,6 +101,12 @@ function Icon({ name, size = 24 }) {
         <path d="m18 6-3 7h6l-3-7Z" />
       </>
     ),
+    certificate: (
+      <>
+        <circle cx="12" cy="8" r="5" />
+        <path d="m8.5 12-1 9 4.5-3 4.5 3-1-9" />
+      </>
+    ),
   };
 
   return <svg {...common}>{paths[name]}</svg>;
@@ -113,7 +120,9 @@ export default function RegisterForm() {
   async function handleFinish(values) {
     const payload = {
       ...values,
-      dateOfBirth: values.dateOfBirth?.format("YYYY/MM/DD"),
+      dateOfBirth: values.dateOfBirth?.format(
+        values.role === "Referee" ? "DD/MM/YYYY" : "YYYY/MM/DD",
+      ),
     };
 
     if (values.role === "Spectator") {
@@ -122,18 +131,35 @@ export default function RegisterForm() {
       delete payload.stableAddress;
       delete payload.height;
       delete payload.weight;
+      delete payload.experienceYears;
+      delete payload.certification;
     }
 
     if (values.role === "HorseOwner") {
       payload.role = "Horse Owner";
       delete payload.height;
       delete payload.weight;
+      delete payload.experienceYears;
+      delete payload.certification;
     }
 
     if (values.role === "Jockey") {
       payload.role = "Jockey";
       delete payload.stableName;
       delete payload.stableAddress;
+      delete payload.experienceYears;
+      delete payload.certification;
+    }
+
+    if (values.role === "Referee") {
+      payload.role = "Referee";
+      payload.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        values.fullName.trim(),
+      )}`;
+      delete payload.stableName;
+      delete payload.stableAddress;
+      delete payload.height;
+      delete payload.weight;
     }
 
     try {
@@ -143,6 +169,8 @@ export default function RegisterForm() {
         await registerHorseOwner(payload);
       } else if (values.role === "Jockey") {
         await registerJockey(payload);
+      } else if (values.role === "Referee") {
+        await registerReferee(payload);
       } else {
         await registerSpectator(payload);
       }
@@ -698,9 +726,7 @@ export default function RegisterForm() {
                 <Radio.Button value="Spectator">Spectator</Radio.Button>
                 <Radio.Button value="HorseOwner">Horse Owner</Radio.Button>
                 <Radio.Button value="Jockey">Jockey</Radio.Button>
-                <Radio.Button disabled value="Referee">
-                  Referee
-                </Radio.Button>
+                <Radio.Button value="Referee">Referee</Radio.Button>
               </Radio.Group>
             </Form.Item>
 
@@ -824,6 +850,39 @@ export default function RegisterForm() {
                     rules={[{ required: true, message: "Weight is required" }]}
                   >
                     <InputNumber className="gr-input-number" min={0} placeholder="Enter weight" prefix={<Icon name="scale" size={20} />} step="0.01" />
+                  </Form.Item>
+                </>
+              ) : null}
+
+              {role === "Referee" ? (
+                <>
+                  <div className="gr-section-title">Referee information</div>
+
+                  <Form.Item
+                    className="gr-col-4"
+                    label="Experience (years)"
+                    name="experienceYears"
+                    rules={[{ required: true, message: "Experience is required" }]}
+                  >
+                    <InputNumber
+                      className="gr-input-number"
+                      min={0}
+                      precision={0}
+                      placeholder="Ex: 3"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    className="gr-col-6"
+                    label="Certification"
+                    name="certification"
+                    rules={[{ required: true, message: "Certification is required" }]}
+                  >
+                    <Input
+                      className="gr-input"
+                      placeholder="Ex: National Referee Level 2"
+                      prefix={<Icon name="certificate" size={20} />}
+                    />
                   </Form.Item>
                 </>
               ) : null}

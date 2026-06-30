@@ -157,11 +157,19 @@ function AdminLayout({ children }) {
 
           <Link
             className={`admin-nav-item ${
-              isActive("/admin/users") ||
               isActive("/admin") ||
               isActive("/admin/dashboard")
                 ? "active"
                 : ""
+            }`}
+            to="/admin/dashboard"
+          >
+            Dashboard
+          </Link>
+
+          <Link
+            className={`admin-nav-item ${
+              isActive("/admin/users") ? "active" : ""
             }`}
             to="/admin/users"
           >

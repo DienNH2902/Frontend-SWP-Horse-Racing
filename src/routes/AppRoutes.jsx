@@ -6,6 +6,7 @@ import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
+import AdminDashboard from "../pages/admin/AdminDashboard";
 import TournamentManagement from "../pages/admin/TournamentManagement";
 import RegistrationManagement from "../pages/admin/RegistrationManagement";
 import RaceManagement from "../pages/admin/RaceManagement";
@@ -27,9 +28,10 @@ import OwnerTournaments from "../pages/owner/OwnerTournaments";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
 import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
+import RefereeTournamentList from "../pages/referee/RefereeTournamentList";
 import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
-import RefereeJockeyDetail from "../pages/referee/RefereeJockeyDetail";
-import RefereeOwnerDetail from "../pages/referee/RefereeOwnerDetail";
+import RefereeResultReview from "../pages/referee/RefereeResultReview";
+import RefereeFinalResults from "../pages/referee/RefereeFinalResults";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
@@ -37,10 +39,16 @@ import JockeyLicenseManagement from "../pages/admin/JockeyLicenseManagement";
 import RewardManagement from "../pages/admin/RewardManagement";
 import SpectatorRewards from "../pages/spectator/SpectatorReward";
 import PointsTransactionHistory from "../pages/spectator/PointsTransaction";
+import SpectatorBetting from "../pages/spectator/SpectatorBetting";
 import NotificationHistory from "../pages/NotificationPage";
 import MoneyTransactionHistory from "../pages/MoneyTransaction";
 import Wallet from "../pages/Wallet";
 import PaymentResult from "../pages/PaymentResult";
+import Broadcast from "../pages/spectator/Broadcast";
+import LiveRaceChannels from "../pages/spectator/LiveRaceChannels";
+import AllHorses from "../pages/AllHorses";
+import AllJockeys from "../pages/AllJockeys";
+import AllRaceResults from "../pages/AllRaceResults";
 import { getAuthSession } from "../utils/storage";
 
 const OWNER_NAV = [
@@ -61,7 +69,17 @@ const OWNER_NAV = [
 ];
 
 const REFEREE_NAV = [
-  { key: "referee-dashboard", to: "/referee", label: "Tournaments" },
+  {
+    key: "referee-dashboard",
+    to: "/referee",
+    label: "Assigned Races",
+  },
+
+  {
+    key: "referee-tournaments",
+    to: "/referee/tournaments",
+    label: "Tournaments",
+  },
 ];
 
 const JOCKEY_NAV = [
@@ -80,6 +98,14 @@ function AdminUsersPage() {
     <AdminLayout>
       <UserManagement />
       <JockeyLicenseManagement />
+    </AdminLayout>
+  );
+}
+
+function AdminDashboardPage() {
+  return (
+    <AdminLayout>
+      <AdminDashboard />
     </AdminLayout>
   );
 }
@@ -140,6 +166,11 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route path="/profile" element={<Profile />} />
+        <Route path="/horses" element={<AllHorses />} />
+        <Route path="/jockeys" element={<AllJockeys />} />
+        <Route path="/race-results" element={<AllRaceResults />} />
+        <Route path="/spectator/broadcast" element={<LiveRaceChannels />} />
+        <Route path="/spectator/broadcast/:raceId" element={<Broadcast />} />
         <Route
           path="notification"
           element={<NotificationHistory allowedRole="Spectator" />}
@@ -147,10 +178,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
-        <Route
-          path="/spectator"
-          element={<RoleHome allowedRole="Spectator" />}
-        />
+        <Route path="/spectator" element={<Navigate to="/profile" replace />} />
         <Route
           path="/spectator/reward"
           element={<SpectatorRewards allowedRole="Spectator" />}
@@ -159,6 +187,7 @@ export default function AppRoutes() {
           path="/spectator/points-transaction"
           element={<PointsTransactionHistory allowedRole="Spectator" />}
         />
+        <Route path="/spectator/bets" element={<SpectatorBetting />} />
       </Route>
 
       <Route
@@ -175,19 +204,11 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
         <Route
           path="/admin"
-          element={
-            <AdminLayout>
-              <UserManagement />
-            </AdminLayout>
-          }
+          element={<AdminDashboardPage />}
         />
         <Route
           path="/admin/dashboard"
-          element={
-            <AdminLayout>
-              <UserManagement />
-            </AdminLayout>
-          }
+          element={<AdminDashboardPage />}
         />
         <Route
           path="/admin/users"
@@ -281,6 +302,10 @@ export default function AppRoutes() {
           }
         >
           <Route path="referee" element={<RefereeDashboard />} />
+          <Route
+            path="referee/tournaments"
+            element={<RefereeTournamentList />}
+          />
 
           <Route
             path="referee/tournaments/:id"
@@ -289,19 +314,12 @@ export default function AppRoutes() {
 
           <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
 
+          <Route path="referee/races/:id/results" element={<RefereeResultReview />} />
+
+          <Route path="referee/races/:id/final" element={<RefereeFinalResults />} />
+
           <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
-
-          <Route path="referee/jockeys/:id" element={<RefereeJockeyDetail />} />
-
-          <Route path="referee/owners/:id" element={<RefereeOwnerDetail />} />
         </Route>
-      </Route>
-
-      <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
-        <Route
-          path="/spectator"
-          element={<RoleHome allowedRole="Spectator" />}
-        />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>

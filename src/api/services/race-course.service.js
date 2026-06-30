@@ -2,12 +2,22 @@ import { apiClient } from "../client";
 
 const RACE_COURSE_ROOT = "/race-courses";
 
+function unwrapData(response) {
+    const data = response?.data;
+
+    return (
+        data?.data ||
+        data?.result ||
+        data
+    );
+}
+
 export const getRaceCourses = async () => {
     const response = await apiClient.get(RACE_COURSE_ROOT, {
         includeAuth: true,
     });
 
-    return response.data;
+    return unwrapData(response);
 };
 
 export const getRaceCourseById = async (id) => {
@@ -18,7 +28,7 @@ export const getRaceCourseById = async (id) => {
         }
     );
 
-    return response.data;
+    return unwrapData(response);
 };
 
 export const createRaceCourse = async (payload) => {
@@ -26,7 +36,7 @@ export const createRaceCourse = async (payload) => {
         includeAuth: true,
     });
 
-    return response.data;
+    return unwrapData(response);
 };
 
 export const updateRaceCourse = async (id, payload) => {
@@ -34,7 +44,7 @@ export const updateRaceCourse = async (id, payload) => {
         includeAuth: true,
     });
 
-    return response.data;
+    return unwrapData(response);
 };
 
 export const deleteRaceCourse = async (id) => {
@@ -42,5 +52,5 @@ export const deleteRaceCourse = async (id) => {
         includeAuth: true,
     });
 
-    return response.data;
+    return unwrapData(response);
 };
