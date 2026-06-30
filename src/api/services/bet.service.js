@@ -14,3 +14,20 @@ export async function createBet(payload) {
 
   return unwrapData(response);
 }
+
+export async function getAllBets() {
+  const response = await apiClient.get(BET_ENDPOINTS.ROOT, {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
+}
+
+// 3. API Lấy toàn bộ các bet đặt cược của tài khoản hiện tại
+export async function getMyBets() {
+  const response = await apiClient.get(BET_ENDPOINTS.MY_BET, {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
+}

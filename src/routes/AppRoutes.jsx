@@ -51,6 +51,7 @@ import AllJockeys from "../pages/AllJockeys";
 import AllRaceResults from "../pages/AllRaceResults";
 import { getAuthSession } from "../utils/storage";
 import AdminWithdrawalManagement from "../pages/admin/AdminWithdrawalManagement";
+import AdminBetManagement from "../pages/admin/AdminBetManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -263,6 +264,15 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <AdminWithdrawalManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/bet"
+          element={
+            <AdminLayout>
+              <AdminBetManagement />
             </AdminLayout>
           }
         />
