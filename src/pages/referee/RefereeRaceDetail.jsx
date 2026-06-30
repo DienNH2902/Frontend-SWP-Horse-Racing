@@ -120,34 +120,6 @@ function statusColor(status) {
     }
 }
 
-function validateReady() {
-    if (!race.raceCourseId) {
-        message.warning("Please assign a race course first.");
-        return false;
-    }
-
-    if (participants.length < 2) {
-        message.warning(
-            "At least 2 horses must be registered."
-        );
-        return false;
-    }
-
-    if (
-        !condition ||
-        !condition.weather ||
-        condition.windSpeed === undefined ||
-        !condition.trackCondition
-    ) {
-        message.warning(
-            "Please complete race conditions."
-        );
-        return false;
-    }
-
-    return true;
-}
-
 function trackConditionColor(condition) {
     switch (condition) {
         case "Good":
@@ -239,6 +211,34 @@ export default function RefereeRaceDetail() {
             loadData();
         }
     }, [id]);
+
+    function validateReady() {
+        if (!race.raceCourseId) {
+            message.warning("Please assign a race course first.");
+            return false;
+        }
+
+        if (participants.length < 2) {
+            message.warning(
+                "At least 2 horses must be registered."
+            );
+            return false;
+        }
+
+        if (
+            !condition ||
+            !condition.weather ||
+            condition.windSpeed === undefined ||
+            !condition.trackCondition
+        ) {
+            message.warning(
+                "Please complete race conditions."
+            );
+            return false;
+        }
+
+        return true;
+    }
 
     async function loadData() {
         try {
