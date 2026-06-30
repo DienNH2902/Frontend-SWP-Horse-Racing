@@ -12,7 +12,7 @@ import {
   Typography,
   message,
 } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, HistoryOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { createBet } from "../../api/services/bet.service";
 import { getHorses } from "../../api/services/horse.service";
@@ -42,7 +42,9 @@ function getHorseName(horse) {
 }
 
 function isBettableRace(race) {
-  const status = String(race?.status || "").trim().toLowerCase();
+  const status = String(race?.status || "")
+    .trim()
+    .toLowerCase();
 
   return status === "scheduled";
 }
@@ -175,17 +177,19 @@ export default function SpectatorBetting() {
             horsesById.get(String(horseId)) ||
             "";
 
-          return horseId && label
-            ? { value: String(horseId), label }
-            : null;
+          return horseId && label ? { value: String(horseId), label } : null;
         })
         .filter(Boolean);
 
       setHorseOptions(
-        Array.from(new Map(options.map((option) => [option.value, option])).values()),
+        Array.from(
+          new Map(options.map((option) => [option.value, option])).values(),
+        ),
       );
     } catch (error) {
-      messageApi.error(error?.message || "Unable to load horses for this race.");
+      messageApi.error(
+        error?.message || "Unable to load horses for this race.",
+      );
     } finally {
       setIsLoadingHorses(false);
     }
@@ -269,19 +273,26 @@ export default function SpectatorBetting() {
               <img src="/goldenhoof-logo.png" alt="" />
               <span>GoldenHoof</span>
             </Link>
-            <Button
-              className="betting-home-btn"
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate("/home")}
-            >
-              Back to Home
-            </Button>
+            <Space size={10}>
+              <Button
+                className="betting-history-btn"
+                icon={<HistoryOutlined />}
+                onClick={() => navigate("/spectator/bet-history")}
+              >
+                History
+              </Button>
+              <Button
+                className="betting-home-btn"
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate("/home")}
+              >
+                Back to Home
+              </Button>
+            </Space>
           </div>
 
           <div>
-            <Typography.Text
-              style={{ color: "#087a6d", fontWeight: 900 }}
-            >
+            <Typography.Text style={{ color: "#087a6d", fontWeight: 900 }}>
               GOLDENHOOF POINT BETTING
             </Typography.Text>
             <Typography.Title level={1} style={{ margin: "4px 0 0" }}>

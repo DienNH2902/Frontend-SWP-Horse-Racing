@@ -44,3 +44,11 @@ export async function getBetDetail(id) {
 
   return unwrapData(response);
 }
+
+export async function updateBet(id, payload) {
+  const response = await apiClient.patch(BET_ENDPOINTS.DETAIL(id), payload, {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
+}

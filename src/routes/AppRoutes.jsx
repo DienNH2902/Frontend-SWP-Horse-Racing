@@ -52,6 +52,7 @@ import AllRaceResults from "../pages/AllRaceResults";
 import { getAuthSession } from "../utils/storage";
 import AdminWithdrawalManagement from "../pages/admin/AdminWithdrawalManagement";
 import AdminBetManagement from "../pages/admin/AdminBetManagement";
+import BettingHistory from "../pages/spectator/BettingHistory";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -188,6 +189,12 @@ export default function AppRoutes() {
         <Route
           path="/spectator/points-transaction"
           element={<PointsTransactionHistory allowedRole="Spectator" />}
+        />
+        <Route path="/spectator/bets" element={<SpectatorBetting />} />
+
+        <Route
+          path="/spectator/bet-history"
+          element={<BettingHistory allowedRole="Spectator" />}
         />
         <Route path="/spectator/bets" element={<SpectatorBetting />} />
       </Route>
