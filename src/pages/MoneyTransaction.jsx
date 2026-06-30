@@ -94,9 +94,9 @@ export default function MoneyTransactionHistory() {
     },
     [TransactionTypeEnum.HOLD_BALANCE]: {
       label: "Hold Balance",
-      isInflow: false,
-      color: "#ff4d4f",
-      bg: "rgba(255, 77, 79, 0.15)",
+      status: "hold",
+      color: "#ffb936", // Cập nhật màu vàng hệ thống
+      bg: "rgba(255, 185, 54, 0.15)", // Background vàng mờ tương ứng
     },
   };
 
@@ -153,7 +153,9 @@ export default function MoneyTransactionHistory() {
       width: 140,
       render: (_, record) => {
         const isPositive =
-          record.type === "Deposit" || record.type === "Prize_payout";
+          record.type === "Deposit" ||
+          record.type === "Prize_payout" ||
+          record.type === "Refund";
         return (
           <Text
             style={{
