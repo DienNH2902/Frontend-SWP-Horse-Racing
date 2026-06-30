@@ -4,7 +4,6 @@ import {
   Input,
   Modal,
   Select,
-  Space,
   Table,
   Tag,
   Typography,
@@ -14,7 +13,7 @@ import {
 import "antd/dist/reset.css";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { getAllBets } from "../../api/services/bet.service";
+import { getAllBets, getBetDetail } from "../../api/services/bet.service";
 
 dayjs.extend(customParseFormat);
 
@@ -79,21 +78,29 @@ function sortNewestRequestFirst(a, b) {
 }
 
 function normalizeBet(item, index) {
-  const id = pick(item, ["id", "_id"], `bet-${index}`);
+  if (!item) return null;
+
   return {
-    key: id,
-    id,
-    spectatorId: pick(item, ["spectatorId"], "N/A"),
-    raceId: pick(item, ["raceId"], "N/A"),
-    horseId: pick(item, ["horseId"], "N/A"),
-    horseWinRateAtBet: item?.horseWinRateAtBet || 0,
-    bettorsOnHorseAtBet: item?.bettorsOnHorseAtBet || 0,
-    totalBettorsAtBet: item?.totalBettorsAtBet || 0,
-    finalOdds: item?.finalOdds || 0,
-    pointsWagered: item?.pointsWagered || 0,
-    pointsWon: item?.pointsWon || 0,
-    result: pick(item, ["result"], "PENDING"),
-    placedAt: pick(item, ["placedAt"], ""),
+    key: item._id || item.id || `bet-${index}`,
+    id: item._id || item.id || `bet-${index}`,
+
+    spectatorId: item.spectatorId ?? "N/A",
+    spectatorName: item.spectatorName ?? "N/A",
+
+    raceId: item.raceId ?? "N/A",
+    raceName: item.raceName ?? "N/A",
+
+    horseId: item.horseId ?? "N/A",
+    horseName: item.horseName ?? "N/A",
+
+    horseWinRateAtBet: item.horseWinRateAtBet ?? 0,
+    bettorsOnHorseAtBet: item.bettorsOnHorseAtBet ?? 0,
+    totalBettorsAtBet: item.totalBettorsAtBet ?? 0,
+    finalOdds: item.finalOdds ?? 0,
+    pointsWagered: item.pointsWagered ?? 0,
+    pointsWon: item.pointsWon ?? 0,
+    result: item.result ?? "PENDING",
+    placedAt: item.placedAt ?? "",
   };
 }
 
@@ -101,12 +108,14 @@ function statusColor(status) {
   const normalizedStatus = String(status).toUpperCase();
   if (normalizedStatus === "WIN") return "green";
   if (normalizedStatus === "LOST" || normalizedStatus === "LOSE") return "red";
-  return "orange"; // PENDING
+  return "orange";
 }
 
 export default function AdminBetManagement() {
   const [bets, setBets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [activeId, setActiveId] = useState(null);
   const [detailData, setDetailData] = useState(null);
   const [searchKey, setSearchKey] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
@@ -135,17 +144,37 @@ export default function AdminBetManagement() {
   const filteredBets = useMemo(() => {
     return bets.filter((bet) => {
       const matchStatus = selectedStatus ? bet.result === selectedStatus : true;
+
+      const sName = String(bet.spectatorName || "").toLowerCase();
+      const rName = String(bet.raceName || "").toLowerCase();
+      const hName = String(bet.horseName || "").toLowerCase();
+      const bId = String(bet.id || "").toLowerCase();
+      const query = searchKey.toLowerCase();
+
       const matchSearch = searchKey
-        ? bet.spectatorId.toLowerCase().includes(searchKey.toLowerCase()) ||
-          bet.raceId.toLowerCase().includes(searchKey.toLowerCase()) ||
-          bet.horseId.toLowerCase().includes(searchKey.toLowerCase())
+        ? sName.includes(query) ||
+          rName.includes(query) ||
+          hName.includes(query) ||
+          bId.includes(query)
         : true;
       return matchStatus && matchSearch;
     });
   }, [bets, selectedStatus, searchKey]);
 
-  function openDetailModal(record) {
-    setDetailData(record);
+  async function openDetailModal(id) {
+    setActiveId(id);
+    setIsDetailLoading(true);
+
+    try {
+      const bet = await getBetDetail(id);
+
+      setDetailData(normalizeBet(bet, 0));
+    } catch (error) {
+      message.error(error?.message || "Không thể tải thông tin chi tiết");
+    } finally {
+      setIsDetailLoading(false);
+      setActiveId(null);
+    }
   }
 
   const columns = useMemo(
@@ -158,21 +187,22 @@ export default function AdminBetManagement() {
         ellipsis: true,
       },
       {
-        title: "Spectator ID",
-        dataIndex: "spectatorId",
-        width: 150,
+        title: "Spectator Name",
+        dataIndex: "spectatorName",
+        width: 180,
+        ellipsis: true,
+        render: (text) => <Text strong>{text}</Text>,
+      },
+      {
+        title: "Race Name",
+        dataIndex: "raceName",
+        width: 220,
         ellipsis: true,
       },
       {
-        title: "Race ID",
-        dataIndex: "raceId",
-        width: 150,
-        ellipsis: true,
-      },
-      {
-        title: "Horse ID",
-        dataIndex: "horseId",
-        width: 150,
+        title: "Horse Name",
+        dataIndex: "horseName",
+        width: 160,
         ellipsis: true,
       },
       {
@@ -222,14 +252,15 @@ export default function AdminBetManagement() {
             size="small"
             type="primary"
             ghost
-            onClick={() => openDetailModal(record)}
+            onClick={() => openDetailModal(record.id)}
+            loading={isDetailLoading && activeId === record.id}
           >
             Details
           </Button>
         ),
       },
     ],
-    [],
+    [isDetailLoading, activeId],
   );
 
   return (
@@ -338,7 +369,7 @@ export default function AdminBetManagement() {
           </Select>
 
           <Search
-            placeholder="Search by Spectator, Race, Horse ID..."
+            placeholder="Search by Spectator, Race, Horse Name..."
             allowClear
             enterButton="Search"
             size="middle"
@@ -370,7 +401,6 @@ export default function AdminBetManagement() {
         />
       </div>
 
-      {/* MODAL XEM CHI TIẾT CƯỢC */}
       <Modal
         className="bet-management-modal"
         title="System Bet Request Details"
@@ -385,7 +415,7 @@ export default function AdminBetManagement() {
           </Button>,
         ]}
         onCancel={() => setDetailData(null)}
-        width={600}
+        width={650}
       >
         {detailData && (
           <Descriptions
@@ -400,11 +430,20 @@ export default function AdminBetManagement() {
             <Descriptions.Item label="Spectator ID">
               {detailData.spectatorId}
             </Descriptions.Item>
+            <Descriptions.Item label="Spectator Name">
+              <Text strong>{detailData.spectatorName}</Text>
+            </Descriptions.Item>
             <Descriptions.Item label="Race ID">
               {detailData.raceId}
             </Descriptions.Item>
+            <Descriptions.Item label="Race Name">
+              {detailData.raceName}
+            </Descriptions.Item>
             <Descriptions.Item label="Horse ID">
               {detailData.horseId}
+            </Descriptions.Item>
+            <Descriptions.Item label="Horse Name">
+              {detailData.horseName}
             </Descriptions.Item>
             <Descriptions.Item label="Horse Win Rate">
               {detailData.horseWinRateAtBet}%

@@ -4,7 +4,12 @@ import { BET_ENDPOINTS } from "../endpoints/bet.endpoint";
 function unwrapData(response) {
   const data = response?.data;
 
-  return data?.data || data?.result || data?.bet || data;
+  if (data?.data !== undefined) return data.data;
+  if (data?.bet !== undefined) return data.bet;
+  if (data?.user !== undefined) return data.user;
+  if (data?.result && typeof data.result === "object") return data.result;
+
+  return data;
 }
 
 export async function createBet(payload) {
@@ -26,6 +31,14 @@ export async function getAllBets() {
 // 3. API Lấy toàn bộ các bet đặt cược của tài khoản hiện tại
 export async function getMyBets() {
   const response = await apiClient.get(BET_ENDPOINTS.MY_BET, {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
+}
+
+export async function getBetDetail(id) {
+  const response = await apiClient.get(BET_ENDPOINTS.DETAIL(id), {
     includeAuth: true,
   });
 
