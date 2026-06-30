@@ -132,6 +132,7 @@ export default function AdminWithdrawalManagement() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [searchKey, setSearchKey] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
+  const [loadingDetailId, setLoadingDetailId] = useState(null);
 
   async function loadWithdrawals() {
     setIsLoading(true);
@@ -169,7 +170,7 @@ export default function AdminWithdrawalManagement() {
   }, [requests, selectedStatus, searchKey]);
 
   async function openDetailModal(id) {
-    setIsDetailLoading(true);
+    setLoadingDetailId(id);
     try {
       const data = await getWithdrawalDetail(id);
       setDetailData(data);
@@ -178,7 +179,7 @@ export default function AdminWithdrawalManagement() {
         error?.message || "Failed to load withdrawal request details",
       );
     } finally {
-      setIsDetailLoading(false);
+      setLoadingDetailId(null);
     }
   }
 
@@ -302,7 +303,7 @@ export default function AdminWithdrawalManagement() {
               size="small"
               type="primary"
               ghost
-              loading={isDetailLoading}
+              loading={loadingDetailId === record.id}
               onClick={() => openDetailModal(record.id)}
             >
               Details
