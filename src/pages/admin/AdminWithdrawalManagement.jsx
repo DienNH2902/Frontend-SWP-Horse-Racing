@@ -233,13 +233,6 @@ export default function AdminWithdrawalManagement() {
   const columns = useMemo(
     () => [
       {
-        title: "Request ID",
-        dataIndex: "id",
-        fixed: "left",
-        width: 140,
-        ellipsis: true,
-      },
-      {
         title: "Requester",
         dataIndex: "fullName",
         fixed: "left",
@@ -590,9 +583,6 @@ export default function AdminWithdrawalManagement() {
             size="small"
             style={{ marginTop: 15 }}
           >
-            <Descriptions.Item label="Request Identifier ID">
-              {detailData._id}
-            </Descriptions.Item>
             <Descriptions.Item label="Requested By">
               {detailData.userId?.fullName}
             </Descriptions.Item>

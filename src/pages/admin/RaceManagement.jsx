@@ -17,6 +17,7 @@ import {
   EyeOutlined,
   FieldTimeOutlined,
   FlagOutlined,
+  PlusOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
@@ -423,6 +424,11 @@ function RaceManagement() {
           date: null,
           startTime: "",
         },
+        {
+          name: "Vong 1 - Race 2",
+          date: null,
+          startTime: "",
+        },
       ],
     });
     setIsBatchModalOpen(true);
@@ -569,6 +575,16 @@ function RaceManagement() {
     );
   }
 
+  const round1Races = useMemo(
+    () => races.filter((race) => Number(race.roundNumber) === 1),
+    [races],
+  );
+
+  const round2Races = useMemo(
+    () => races.filter((race) => Number(race.roundNumber) === 2),
+    [races],
+  );
+
   const columns = useMemo(
     () => [
       {
@@ -700,12 +716,81 @@ function RaceManagement() {
           margin-bottom: 18px;
         }
 
+        .race-round-actions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          margin-bottom: 20px;
+          border-top: 1px solid #ccefe7;
+          border-bottom: 1px solid #ccefe7;
+          background: #f7fffd;
+        }
+
+        .race-round-action {
+          min-height: 86px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          padding: 16px 20px;
+        }
+
+        .race-round-action + .race-round-action {
+          border-left: 1px solid #ccefe7;
+        }
+
+        .race-round-label {
+          display: block;
+          margin-bottom: 3px;
+          color: #007a68;
+          font-size: 12px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .race-round-title {
+          color: #06332e;
+          font-size: 16px;
+          font-weight: 900;
+        }
+
         .race-management-card {
           border: 1px solid #ccefe7;
           border-radius: 8px;
           background: #fff;
           box-shadow: 0 22px 70px rgba(13, 70, 63, 0.08);
           overflow: hidden;
+        }
+
+        .race-list-section + .race-list-section {
+          margin-top: 24px;
+        }
+
+        .race-list-heading {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 10px;
+        }
+
+        .race-list-heading h3.ant-typography {
+          margin: 0;
+          color: #06332e;
+          font-size: 18px;
+        }
+
+        .race-list-count {
+          min-width: 30px;
+          height: 28px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 9px;
+          border-radius: 14px;
+          color: #006755;
+          background: #dffff8;
+          font-size: 13px;
+          font-weight: 900;
         }
 
         .race-management-table.ant-table-wrapper .ant-table-thead > tr > th {
@@ -749,6 +834,40 @@ function RaceManagement() {
           align-items: flex-start;
         }
 
+        .race-batch-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+        }
+
+        .race-batch-panel {
+          padding: 18px;
+          border: 1px solid #ccefe7;
+          border-radius: 8px;
+          background: #f9fffd;
+        }
+
+        .race-batch-title {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          margin-bottom: 16px;
+          color: #06332e;
+          font-size: 16px;
+          font-weight: 950;
+        }
+
+        .race-batch-number {
+          width: 28px;
+          height: 28px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: #69f8dd;
+          font-size: 13px;
+        }
+
         @media (max-width: 920px) {
           .race-management-header,
           .race-management-toolbar {
@@ -756,7 +875,20 @@ function RaceManagement() {
             flex-direction: column;
           }
 
+          .race-round-actions {
+            grid-template-columns: 1fr;
+          }
+
+          .race-round-action + .race-round-action {
+            border-top: 1px solid #ccefe7;
+            border-left: 0;
+          }
+
           .race-management-dynamic-row {
+            grid-template-columns: 1fr;
+          }
+
+          .race-batch-grid {
             grid-template-columns: 1fr;
           }
         }
@@ -767,23 +899,38 @@ function RaceManagement() {
           <div className="race-management-kicker">Admin dashboard</div>
           <Title level={1}>Race Management</Title>
         </div>
+      </div>
 
-        <Space wrap>
+      <div className="race-round-actions">
+        <section className="race-round-action">
+          <div>
+            <span className="race-round-label">Round 1</span>
+            <div className="race-round-title">Qualifying Races</div>
+          </div>
+
+          <Button
+            className="race-management-primary"
+            icon={<PlusOutlined />}
+            onClick={openBatchModal}
+          >
+            Create Round 1 Batch
+          </Button>
+        </section>
+
+        <section className="race-round-action">
+          <div>
+            <span className="race-round-label">Round 2</span>
+            <div className="race-round-title">Final Race</div>
+          </div>
+
           <Button
             className="race-management-link-btn"
             icon={<FieldTimeOutlined />}
             onClick={openRound2Modal}
           >
-            Create Round 2
+            Create Final Race
           </Button>
-
-          <Button
-            className="race-management-primary"
-            onClick={openBatchModal}
-          >
-            Create Batch
-          </Button>
-        </Space>
+        </section>
       </div>
 
       <div className="race-management-toolbar">
@@ -827,27 +974,52 @@ function RaceManagement() {
         </Form>
       </div>
 
-      <div className="race-management-card">
-        <Table
-          className="race-management-table"
-          columns={columns}
-          dataSource={races}
-          loading={isLoading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showTotal: (total) => `${total} races`,
-          }}
-          scroll={{ x: 1950 }}
-        />
-      </div>
+      <section className="race-list-section">
+        <div className="race-list-heading">
+          <Title level={3}>Round 1 Races</Title>
+          <span className="race-list-count">{round1Races.length}</span>
+        </div>
+        <div className="race-management-card">
+          <Table
+            className="race-management-table"
+            columns={columns}
+            dataSource={round1Races}
+            loading={isLoading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (total) => `${total} Round 1 races`,
+            }}
+            locale={{ emptyText: "No Round 1 races found" }}
+            scroll={{ x: 1950 }}
+          />
+        </div>
+      </section>
+
+      <section className="race-list-section">
+        <div className="race-list-heading">
+          <Title level={3}>Round 2 Final</Title>
+          <span className="race-list-count">{round2Races.length}</span>
+        </div>
+        <div className="race-management-card">
+          <Table
+            className="race-management-table"
+            columns={columns}
+            dataSource={round2Races}
+            loading={isLoading}
+            pagination={false}
+            locale={{ emptyText: "No Round 2 final found" }}
+            scroll={{ x: 1950 }}
+          />
+        </div>
+      </section>
 
       <Modal
-        title="Create Batch Races"
+        title="Create Round 1 Batch"
         open={isBatchModalOpen}
-        okText="Create"
+        okText="Create 2 Races"
         cancelText="Cancel"
-        width={850}
+        width={960}
         confirmLoading={isSaving}
         onOk={handleCreateBatch}
         onCancel={() => setIsBatchModalOpen(false)}
@@ -868,17 +1040,22 @@ function RaceManagement() {
           </Form.Item>
 
           <Form.List name="races">
-            {(fields, { add, remove }) => (
-              <Space direction="vertical" style={{ width: "100%" }}>
-                {fields.map(({ key, name, ...restField }) => (
-                  <div className="race-management-dynamic-row" key={key}>
+            {(fields) => (
+              <div className="race-batch-grid">
+                {fields.map(({ key, name, ...restField }, index) => (
+                  <section className="race-batch-panel" key={key}>
+                    <div className="race-batch-title">
+                      <span className="race-batch-number">{index + 1}</span>
+                      Race {index + 1}
+                    </div>
+
                     <Form.Item
                       {...restField}
-                      label="Name"
+                      label="Race Name"
                       name={[name, "name"]}
                       rules={[{ required: true, message: "Name is required" }]}
                     >
-                      <Input placeholder="Vong 1 - Race 1" />
+                      <Input placeholder={`Vong 1 - Race ${index + 1}`} />
                     </Form.Item>
 
                     <Form.Item
@@ -904,28 +1081,9 @@ function RaceManagement() {
                     >
                       <Input type="time" placeholder="08:00" />
                     </Form.Item>
-
-                    <Form.Item label=" ">
-                      <Button danger onClick={() => remove(name)}>
-                        Remove
-                      </Button>
-                    </Form.Item>
-                  </div>
+                  </section>
                 ))}
-
-                <Button
-                  className="race-management-link-btn"
-                  onClick={() =>
-                    add({
-                      name: `Vong 1 - Race ${fields.length + 1}`,
-                      date: null,
-                      startTime: "",
-                    })
-                  }
-                >
-                  Add Race
-                </Button>
-              </Space>
+              </div>
             )}
           </Form.List>
         </Form>

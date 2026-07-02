@@ -148,14 +148,12 @@ export default function AdminBetManagement() {
       const sName = String(bet.spectatorName || "").toLowerCase();
       const rName = String(bet.raceName || "").toLowerCase();
       const hName = String(bet.horseName || "").toLowerCase();
-      const bId = String(bet.id || "").toLowerCase();
       const query = searchKey.toLowerCase();
 
       const matchSearch = searchKey
         ? sName.includes(query) ||
           rName.includes(query) ||
-          hName.includes(query) ||
-          bId.includes(query)
+          hName.includes(query)
         : true;
       return matchStatus && matchSearch;
     });
@@ -180,15 +178,9 @@ export default function AdminBetManagement() {
   const columns = useMemo(
     () => [
       {
-        title: "Bet ID",
-        dataIndex: "id",
-        fixed: "left",
-        width: 140,
-        ellipsis: true,
-      },
-      {
         title: "Spectator Name",
         dataIndex: "spectatorName",
+        fixed: "left",
         width: 180,
         ellipsis: true,
         render: (text) => <Text strong>{text}</Text>,
@@ -424,23 +416,11 @@ export default function AdminBetManagement() {
             size="small"
             style={{ marginTop: 15 }}
           >
-            <Descriptions.Item label="Bet ID">
-              {detailData.id}
-            </Descriptions.Item>
-            <Descriptions.Item label="Spectator ID">
-              {detailData.spectatorId}
-            </Descriptions.Item>
             <Descriptions.Item label="Spectator Name">
               <Text strong>{detailData.spectatorName}</Text>
             </Descriptions.Item>
-            <Descriptions.Item label="Race ID">
-              {detailData.raceId}
-            </Descriptions.Item>
             <Descriptions.Item label="Race Name">
               {detailData.raceName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Horse ID">
-              {detailData.horseId}
             </Descriptions.Item>
             <Descriptions.Item label="Horse Name">
               {detailData.horseName}

@@ -9,6 +9,7 @@ import {
   Popconfirm,
   Select,
   Space,
+  Steps,
   Table,
   Tag,
   Tooltip,
@@ -19,11 +20,13 @@ import {
 import {
   DeleteOutlined,
   EyeOutlined,
+  GiftOutlined,
   TrophyOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import { useNavigate } from "react-router-dom";
 import "antd/dist/reset.css";
 import {
   createTournament,
@@ -35,6 +38,10 @@ import {
   updateTournament,
   updateTournamentStatus,
 } from "../../api/services/tournament.service";
+import {
+  createRaceBatch,
+  createRound2Race,
+} from "../../api/services/race.service";
 
 dayjs.extend(customParseFormat);
 
@@ -60,6 +67,10 @@ function resolveList(response) {
 function formatMoney(value) {
   if (value === undefined || value === null) return "N/A";
   return Number(value).toLocaleString("vi-VN") + " VND";
+}
+
+function buildRaceStartTime(date, time) {
+  return `${date}T${time}:00.000Z`;
 }
 
 function formatDateTime(value) {
@@ -166,8 +177,11 @@ function normalizeTournamentDetail(item) {
 }
 
 function TournamentManagement() {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [statusForm] = Form.useForm();
+  const [round1Form] = Form.useForm();
+  const [round2Form] = Form.useForm();
 
   const [tournaments, setTournaments] = useState([]);
   const [filterStatus, setFilterStatus] = useState("");
@@ -177,6 +191,9 @@ function TournamentManagement() {
   const bannerUrl = Form.useWatch("imageUrl", form);
 
   const [isTournamentModalOpen, setIsTournamentModalOpen] = useState(false);
+  const [isSetupWizardOpen, setIsSetupWizardOpen] = useState(false);
+  const [setupStep, setSetupStep] = useState(0);
+  const [createdTournament, setCreatedTournament] = useState(null);
   const [editingTournament, setEditingTournament] = useState(null);
   const [changingStatusTournament, setChangingStatusTournament] =
     useState(null);
@@ -207,11 +224,102 @@ function TournamentManagement() {
   function openCreateModal() {
     setEditingTournament(null);
     form.resetFields();
+    round1Form.resetFields();
+    round2Form.resetFields();
     form.setFieldsValue({
       horsesPerRace: 8,
       entryFee: 500000,
     });
-    setIsTournamentModalOpen(true);
+    round1Form.setFieldsValue({
+      races: [{ name: "Vong 1 - Race 1", date: "", startTime: "" }],
+    });
+    setCreatedTournament(null);
+    setSetupStep(0);
+    setIsSetupWizardOpen(true);
+  }
+
+  async function finishSetupWizard() {
+    setIsSetupWizardOpen(false);
+    setSetupStep(0);
+    setCreatedTournament(null);
+    form.resetFields();
+    round1Form.resetFields();
+    round2Form.resetFields();
+    await loadTournaments();
+  }
+
+  async function handleCreateTournamentStep() {
+    const values = await form.validateFields();
+    const payload = {
+      ...values,
+      startDate: values.startDate.format("DD/MM/YYYY"),
+      endDate: values.endDate.format("DD/MM/YYYY"),
+      totalRounds: 2,
+      totalRaces: 3,
+    };
+
+    setIsSaving(true);
+
+    try {
+      const response = await createTournament(payload);
+      const tournamentId = response?._id || response?.id;
+
+      if (!tournamentId) {
+        throw new Error("Tournament was created but no ID was returned");
+      }
+
+      setCreatedTournament({
+        id: tournamentId,
+        title: response?.title || payload.title,
+      });
+      setSetupStep(1);
+      message.success("Tournament created. Continue with Round 1 races.");
+    } catch (error) {
+      message.error(error?.message || "Unable to create tournament");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleCreateRound1Step() {
+    const values = await round1Form.validateFields();
+
+    setIsSaving(true);
+
+    try {
+      await createRaceBatch({
+        tournamentId: createdTournament.id,
+        races: values.races.map((race) => ({
+          ...race,
+          startTime: buildRaceStartTime(race.date, race.startTime),
+        })),
+      });
+      setSetupStep(2);
+      message.success("Round 1 races created. You can now create the final.");
+    } catch (error) {
+      message.error(error?.message || "Unable to create Round 1 races");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleCreateRound2Step() {
+    const values = await round2Form.validateFields();
+
+    setIsSaving(true);
+
+    try {
+      await createRound2Race(createdTournament.id, {
+        date: values.date,
+        startTime: buildRaceStartTime(values.date, values.startTime),
+      });
+      message.success("Tournament and race setup completed");
+      await finishSetupWizard();
+    } catch (error) {
+      message.error(error?.message || "Unable to create Round 2 race");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function openDetailModal(record) {
@@ -422,7 +530,7 @@ function TournamentManagement() {
         title: "Actions",
         key: "actions",
         fixed: "right",
-        width: 210,
+        width: 340,
         render: (_, record) => (
           <Space>
             <Button
@@ -438,6 +546,21 @@ function TournamentManagement() {
                 onClick={() => openAdvancementsModal(record)}
               />
             </Tooltip>
+
+            {record.status === "Completed" && (
+              <Tooltip title="Award tournament prize">
+                <Button
+                  className="tournament-management-link-btn"
+                  size="small"
+                  icon={<GiftOutlined />}
+                  onClick={() =>
+                    navigate(`/admin/prize?tournamentId=${record.id}`)
+                  }
+                >
+                  Award Prize
+                </Button>
+              </Tooltip>
+            )}
 
             <Button
               className="tournament-management-link-btn"
@@ -546,10 +669,53 @@ function TournamentManagement() {
           border-radius: 8px;
         }
 
+        .setup-wizard-steps {
+          margin-bottom: 24px;
+          padding-bottom: 20px;
+          border-bottom: 1px solid #dff3ee;
+        }
+
+        .setup-wizard-heading {
+          margin-bottom: 18px;
+        }
+
+        .setup-wizard-heading h4.ant-typography {
+          margin: 0 0 4px;
+          color: #06332e;
+        }
+
+        .setup-wizard-created {
+          margin-bottom: 18px;
+          padding: 12px 14px;
+          border-left: 3px solid #00a88d;
+          background: #f3fffc;
+          color: #315f59;
+        }
+
+        .setup-wizard-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0 14px;
+        }
+
+        .setup-wizard-race-row {
+          display: grid;
+          grid-template-columns: minmax(220px, 1fr) 180px 160px auto;
+          gap: 10px;
+          align-items: flex-start;
+          padding: 14px 0;
+          border-bottom: 1px solid #edf5f3;
+        }
+
         @media (max-width: 920px) {
           .tournament-management-header {
             align-items: flex-start;
             flex-direction: column;
+          }
+
+          .setup-wizard-grid,
+          .setup-wizard-race-row {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
@@ -588,7 +754,7 @@ function TournamentManagement() {
             className="tournament-management-primary"
             onClick={openCreateModal}
           >
-            Create Tournament
+            Create Tournament & Races
           </Button>
         </Space>
       </div>
@@ -610,9 +776,286 @@ function TournamentManagement() {
 
       <Modal
         className="tournament-management-edit-modal"
-        title={editingTournament ? "Edit Tournament" : "Create Tournament"}
+        title="Tournament Setup"
+        open={isSetupWizardOpen}
+        width={900}
+        confirmLoading={isSaving}
+        onCancel={finishSetupWizard}
+        destroyOnClose
+        footer={[
+          <Button key="close" onClick={finishSetupWizard}>
+            {setupStep === 0 ? "Cancel" : "Finish Later"}
+          </Button>,
+          <Button
+            key="continue"
+            className="tournament-management-primary"
+            loading={isSaving}
+            onClick={
+              setupStep === 0
+                ? handleCreateTournamentStep
+                : setupStep === 1
+                  ? handleCreateRound1Step
+                  : handleCreateRound2Step
+            }
+          >
+            {setupStep === 0
+              ? "Create & Continue"
+              : setupStep === 1
+                ? "Create Round 1 & Continue"
+                : "Create Final & Finish"}
+          </Button>,
+        ]}
+      >
+        <Steps
+          className="setup-wizard-steps"
+          current={setupStep}
+          responsive
+          items={[
+            { title: "Tournament" },
+            { title: "Round 1" },
+            { title: "Final" },
+          ]}
+        />
+
+        {createdTournament && (
+          <div className="setup-wizard-created">
+            <Text strong>{createdTournament.title}</Text> has been created.
+            Continue setting up its races or finish and return later.
+          </div>
+        )}
+
+        {setupStep === 0 && (
+          <>
+            <div className="setup-wizard-heading">
+              <Title level={4}>Tournament information</Title>
+              <Text type="secondary">
+                Set the registration period, venue and participation rules.
+              </Text>
+            </div>
+
+            <Form form={form} layout="vertical">
+              <Form.Item
+                label="Title"
+                name="title"
+                rules={[{ required: true, message: "Title is required" }]}
+              >
+                <Input placeholder="Tournament title" />
+              </Form.Item>
+
+              <Form.Item label="Description" name="description">
+                <Input.TextArea rows={3} placeholder="Tournament description" />
+              </Form.Item>
+
+              <Form.Item label="Tournament Banner" required>
+                <Form.Item
+                  name="imageUrl"
+                  noStyle
+                  rules={[
+                    { required: true, message: "Tournament banner is required" },
+                  ]}
+                >
+                  <Input type="hidden" />
+                </Form.Item>
+                <Upload
+                  accept="image/*"
+                  customRequest={handleBannerUpload}
+                  maxCount={1}
+                  showUploadList={false}
+                >
+                  <Button
+                    icon={<UploadOutlined />}
+                    loading={isUploadingBanner}
+                  >
+                    Upload Banner
+                  </Button>
+                </Upload>
+                {bannerUrl ? (
+                  <img
+                    src={bannerUrl}
+                    alt="Tournament banner preview"
+                    style={{
+                      width: "100%",
+                      height: 160,
+                      display: "block",
+                      marginTop: 12,
+                      borderRadius: 8,
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : null}
+              </Form.Item>
+
+              <div className="setup-wizard-grid">
+                <Form.Item
+                  label="Start Date"
+                  name="startDate"
+                  rules={[{ required: true, message: "Start date is required" }]}
+                >
+                  <DatePicker
+                    format="DD/MM/YYYY"
+                    placeholder="DD/MM/YYYY"
+                    style={{ width: "100%" }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="End Date"
+                  name="endDate"
+                  rules={[{ required: true, message: "End date is required" }]}
+                >
+                  <DatePicker
+                    format="DD/MM/YYYY"
+                    placeholder="DD/MM/YYYY"
+                    style={{ width: "100%" }}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Location"
+                  name="location"
+                  rules={[{ required: true, message: "Location is required" }]}
+                >
+                  <Input placeholder="Tournament location" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Horses Per Race"
+                  name="horsesPerRace"
+                  rules={[
+                    { required: true, message: "Horses per race is required" },
+                    {
+                      type: "number",
+                      min: 8,
+                      max: 10,
+                      message: "Horses per race must be between 8 and 10",
+                    },
+                  ]}
+                >
+                  <InputNumber min={8} max={10} style={{ width: "100%" }} />
+                </Form.Item>
+              </div>
+
+              <Form.Item label="Entry Fee" name="entryFee">
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  addonAfter="VND"
+                />
+              </Form.Item>
+            </Form>
+          </>
+        )}
+
+        {setupStep === 1 && (
+          <>
+            <div className="setup-wizard-heading">
+              <Title level={4}>Round 1 races</Title>
+              <Text type="secondary">
+                Add each qualifying race with its date and start time.
+              </Text>
+            </div>
+
+            <Form form={round1Form} layout="vertical">
+              <Form.List name="races">
+                {(fields, { add, remove }) => (
+                  <Space direction="vertical" style={{ width: "100%" }}>
+                    {fields.map(({ key, name, ...restField }, index) => (
+                      <div className="setup-wizard-race-row" key={key}>
+                        <Form.Item
+                          {...restField}
+                          label="Race Name"
+                          name={[name, "name"]}
+                          rules={[{ required: true, message: "Name is required" }]}
+                        >
+                          <Input placeholder={`Vong 1 - Race ${index + 1}`} />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          label="Date"
+                          name={[name, "date"]}
+                          rules={[{ required: true, message: "Date is required" }]}
+                        >
+                          <Input type="date" />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          label="Start Time"
+                          name={[name, "startTime"]}
+                          rules={[{ required: true, message: "Time is required" }]}
+                        >
+                          <Input type="time" />
+                        </Form.Item>
+
+                        <Form.Item label=" ">
+                          <Button
+                            danger
+                            disabled={fields.length === 1}
+                            onClick={() => remove(name)}
+                          >
+                            Remove
+                          </Button>
+                        </Form.Item>
+                      </div>
+                    ))}
+
+                    <Button
+                      onClick={() =>
+                        add({
+                          name: `Vong 1 - Race ${fields.length + 1}`,
+                          date: "",
+                          startTime: "",
+                        })
+                      }
+                    >
+                      Add Round 1 Race
+                    </Button>
+                  </Space>
+                )}
+              </Form.List>
+            </Form>
+          </>
+        )}
+
+        {setupStep === 2 && (
+          <>
+            <div className="setup-wizard-heading">
+              <Title level={4}>Round 2 final</Title>
+              <Text type="secondary">
+                Schedule the final now, or choose Finish Later to create it from
+                Race Management.
+              </Text>
+            </div>
+
+            <Form form={round2Form} layout="vertical">
+              <div className="setup-wizard-grid">
+                <Form.Item
+                  label="Final Date"
+                  name="date"
+                  rules={[{ required: true, message: "Date is required" }]}
+                >
+                  <Input type="date" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Start Time"
+                  name="startTime"
+                  rules={[{ required: true, message: "Time is required" }]}
+                >
+                  <Input type="time" />
+                </Form.Item>
+              </div>
+            </Form>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        className="tournament-management-edit-modal"
+        title="Edit Tournament"
         open={isTournamentModalOpen}
-        okText={editingTournament ? "Update" : "Create"}
+        okText="Update"
         cancelText="Cancel"
         confirmLoading={isSaving}
         onOk={handleSaveTournament}
