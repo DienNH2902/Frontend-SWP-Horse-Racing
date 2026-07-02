@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
+  Checkbox,
   Form,
   Input,
   InputNumber,
@@ -74,6 +75,7 @@ function normalizeBet(item, index) {
     pointsWon: item?.pointsWon ?? 0,
     result: pick(item, ["result"], "PENDING"),
     placedAt: pick(item, ["placedAt"], ""),
+    isInsuranceCardUsed: item?.isInsuranceCardUsed ?? false,
   };
 }
 
@@ -116,6 +118,7 @@ export default function BettingHistory() {
     form.setFieldsValue({
       horseId: editingBet.horseId ? String(editingBet.horseId) : undefined,
       pointsWagered: editingBet.pointsWagered,
+      isInsuranceCardUsed: editingBet.isInsuranceCardUsed || false,
     });
   }, [editingBet, form]);
 
@@ -218,6 +221,7 @@ export default function BettingHistory() {
       await updateBet(editingBet.id, {
         horseId: values.horseId,
         pointsWagered: values.pointsWagered,
+        isInsuranceCardUsed: values.isInsuranceCardUsed,
       });
 
       messageApi.success("Bet updated successfully");
@@ -540,6 +544,13 @@ export default function BettingHistory() {
                 addonAfter="points"
                 style={{ width: "100%" }}
               />
+            </Form.Item>
+
+            <Form.Item
+              name="isInsuranceCardUsed"
+              valuePropName="checked" // Cần thiết đối với Checkbox hoặc Switch trong Antd Form
+            >
+              <Checkbox>Use items/cards for this bet</Checkbox>
             </Form.Item>
 
             <div style={{ margin: "-8px 0 20px" }}>
