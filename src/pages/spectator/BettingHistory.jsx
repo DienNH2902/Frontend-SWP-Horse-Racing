@@ -221,7 +221,7 @@ export default function BettingHistory() {
       await updateBet(editingBet.id, {
         horseId: values.horseId,
         pointsWagered: values.pointsWagered,
-        isInsuranceCardUsed: values.isInsuranceCardUsed,
+        useInsuranceCard: values.isInsuranceCardUsed,
       });
 
       messageApi.success("Bet updated successfully");
