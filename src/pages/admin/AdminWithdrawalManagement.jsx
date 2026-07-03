@@ -583,6 +583,9 @@ export default function AdminWithdrawalManagement() {
             size="small"
             style={{ marginTop: 15 }}
           >
+            <Descriptions.Item label="Request ID">
+              {detailData._id || detailData.id}
+            </Descriptions.Item>
             <Descriptions.Item label="Requested By">
               {detailData.userId?.fullName}
             </Descriptions.Item>

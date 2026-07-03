@@ -96,6 +96,7 @@ function AdminLayout({ children }) {
         }
 
         .admin-layout { min-height: 100dvh; background: #f6fbfa; }
+        .admin-main-layout { min-width: 0; }
         .admin-sidebar.ant-layout-sider {
           position: sticky;
           top: 0;
@@ -220,24 +221,57 @@ function AdminLayout({ children }) {
 
         .admin-content.ant-layout-content {
           min-width: 0;
+          max-width: 100%;
+          overflow-x: hidden;
           padding: 28px;
           background: #f6fbfa;
         }
 
-        @media (max-width: 920px) {
-          .admin-layout { display: block; }
+        .admin-content > * { min-width: 0; max-width: 100%; }
+        .admin-content .ant-table-wrapper,
+        .admin-content .ant-table-container,
+        .admin-content .ant-form,
+        .admin-content .ant-space { max-width: 100%; }
+        .admin-content .ant-form-inline { row-gap: 10px; }
+
+        @media (max-width: 1180px) {
           .admin-sidebar.ant-layout-sider {
-            position: static;
-            max-width: none !important;
-            min-width: 0 !important;
-            width: 100% !important;
-            height: auto;
-            border-right: 0;
-            border-bottom: 1px solid #e7efed;
+            flex: 0 0 82px !important;
+            max-width: 82px !important;
+            min-width: 82px !important;
+            width: 82px !important;
           }
-          .admin-sidebar-inner { height: auto; max-height: none; }
-          .admin-nav-scroll { overflow: visible; }
+
+          .admin-sidebar-inner { padding-inline: 9px; }
+          .admin-brand { justify-content: center; padding-inline: 0; }
+          .admin-brand > span,
+          .admin-nav-label,
+          .admin-nav-item > span,
+          .admin-account-copy,
+          .admin-footer-actions .ant-btn > span:not(.anticon) { display: none; }
+          .admin-nav-group + .admin-nav-group { margin-top: 12px; }
+          .admin-nav-item { justify-content: center; padding: 0; }
+          .admin-account { display: flex; justify-content: center; padding-inline: 0; }
+          .admin-footer-actions { grid-template-columns: 1fr; }
+          .admin-footer-actions .ant-btn { width: 100%; padding-inline: 0; }
+        }
+
+        @media (max-width: 920px) {
+          .admin-header.ant-layout-header { padding: 0 18px; }
           .admin-content.ant-layout-content { padding: 18px; }
+        }
+
+        @media (max-width: 560px) {
+          .admin-sidebar.ant-layout-sider {
+            flex-basis: 70px !important;
+            max-width: 70px !important;
+            min-width: 70px !important;
+            width: 70px !important;
+          }
+          .admin-brand-logo { width: 32px; height: 32px; }
+          .admin-header.ant-layout-header { height: 64px; padding: 0 14px; }
+          .admin-header-copy .ant-typography-secondary { display: none; }
+          .admin-content.ant-layout-content { padding: 14px; }
         }
       `}</style>
 
@@ -258,6 +292,7 @@ function AdminLayout({ children }) {
                       className={`admin-nav-item ${isActive(item.path) ? "active" : ""}`}
                       to={item.path}
                       key={item.path}
+                      title={item.label}
                     >
                       {item.icon}
                       <span>{item.label}</span>
@@ -298,7 +333,7 @@ function AdminLayout({ children }) {
         </div>
       </Sider>
 
-      <Layout>
+      <Layout className="admin-main-layout">
         <Header className="admin-header">
           <div className="admin-header-copy">
             <Typography.Text type="secondary">

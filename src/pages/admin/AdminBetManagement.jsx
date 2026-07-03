@@ -416,12 +416,16 @@ export default function AdminBetManagement() {
             size="small"
             style={{ marginTop: 15 }}
           >
+            <Descriptions.Item label="Bet ID">{detailData.id}</Descriptions.Item>
+            <Descriptions.Item label="Spectator ID">{detailData.spectatorId}</Descriptions.Item>
             <Descriptions.Item label="Spectator Name">
               <Text strong>{detailData.spectatorName}</Text>
             </Descriptions.Item>
+            <Descriptions.Item label="Race ID">{detailData.raceId}</Descriptions.Item>
             <Descriptions.Item label="Race Name">
               {detailData.raceName}
             </Descriptions.Item>
+            <Descriptions.Item label="Horse ID">{detailData.horseId}</Descriptions.Item>
             <Descriptions.Item label="Horse Name">
               {detailData.horseName}
             </Descriptions.Item>
