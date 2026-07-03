@@ -24,7 +24,11 @@ const NAV_GROUPS = [
   {
     label: "Overview",
     items: [
-      { path: "/admin/dashboard", label: "Dashboard", icon: <DashboardOutlined /> },
+      {
+        path: "/admin/dashboard",
+        label: "Dashboard",
+        icon: <DashboardOutlined />,
+      },
     ],
   },
   {
@@ -41,22 +45,38 @@ const NAV_GROUPS = [
   {
     label: "Competition",
     items: [
-      { path: "/admin/tournaments", label: "Tournaments", icon: <TrophyOutlined /> },
-      { path: "/admin/registrations", label: "Registrations", icon: <ProfileOutlined /> },
+      {
+        path: "/admin/tournaments",
+        label: "Tournaments",
+        icon: <TrophyOutlined />,
+      },
+      {
+        path: "/admin/registrations",
+        label: "Registrations",
+        icon: <ProfileOutlined />,
+      },
       { path: "/admin/races", label: "Races", icon: <ScheduleOutlined /> },
       {
         path: "/admin/raceCourse",
         label: "Race Courses",
         icon: <EnvironmentOutlined />,
       },
-      { path: "/admin/prize", label: "Prize Distribution", icon: <GiftOutlined /> },
+      {
+        path: "/admin/prize",
+        label: "Prize Distribution",
+        icon: <GiftOutlined />,
+      },
     ],
   },
   {
     label: "Finance & Engagement",
     items: [
       { path: "/admin/reward", label: "Rewards", icon: <GiftOutlined /> },
-      { path: "/admin/withdrawal", label: "Withdrawals", icon: <WalletOutlined /> },
+      {
+        path: "/admin/withdrawal",
+        label: "Withdrawals",
+        icon: <WalletOutlined />,
+      },
       { path: "/admin/bet", label: "Bets", icon: <DollarOutlined /> },
     ],
   },
@@ -244,7 +264,11 @@ function AdminLayout({ children }) {
       <Sider className="admin-sidebar" width={250}>
         <div className="admin-sidebar-inner">
           <Link className="admin-brand" to="/admin/dashboard">
-            <img className="admin-brand-logo" src="/goldenhoof-logo.png" alt="GoldenHoof" />
+            <img
+              className="admin-brand-logo"
+              src="/goldenhoof-logo.png"
+              alt="GoldenHoof"
+            />
             <span>GoldenHoof</span>
           </Link>
 
@@ -275,13 +299,18 @@ function AdminLayout({ children }) {
               </Avatar>
               <div className="admin-account-copy">
                 <div className="admin-account-name">{displayName}</div>
-                <div className="admin-account-email">{user?.email || "Admin account"}</div>
+                <div className="admin-account-email">
+                  {user?.email || "Admin account"}
+                </div>
               </div>
             </Link>
 
             <div className="admin-footer-actions">
               <Tooltip title="Open home">
-                <Button icon={<HomeOutlined />} onClick={() => navigate("/home")}>
+                <Button
+                  icon={<HomeOutlined />}
+                  onClick={() => navigate("/home")}
+                >
                   Home
                 </Button>
               </Tooltip>
@@ -299,7 +328,7 @@ function AdminLayout({ children }) {
       </Sider>
 
       <Layout>
-        <Header className="admin-header">
+        {/* <Header className="admin-header">
           <div className="admin-header-copy">
             <Typography.Text type="secondary">
               Operations and management
@@ -308,7 +337,7 @@ function AdminLayout({ children }) {
               Admin workspace
             </Typography.Title>
           </div>
-        </Header>
+        </Header> */}
 
         <Content className="admin-content">{children}</Content>
       </Layout>
