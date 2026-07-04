@@ -3,6 +3,7 @@ import {
   DashboardOutlined,
   DollarOutlined,
   EnvironmentOutlined,
+  FileTextOutlined,
   GiftOutlined,
   HomeOutlined,
   IdcardOutlined,
@@ -78,6 +79,7 @@ const NAV_GROUPS = [
         icon: <WalletOutlined />,
       },
       { path: "/admin/bet", label: "Bets", icon: <DollarOutlined /> },
+      { path: "/admin/report", label: "Reports", icon: <FileTextOutlined /> },
     ],
   },
 ];
