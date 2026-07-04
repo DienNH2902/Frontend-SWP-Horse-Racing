@@ -1904,6 +1904,10 @@ function Home() {
                 Bet Points
               </Link>
             )}
+            <Link className="home-live-btn" to="/report">
+              <i aria-hidden="true" />
+              Report
+            </Link>
             <Link className="home-live-btn" to="/spectator/broadcast">
               <i aria-hidden="true" />
               Live Broadcast
@@ -2237,7 +2241,9 @@ function Home() {
                 ))}
               </div>
               {topHorses.length === 0 && (
-                <p className="loading-line">No horses match the current filters.</p>
+                <p className="loading-line">
+                  No horses match the current filters.
+                </p>
               )}
             </section>
 
@@ -2268,7 +2274,9 @@ function Home() {
                 ))}
               </div>
               {topJockeys.length === 0 && (
-                <p className="loading-line">No jockeys match the current filters.</p>
+                <p className="loading-line">
+                  No jockeys match the current filters.
+                </p>
               )}
             </section>
           </div>
@@ -2424,13 +2432,17 @@ function Home() {
                         <div className="horse-profile-detail">
                           <span>Height</span>
                           <strong>
-                            {selectedHorse.height ? `${selectedHorse.height} m` : "N/A"}
+                            {selectedHorse.height
+                              ? `${selectedHorse.height} m`
+                              : "N/A"}
                           </strong>
                         </div>
                         <div className="horse-profile-detail">
                           <span>Weight</span>
                           <strong>
-                            {selectedHorse.weight ? `${selectedHorse.weight} kg` : "N/A"}
+                            {selectedHorse.weight
+                              ? `${selectedHorse.weight} kg`
+                              : "N/A"}
                           </strong>
                         </div>
                         <div className="horse-profile-detail">
