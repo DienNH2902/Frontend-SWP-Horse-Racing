@@ -338,8 +338,17 @@ export default function AdminReportManagement() {
                 trigger={["click"]}
                 disabled={isActionLoading}
               >
-                <Button size="small" type="default">
-                  Resolve...
+                <Button
+                  size="small"
+                  type="default"
+                  style={{
+                    backgroundColor: "#e6fffb",
+                    color: "#006d75",
+                    borderColor: "#87e8de",
+                    fontWeight: 600,
+                  }}
+                >
+                  Resolve
                 </Button>
               </Dropdown>
 
