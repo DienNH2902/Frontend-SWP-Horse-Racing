@@ -14,6 +14,7 @@ import {
   Select,
   Modal,
   Descriptions,
+  Popconfirm,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -24,6 +25,7 @@ import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import {
   createReport,
+  deleteReport,
   getMyReports,
   getReportById,
 } from "../api/services/report.service";
@@ -53,7 +55,8 @@ export default function ReportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [activeId, setActiveId] = useState(null);
-  const [detailData, setDetailData] = useState(null);
+  const [detailData, setDetailData] = useState(null);  
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   async function loadReports() {
     setIsLoading(true);
@@ -116,6 +119,22 @@ export default function ReportPage() {
     }
   }
 
+  async function handleDelete(id) {
+    setIsActionLoading(true);
+    try {
+      await deleteReport(id);
+      message.success("Report deleted successfully");
+      if (detailData && detailData.id === id) {
+        setDetailData(null);
+      }
+      await loadReports();
+    } catch (error) {
+      message.error(error?.message || "Failed to delete report");
+    } finally {
+      setIsActionLoading(false);
+    }
+  }
+
   const categoryConfigs = {
     MISSING_WINNING_POINTS: {
       text: "Missing Winning Points",
@@ -152,6 +171,7 @@ export default function ReportPage() {
   };
 
   const columns = [
+    // ... Giữ nguyên các cột cũ (Category, Status, Report Content, Created At) ...
     {
       title: "Category",
       dataIndex: "category",
@@ -264,17 +284,37 @@ export default function ReportPage() {
       title: "Actions",
       key: "actions",
       width: 110,
-      render: (_, record) => (
-        <Button
-          size="small"
-          type="primary"
-          ghost
-          onClick={() => openDetailModal(record._id || record.id)}
-          loading={isDetailLoading && activeId === (record._id || record.id)}
-        >
-          Details
-        </Button>
-      ),
+      render: (_, record) => {
+        // Lấy ID thực tế dựa theo dữ liệu bản ghi
+        const targetId = record._id || record.id;
+
+        return (
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Button
+              size="small"
+              type="primary"
+              ghost
+              onClick={() => openDetailModal(targetId)}
+              loading={isDetailLoading && activeId === targetId}
+            >
+              Details
+            </Button>
+
+            <Popconfirm
+              title="Delete Report"
+              description="Are you sure you want to delete this report?"
+              onConfirm={() => handleDelete(targetId)}
+              okText="Yes"
+              cancelText="No"
+              disabled={isActionLoading}
+            >
+              <Button size="small" type="primary" danger ghost>
+                Delete
+              </Button>
+            </Popconfirm>
+          </div>
+        );
+      },
     },
   ];
 
