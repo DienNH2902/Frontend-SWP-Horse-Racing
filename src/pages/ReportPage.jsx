@@ -12,6 +12,8 @@ import {
   Form,
   Input,
   Select,
+  Modal,
+  Descriptions,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -20,10 +22,28 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
-import { createReport, getMyReports } from "../api/services/report.service";
+import {
+  createReport,
+  getMyReports,
+  getReportById,
+} from "../api/services/report.service";
 
 const { Text, Title, Paragraph } = Typography;
 const { TextArea } = Input;
+
+function formatDate(value) {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+}
 
 export default function ReportPage() {
   const navigate = useNavigate();
@@ -31,6 +51,9 @@ export default function ReportPage() {
   const [reports, setReports] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [activeId, setActiveId] = useState(null);
+  const [detailData, setDetailData] = useState(null);
 
   async function loadReports() {
     setIsLoading(true);
@@ -69,6 +92,29 @@ export default function ReportPage() {
   useEffect(() => {
     loadReports();
   }, []);
+
+  async function openDetailModal(id) {
+    setActiveId(id);
+    setIsDetailLoading(true);
+    try {
+      // Sử dụng service chung hoặc getReportById tùy cấu trúc hệ thống công ty của bạn
+      const report = await getReportById(id);
+      setDetailData({
+        id: report._id || report.id,
+        description: report.description || "No Description",
+        category: report.category || "OTHER",
+        status: report.status || "PENDING",
+        adminNotes: report.adminNotes || "",
+        relatedRaceId: report.relatedRaceId || null,
+        createdAt: report.createdAt || "",
+      });
+    } catch (error) {
+      message.error(error?.message || "Failed to load report details");
+    } finally {
+      setIsDetailLoading(false);
+      setActiveId(null);
+    }
+  }
 
   const categoryConfigs = {
     MISSING_WINNING_POINTS: {
@@ -212,6 +258,22 @@ export default function ReportPage() {
         <Text style={{ color: "rgba(244, 255, 251, 0.5)" }}>
           {date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "N/A"}
         </Text>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: 110,
+      render: (_, record) => (
+        <Button
+          size="small"
+          type="primary"
+          ghost
+          onClick={() => openDetailModal(record._id || record.id)}
+          loading={isDetailLoading && activeId === (record._id || record.id)}
+        >
+          Details
+        </Button>
       ),
     },
   ];
@@ -510,6 +572,78 @@ export default function ReportPage() {
           </Card>
         )}
       </div>
+
+      <Modal
+        title="Incident Report Details"
+        open={Boolean(detailData)}
+        footer={[
+          <Button
+            key="close"
+            type="primary"
+            onClick={() => setDetailData(null)}
+          >
+            Close
+          </Button>,
+        ]}
+        onCancel={() => setDetailData(null)}
+        width={600}
+      >
+        {detailData && (
+          <Descriptions
+            column={1}
+            bordered
+            size="small"
+            style={{ marginTop: 15 }}
+          >
+            <Descriptions.Item label="Ticket ID">
+              <Text strong>{detailData.id}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Category">
+              {categoryConfigs[detailData.category]?.text ||
+                detailData.category}
+            </Descriptions.Item>
+            <Descriptions.Item label="Current Status">
+              {(() => {
+                const config = statusConfigs[detailData.status] || {
+                  text: detailData.status,
+                  border: "#ccc",
+                };
+                return (
+                  <Tag
+                    style={{
+                      fontWeight: "700",
+                      color: config.border,
+                      borderColor: config.border,
+                    }}
+                  >
+                    {config.text}
+                  </Tag>
+                );
+              })()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Related Race ID">
+              {detailData.relatedRaceId || "None"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Created At">
+              {formatDate(detailData.createdAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Description Details">
+              <span style={{ whiteSpace: "pre-wrap" }}>
+                {detailData.description}
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Admin Response">
+              {detailData.adminNotes ? (
+                <Text type="danger" strong>
+                  {detailData.adminNotes}
+                </Text>
+              ) : (
+                <Text type="secondary">No responses from admin yet.</Text>
+              )}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
     </main>
   );
 }

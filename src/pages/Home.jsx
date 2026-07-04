@@ -234,11 +234,16 @@ function pickFirstValue(source, keys) {
 
 function normalizeNotification(notification = {}) {
   return {
-    id: notification._id || notification.id || notification.notificationId || "",
+    id:
+      notification._id || notification.id || notification.notificationId || "",
     title: notification.title || notification.type || "Notification",
     content: notification.content || notification.message || "",
     isRead: Boolean(notification.isRead ?? notification.read),
-    createdAt: notification.createdAt || notification.created_at || notification.date || "",
+    createdAt:
+      notification.createdAt ||
+      notification.created_at ||
+      notification.date ||
+      "",
   };
 }
 
@@ -275,7 +280,12 @@ function normalizeHomeHorse(horse = {}, index = 0) {
     weight: horse.weight || "",
     status: horse.horseStatus || horse.status || "",
     description: horse.description || "",
-    owner: horse.ownerName || horse.owner?.fullName || horse.owner?.name || horse.stable || "N/A",
+    owner:
+      horse.ownerName ||
+      horse.owner?.fullName ||
+      horse.owner?.name ||
+      horse.stable ||
+      "N/A",
     rating: toNumber(horse.rating),
     totalWin,
     winRate,
@@ -305,12 +315,23 @@ function normalizeHomeJockey(jockey = {}, index = 0) {
       profile.careerWins ??
       profile.wins,
   );
-  const status = jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
+  const status =
+    jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
 
   return {
-    id: jockey.id || jockey._id || jockey.userId || profile.id || `${jockey.fullName}-${index}`,
+    id:
+      jockey.id ||
+      jockey._id ||
+      jockey.userId ||
+      profile.id ||
+      `${jockey.fullName}-${index}`,
     rank: index + 1,
-    name: jockey.fullName || jockey.name || profile.fullName || profile.name || "Unnamed jockey",
+    name:
+      jockey.fullName ||
+      jockey.name ||
+      profile.fullName ||
+      profile.name ||
+      "Unnamed jockey",
     wins,
     winRate,
     status,
@@ -372,8 +393,7 @@ function Home() {
     loadHomeDirectories().then(([horsesResult, jockeysResult]) => {
       if (!isMounted) return;
       const horses =
-        horsesResult.status === "fulfilled" &&
-        Array.isArray(horsesResult.value)
+        horsesResult.status === "fulfilled" && Array.isArray(horsesResult.value)
           ? horsesResult.value.map(normalizeHomeHorse)
           : [];
       const jockeys =
@@ -413,7 +433,9 @@ function Home() {
     getMyNotifications()
       .then((data) => {
         if (isMounted) {
-          setNotifications(Array.isArray(data) ? data.map(normalizeNotification) : []);
+          setNotifications(
+            Array.isArray(data) ? data.map(normalizeNotification) : [],
+          );
         }
       })
       .catch(() => {
@@ -492,11 +514,14 @@ function Home() {
   const isSpectator = roleString.includes("spectator");
   const isOwnerOrJockey =
     roleString.includes("owner") || roleString.includes("jockey");
-  const unreadNotificationCount = notifications.filter((item) => !item.isRead).length;
+  const unreadNotificationCount = notifications.filter(
+    (item) => !item.isRead,
+  ).length;
   const notificationPreview = notifications.slice(0, 5);
   const filteredHorses = useMemo(() => {
     const minWinRate = minHorseWinRate === "" ? 0 : toNumber(minHorseWinRate);
-    const minTotalWin = minHorseTotalWin === "" ? 0 : toNumber(minHorseTotalWin);
+    const minTotalWin =
+      minHorseTotalWin === "" ? 0 : toNumber(minHorseTotalWin);
     const sortKey = horseSortBy === "totalWin" ? "totalWin" : "winRate";
 
     return homeData.horses
@@ -505,7 +530,9 @@ function Home() {
           toNumber(horse.winRate) >= minWinRate &&
           toNumber(horse.totalWin) >= minTotalWin,
       )
-      .sort((first, second) => toNumber(second[sortKey]) - toNumber(first[sortKey]))
+      .sort(
+        (first, second) => toNumber(second[sortKey]) - toNumber(first[sortKey]),
+      )
       .map((horse, index) => ({ ...horse, rank: index + 1 }));
   }, [homeData.horses, horseSortBy, minHorseTotalWin, minHorseWinRate]);
   const topHorses = filteredHorses.slice(0, 3);
@@ -514,7 +541,9 @@ function Home() {
 
     return homeData.jockeys
       .filter((jockey) => toNumber(jockey.winRate) >= minWinRate)
-      .sort((first, second) => toNumber(second.winRate) - toNumber(first.winRate))
+      .sort(
+        (first, second) => toNumber(second.winRate) - toNumber(first.winRate),
+      )
       .map((jockey, index) => ({ ...jockey, rank: index + 1 }));
   }, [homeData.jockeys, minJockeyWinRate]);
   const topJockeys = filteredJockeys.slice(0, 5);
@@ -1905,7 +1934,6 @@ function Home() {
               </Link>
             )}
             <Link className="home-live-btn" to="/report">
-              <i aria-hidden="true" />
               Report
             </Link>
             <Link className="home-live-btn" to="/spectator/broadcast">
