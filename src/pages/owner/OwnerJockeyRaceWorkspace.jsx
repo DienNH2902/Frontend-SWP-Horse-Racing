@@ -8,6 +8,7 @@ import {
   Descriptions,
   Empty,
   Form,
+  Image,
   Input,
   InputNumber,
   Modal,
@@ -19,6 +20,7 @@ import {
   Typography,
   message,
 } from "antd";
+import { EyeOutlined } from "@ant-design/icons";
 import {
   confirmHorseRaceEntry,
   confirmJockeyForRace,
@@ -216,6 +218,7 @@ export default function OwnerJockeyRaceWorkspace() {
   const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
   const [tournamentErrorMessage, setTournamentErrorMessage] = useState("");
   const [detailJockey, setDetailJockey] = useState(null);
+  const [previewingLicense, setPreviewingLicense] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractLoadingId, setContractLoadingId] = useState(null);
 
@@ -808,7 +811,10 @@ export default function OwnerJockeyRaceWorkspace() {
         open={Boolean(detailJockey)}
         title="Jockey details"
         footer={null}
-        onCancel={() => setDetailJockey(null)}
+        onCancel={() => {
+          setDetailJockey(null);
+          setPreviewingLicense(null);
+        }}
         width={680}
       >
         {detailJockey && (
@@ -918,13 +924,15 @@ export default function OwnerJockeyRaceWorkspace() {
                       </Descriptions.Item>
                       <Descriptions.Item label="Certificate">
                         {pickFirstValue(license, ["licenseUrl"], "") ? (
-                          <Typography.Link
-                            href={pickFirstValue(license, ["licenseUrl"], "")}
-                            target="_blank"
-                            rel="noreferrer"
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<EyeOutlined />}
+                            style={{ padding: 0 }}
+                            onClick={() => setPreviewingLicense(license)}
                           >
-                            Open file
-                          </Typography.Link>
+                            Preview
+                          </Button>
                         ) : (
                           "N/A"
                         )}
@@ -937,6 +945,39 @@ export default function OwnerJockeyRaceWorkspace() {
               )}
             </div>
           </Space>
+        )}
+      </Modal>
+
+      <Modal
+        title={`License ${pickFirstValue(
+          previewingLicense,
+          ["licenseCode"],
+          "",
+        )}`}
+        open={Boolean(previewingLicense)}
+        footer={null}
+        width={760}
+        onCancel={() => setPreviewingLicense(null)}
+        destroyOnHidden
+      >
+        {previewingLicense && (
+          <Image
+            src={pickFirstValue(previewingLicense, ["licenseUrl"], "")}
+            alt={`License ${pickFirstValue(
+              previewingLicense,
+              ["licenseCode"],
+              "",
+            )}`}
+            preview={false}
+            width="100%"
+            style={{
+              display: "block",
+              maxHeight: "70dvh",
+              borderRadius: 10,
+              objectFit: "contain",
+              background: "#f4f8f7",
+            }}
+          />
         )}
       </Modal>
 
