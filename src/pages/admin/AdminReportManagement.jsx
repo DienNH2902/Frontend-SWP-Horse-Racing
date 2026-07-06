@@ -321,6 +321,8 @@ export default function AdminReportManagement() {
             },
           ];
 
+          const isNotPending = record.status !== ReportStatus.PENDING;
+
           return (
             <div style={{ display: "flex", gap: "8px" }}>
               <Button
@@ -333,24 +335,40 @@ export default function AdminReportManagement() {
                 Details
               </Button>
 
-              <Dropdown
-                menu={{ items: resolveMenuItems }}
-                trigger={["click"]}
-                disabled={isActionLoading}
-              >
+              {!isNotPending ? (
+                <Dropdown
+                  menu={{ items: resolveMenuItems }}
+                  trigger={["click"]}
+                  disabled={isActionLoading}
+                >
+                  <Button
+                    size="small"
+                    type="default"
+                    style={{
+                      backgroundColor: "#e6fffb",
+                      color: "#006d75",
+                      borderColor: "#87e8de",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Resolve
+                  </Button>
+                </Dropdown>
+              ) : (
                 <Button
                   size="small"
                   type="default"
+                  disabled
                   style={{
-                    backgroundColor: "#e6fffb",
-                    color: "#006d75",
-                    borderColor: "#87e8de",
+                    backgroundColor: "#f5f5f5",
+                    color: "rgba(0, 0, 0, 0.25)",
+                    borderColor: "#d9d9d9",
                     fontWeight: 600,
                   }}
                 >
                   Resolve
                 </Button>
-              </Dropdown>
+              )}
 
               <Popconfirm
                 title="Delete Report"
@@ -369,7 +387,7 @@ export default function AdminReportManagement() {
         },
       },
     ],
-    [isDetailLoading, isActionLoading, activeId],
+    [isDetailLoading, isActionLoading, activeId, reports],
   );
 
   return (
