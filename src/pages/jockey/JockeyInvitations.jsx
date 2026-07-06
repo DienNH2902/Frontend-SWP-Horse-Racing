@@ -19,6 +19,7 @@ import {
 } from "../../api/services/jockey.service";
 import { getTournamentById } from "../../api/services/tournament.service";
 import { getUserById } from "../../api/services/user.service";
+import JockeyContractModal from "../../components/contracts/JockeyContractModal";
 
 const statusColor = {
   Pending: "gold",
@@ -28,18 +29,6 @@ const statusColor = {
 
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString("vi-VN")} VND`;
-}
-
-function formatContractDate(value) {
-  if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "long",
-    timeStyle: "short",
-  }).format(date);
 }
 
 function pickFirstValue(source, keys, fallback = "") {
@@ -469,115 +458,10 @@ export default function JockeyInvitations() {
         )}
       </Modal>
 
-      <Modal
-        title={null}
-        open={Boolean(selectedContract)}
-        footer={null}
+      <JockeyContractModal
+        contract={selectedContract}
         onCancel={() => setSelectedContract(null)}
-        destroyOnHidden
-        width={760}
-      >
-        {selectedContract && (
-          <div
-            style={{
-              overflow: "hidden",
-              border: "1px solid #ccefe7",
-              borderRadius: 12,
-              background: "#fff",
-            }}
-          >
-            <div
-              style={{
-                padding: "28px 30px",
-                color: "#fff",
-                background: "linear-gradient(135deg, #06332e, #087a6d)",
-                textAlign: "center",
-              }}
-            >
-              <Typography.Text
-                style={{
-                  color: "#69f8dd",
-                  fontSize: 12,
-                  fontWeight: 900,
-                  letterSpacing: 2,
-                }}
-              >
-                GOLDENHOOF OFFICIAL AGREEMENT
-              </Typography.Text>
-              <Typography.Title
-                level={2}
-                style={{ margin: "8px 0 12px", color: "#fff" }}
-              >
-                Jockey Service Contract
-              </Typography.Title>
-              <Tag color={selectedContract.status === "ACTIVE" ? "green" : "default"}>
-                {selectedContract.status || "N/A"}
-              </Tag>
-            </div>
-
-            <div style={{ padding: 28 }}>
-              <Typography.Title level={5}>Contract parties</Typography.Title>
-              <Descriptions bordered column={{ xs: 1, sm: 2 }} size="small">
-                <Descriptions.Item label="Horse Owner">
-                  <Typography.Text strong>
-                    {selectedContract.ownerName || "N/A"}
-                  </Typography.Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Jockey">
-                  <Typography.Text strong>
-                    {selectedContract.jockeyName || "N/A"}
-                  </Typography.Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Horse">
-                  {selectedContract.horseName || "N/A"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Tournament">
-                  {selectedContract.tournamentName || "N/A"}
-                </Descriptions.Item>
-              </Descriptions>
-
-              <Typography.Title level={5} style={{ marginTop: 24 }}>
-                Financial terms
-              </Typography.Title>
-              <Descriptions bordered column={{ xs: 1, sm: 2 }} size="small">
-                <Descriptions.Item label="Contract Amount" span={2}>
-                  <Typography.Text strong style={{ color: "#087a6d", fontSize: 18 }}>
-                    {formatMoney(selectedContract.contractAmount)}
-                  </Typography.Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Owner Share">
-                  {selectedContract.ownerShareRate ?? 0}%
-                </Descriptions.Item>
-                <Descriptions.Item label="Jockey Share">
-                  {selectedContract.jockeyShareRate ?? 0}%
-                </Descriptions.Item>
-                <Descriptions.Item label="Owner Compensation">
-                  {selectedContract.ownerCompensationRate ?? 0}%
-                </Descriptions.Item>
-                <Descriptions.Item label="Jockey Compensation">
-                  {selectedContract.jockeyCompensationRate ?? 0}%
-                </Descriptions.Item>
-              </Descriptions>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 16,
-                  marginTop: 24,
-                  paddingTop: 18,
-                  borderTop: "1px solid #d9eee9",
-                  color: "#52726e",
-                  fontSize: 13,
-                }}
-              >
-                <span>Signed: {formatContractDate(selectedContract.signedAt)}</span>
-                <span>Contract ID: {selectedContract._id || "N/A"}</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+      />
     </Space>
   );
 }

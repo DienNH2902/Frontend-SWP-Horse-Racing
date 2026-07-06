@@ -21,6 +21,7 @@ import {
 import {
   confirmHorseRaceEntry,
   confirmJockeyForRace,
+  getJockeyInvitationContract,
   getOwnerJockeyWorkspace,
   getSentJockeyInvitations,
   registerContractToTournament,
@@ -28,7 +29,8 @@ import {
 } from "../../api/services/owner.service";
 import { createRegistration } from "../../api/services/registration.service";
 import { getTournamentById, getTournaments } from "../../api/services/tournament.service";
-import { searchUsersByName } from "../../api/services/user.service";
+import { getUserById, searchUsersByName } from "../../api/services/user.service";
+import JockeyContractModal from "../../components/contracts/JockeyContractModal";
 
 const contractColor = {
   Active: "green",
@@ -211,6 +213,8 @@ export default function OwnerJockeyRaceWorkspace() {
   const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
   const [tournamentErrorMessage, setTournamentErrorMessage] = useState("");
   const [licenseJockey, setLicenseJockey] = useState(null);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [contractLoadingId, setContractLoadingId] = useState(null);
 
   async function loadWorkspace() {
     setLoading(true);
@@ -374,6 +378,63 @@ export default function OwnerJockeyRaceWorkspace() {
     }
   }
 
+  async function openInvitationContract(invitation) {
+    setContractLoadingId(invitation.id);
+
+    try {
+      const contract = await getJockeyInvitationContract(invitation.id);
+      let ownerName = "Horse Owner";
+      let jockeyName = invitation.jockey || "Jockey";
+
+      const userLookups = [];
+
+      if (contract?.ownerId) {
+        userLookups.push(
+          getUserById(contract.ownerId)
+            .then((owner) => {
+              ownerName = pickFirstValue(
+                owner,
+                ["fullName", "name", "displayName", "email"],
+                ownerName,
+              );
+            })
+            .catch(() => undefined),
+        );
+      }
+
+      if (
+        contract?.jockeyId &&
+        (!jockeyName || jockeyName === "N/A" || jockeyName === "Jockey")
+      ) {
+        userLookups.push(
+          getUserById(contract.jockeyId)
+            .then((jockey) => {
+              jockeyName = pickFirstValue(
+                jockey,
+                ["fullName", "name", "displayName", "email"],
+                jockeyName,
+              );
+            })
+            .catch(() => undefined),
+        );
+      }
+
+      await Promise.all(userLookups);
+
+      setSelectedContract({
+        ...contract,
+        ownerName,
+        jockeyName,
+        horseName: invitation.horse,
+        tournamentName: invitation.tournament,
+      });
+    } catch (error) {
+      messageApi.error(error.message || "Could not load invitation contract.");
+    } finally {
+      setContractLoadingId(null);
+    }
+  }
+
   const jockeyColumns = [
     {
       title: "Jockey",
@@ -458,6 +519,20 @@ export default function OwnerJockeyRaceWorkspace() {
       title: "Status",
       dataIndex: "status",
       render: (value) => <Tag color={contractColor[value] || "blue"}>{value}</Tag>,
+    },
+    {
+      title: "Action",
+      width: 110,
+      render: (_, record) => (
+        <Button
+          size="small"
+          disabled={!isAcceptedInvitation(record)}
+          loading={contractLoadingId === record.id}
+          onClick={() => openInvitationContract(record)}
+        >
+          Contract
+        </Button>
+      ),
     },
   ];
 
@@ -803,6 +878,11 @@ export default function OwnerJockeyRaceWorkspace() {
           ))}
         </Space>
       </Modal>
+
+      <JockeyContractModal
+        contract={selectedContract}
+        onCancel={() => setSelectedContract(null)}
+      />
     </Space>
   );
 }
