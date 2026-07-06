@@ -19,6 +19,7 @@ import {
 } from "../../api/services/jockey.service";
 import { getTournamentById } from "../../api/services/tournament.service";
 import { getUserById } from "../../api/services/user.service";
+import { cancelContract } from "../../api/services/contract.service";
 import JockeyContractModal from "../../components/contracts/JockeyContractModal";
 
 const statusColor = {
@@ -461,6 +462,11 @@ export default function JockeyInvitations() {
       <JockeyContractModal
         contract={selectedContract}
         onCancel={() => setSelectedContract(null)}
+        cancellingParty="JOCKEY"
+        onCancelContract={async (payload) => {
+          await cancelContract(payload);
+          await loadInvitations();
+        }}
       />
     </Space>
   );
