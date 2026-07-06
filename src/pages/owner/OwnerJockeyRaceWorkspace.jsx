@@ -6,6 +6,7 @@ import {
   Card,
   Col,
   Descriptions,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -184,10 +185,12 @@ function formatRate(value) {
   return String(value).includes("%") ? value : `${value}%`;
 }
 
-function toSortableNumber(value) {
-  const number = Number(value);
+function formatMeasurement(value, unit) {
+  if (value === undefined || value === null || value === "" || value === "N/A") {
+    return "N/A";
+  }
 
-  return Number.isFinite(number) ? number : 0;
+  return /[a-z]/i.test(String(value)) ? value : `${value} ${unit}`;
 }
 
 export default function OwnerJockeyRaceWorkspace() {
@@ -212,7 +215,7 @@ export default function OwnerJockeyRaceWorkspace() {
   const [errorMessage, setErrorMessage] = useState("");
   const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
   const [tournamentErrorMessage, setTournamentErrorMessage] = useState("");
-  const [licenseJockey, setLicenseJockey] = useState(null);
+  const [detailJockey, setDetailJockey] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractLoadingId, setContractLoadingId] = useState(null);
 
@@ -445,59 +448,20 @@ export default function OwnerJockeyRaceWorkspace() {
           <Avatar size={44} src={record.avatar || undefined}>
             {String(value || "?").charAt(0)}
           </Avatar>
-          <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
-            <Typography.Text strong ellipsis style={{ maxWidth: 170 }}>
-              {value}
-            </Typography.Text>
-            <Typography.Text type="secondary" ellipsis style={{ maxWidth: 170 }}>
-              {record.email}
-            </Typography.Text>
-          </Space>
+          <Typography.Text strong ellipsis style={{ maxWidth: 220 }}>
+            {value}
+          </Typography.Text>
         </Space>
       ),
     },
-    { title: "Phone", dataIndex: "phoneNumber", width: 130 },
     {
-      title: "Weight",
-      dataIndex: "weight",
-      width: 90,
-      sorter: (first, second) =>
-        toSortableNumber(first.weight) - toSortableNumber(second.weight),
-      sortDirections: ["ascend", "descend"],
-    },
-    {
-      title: "Height",
-      dataIndex: "height",
-      width: 90,
-      sorter: (first, second) =>
-        toSortableNumber(first.height) - toSortableNumber(second.height),
-      sortDirections: ["ascend", "descend"],
-    },
-    {
-      title: "Win rate",
-      dataIndex: "winRate",
-      render: formatRate,
-      width: 90,
-    },
-    {
-      title: "License",
-      dataIndex: "licenses",
-      render: (licenses, record) => (
-        <Button
-          size="small"
-          disabled={!licenses?.length}
-          onClick={() => setLicenseJockey(record)}
-        >
+      title: "Details",
+      width: 130,
+      render: (_, record) => (
+        <Button size="small" onClick={() => setDetailJockey(record)}>
           View more
         </Button>
       ),
-      width: 130,
-    },
-    {
-      title: "Status",
-      dataIndex: "jockeyStatus",
-      render: (value) => <Tag color={value === "Available" ? "green" : "default"}>{value}</Tag>,
-      width: 110,
     },
     {
       title: "Action",
@@ -776,7 +740,6 @@ export default function OwnerJockeyRaceWorkspace() {
               columns={jockeyColumns}
               dataSource={workspace.jockeys}
               pagination={{ pageSize: 5, showSizeChanger: false }}
-              scroll={{ x: 1000 }}
             />
           </Card>
         </Col>
@@ -842,41 +805,139 @@ export default function OwnerJockeyRaceWorkspace() {
       </Card> */}
 
       <Modal
-        open={Boolean(licenseJockey)}
-        title={`Licenses - ${licenseJockey?.fullName || ""}`}
+        open={Boolean(detailJockey)}
+        title="Jockey details"
         footer={null}
-        onCancel={() => setLicenseJockey(null)}
+        onCancel={() => setDetailJockey(null)}
+        width={680}
       >
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
-          {(licenseJockey?.licenses || []).map((license, index) => (
-            <Descriptions
-              key={pickFirstValue(license, ["_id", "id", "licenseCode"], index)}
-              bordered
-              size="small"
-              column={1}
-            >
-              <Descriptions.Item label="Code">
-                {pickFirstValue(license, ["licenseCode"], "N/A")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Racing start date">
-                {pickFirstValue(license, ["racingStartDate"], "N/A")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Certificate">
-                {pickFirstValue(license, ["licenseUrl"], "") ? (
-                  <Typography.Link
-                    href={pickFirstValue(license, ["licenseUrl"], "")}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open file
-                  </Typography.Link>
-                ) : (
-                  "N/A"
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-          ))}
-        </Space>
+        {detailJockey && (
+          <Space direction="vertical" size={20} style={{ width: "100%" }}>
+            <Space align="center" size={14}>
+              <Avatar size={64} src={detailJockey.avatar || undefined}>
+                {String(detailJockey.fullName || "?").charAt(0)}
+              </Avatar>
+              <Space direction="vertical" size={0}>
+                <Typography.Title level={4} style={{ margin: 0 }}>
+                  {detailJockey.fullName}
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  {detailJockey.email}
+                </Typography.Text>
+              </Space>
+            </Space>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 7fr) minmax(0, 3fr)",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Phone</Typography.Text>
+                  <Typography.Text strong style={{ display: "block", marginTop: 4 }}>
+                    {detailJockey.phoneNumber}
+                  </Typography.Text>
+                </div>
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Win rate</Typography.Text>
+                  <Typography.Text strong style={{ display: "block", marginTop: 4 }}>
+                    {formatRate(detailJockey.winRate)}
+                  </Typography.Text>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Height</Typography.Text>
+                  <Typography.Text strong style={{ display: "block", marginTop: 4 }}>
+                    {formatMeasurement(detailJockey.height, "cm")}
+                  </Typography.Text>
+                </div>
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Weight</Typography.Text>
+                  <Typography.Text strong style={{ display: "block", marginTop: 4 }}>
+                    {formatMeasurement(detailJockey.weight, "kg")}
+                  </Typography.Text>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Typography.Title level={5}>Licenses</Typography.Title>
+              {detailJockey.licenses?.length ? (
+                <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                  {detailJockey.licenses.map((license, index) => (
+                    <Descriptions
+                      key={pickFirstValue(
+                        license,
+                        ["_id", "id", "licenseCode"],
+                        index,
+                      )}
+                      bordered
+                      size="small"
+                      column={1}
+                    >
+                      <Descriptions.Item label="Code">
+                        {pickFirstValue(license, ["licenseCode"], "N/A")}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Racing start date">
+                        {pickFirstValue(license, ["racingStartDate"], "N/A")}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Certificate">
+                        {pickFirstValue(license, ["licenseUrl"], "") ? (
+                          <Typography.Link
+                            href={pickFirstValue(license, ["licenseUrl"], "")}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open file
+                          </Typography.Link>
+                        ) : (
+                          "N/A"
+                        )}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  ))}
+                </Space>
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No licenses" />
+              )}
+            </div>
+          </Space>
+        )}
       </Modal>
 
       <JockeyContractModal
