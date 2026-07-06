@@ -1,4 +1,5 @@
-import { Modal, Tag, Typography } from "antd";
+import { useState } from "react";
+import { Button, Input, Modal, Tag, Typography, message } from "antd";
 
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString("vi-VN")} VND`;
@@ -102,55 +103,112 @@ function TermCard({ label, value }) {
   );
 }
 
-export default function JockeyContractModal({ contract, onCancel }) {
+export default function JockeyContractModal({
+  contract,
+  onCancel,
+  cancellingParty,
+  onCancelContract,
+}) {
+  const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [cancellationLoading, setCancellationLoading] = useState(false);
+  const contractStatus = String(contract?.status || "").toUpperCase();
+  const cancellationDisabled = ["CANCELLED", "COMPLETED", "BREACHED"].includes(
+    contractStatus,
+  );
+  const cancellingPartyLabel =
+    cancellingParty === "HORSE_OWNER" ? "Horse Owner" : "Jockey";
+
+  function handleClose() {
+    setCancellationModalOpen(false);
+    setCancellationReason("");
+    onCancel?.();
+  }
+
+  async function handleCancelContract() {
+    const reason = cancellationReason.trim();
+    const contractId = contract?._id || contract?.id;
+
+    if (!contractId) {
+      message.error("Missing contract ID.");
+      return;
+    }
+
+    if (reason.length < 10) {
+      message.warning("Please enter a reason of at least 10 characters.");
+      return;
+    }
+
+    setCancellationLoading(true);
+
+    try {
+      await onCancelContract({
+        contractId,
+        breachingParty: cancellingParty,
+        reason,
+      });
+      message.success("Contract cancelled successfully.");
+      handleClose();
+    } catch (error) {
+      message.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Could not cancel contract.",
+      );
+    } finally {
+      setCancellationLoading(false);
+    }
+  }
+
   return (
-    <Modal
-      title={null}
-      open={Boolean(contract)}
-      footer={null}
-      onCancel={onCancel}
-      destroyOnHidden
-      width={800}
-    >
-      {contract && (
-        <div
-          style={{
-            overflow: "hidden",
-            border: "1px solid #ccefe7",
-            borderRadius: 14,
-            background: "#fff",
-          }}
-        >
+    <>
+      <Modal
+        title={null}
+        open={Boolean(contract)}
+        footer={null}
+        onCancel={handleClose}
+        destroyOnHidden
+        width={800}
+      >
+        {contract && (
           <div
             style={{
-              padding: "28px 30px",
-              color: "#fff",
-              background: "linear-gradient(135deg, #06332e, #087a6d)",
-              textAlign: "center",
+              overflow: "hidden",
+              border: "1px solid #ccefe7",
+              borderRadius: 14,
+              background: "#fff",
             }}
           >
-            <Typography.Text
+            <div
               style={{
-                color: "#69f8dd",
-                fontSize: 12,
-                fontWeight: 900,
-                letterSpacing: 2,
+                padding: "28px 30px",
+                color: "#fff",
+                background: "linear-gradient(135deg, #06332e, #087a6d)",
+                textAlign: "center",
               }}
             >
-              GOLDENHOOF OFFICIAL AGREEMENT
-            </Typography.Text>
-            <Typography.Title
-              level={2}
-              style={{ margin: "8px 0 12px", color: "#fff" }}
-            >
-              Jockey Service Contract
-            </Typography.Title>
-            <Tag color={contract.status === "ACTIVE" ? "green" : "default"}>
-              {contract.status || "N/A"}
-            </Tag>
-          </div>
+              <Typography.Text
+                style={{
+                  color: "#69f8dd",
+                  fontSize: 12,
+                  fontWeight: 900,
+                  letterSpacing: 2,
+                }}
+              >
+                GOLDENHOOF OFFICIAL AGREEMENT
+              </Typography.Text>
+              <Typography.Title
+                level={2}
+                style={{ margin: "8px 0 12px", color: "#fff" }}
+              >
+                Jockey Service Contract
+              </Typography.Title>
+              <Tag color={contract.status === "ACTIVE" ? "green" : "default"}>
+                {contract.status || "N/A"}
+              </Tag>
+            </div>
 
-          <div style={{ padding: 28 }}>
+            <div style={{ padding: 28 }}>
             <Typography.Title level={5} style={{ marginTop: 0 }}>
               Contract parties
             </Typography.Title>
@@ -279,9 +337,79 @@ export default function JockeyContractModal({ contract, onCancel }) {
               <span>Signed: {formatContractDate(contract.signedAt)}</span>
               <span>Contract ID: {contract._id || contract.id || "N/A"}</span>
             </div>
+
+            {onCancelContract && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 14,
+                  marginTop: 20,
+                  padding: 16,
+                  border: "1px solid #ffd2d2",
+                  borderRadius: 10,
+                  background: "#fff7f7",
+                }}
+              >
+                <div>
+                  <Typography.Text strong style={{ display: "block" }}>
+                    Contract cancellation
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Cancel this contract as the current contract party.
+                  </Typography.Text>
+                </div>
+                <Button
+                  danger
+                  disabled={cancellationDisabled}
+                  onClick={() => setCancellationModalOpen(true)}
+                >
+                  Cancel contract
+                </Button>
+              </div>
+            )}
+            </div>
           </div>
+        )}
+      </Modal>
+
+      <Modal
+        title="Cancel contract"
+        open={cancellationModalOpen}
+        okText="Submit cancellation"
+        okButtonProps={{ danger: true }}
+        confirmLoading={cancellationLoading}
+        styles={{
+          body: { paddingBottom: 4 },
+          footer: { marginTop: 28 },
+        }}
+        onOk={handleCancelContract}
+        onCancel={() => {
+          if (!cancellationLoading) {
+            setCancellationModalOpen(false);
+            setCancellationReason("");
+          }
+        }}
+        destroyOnHidden
+      >
+        <Typography.Paragraph type="secondary">
+          You are cancelling this contract as{" "}
+          <strong>{cancellingPartyLabel}</strong>. Please provide a clear
+          reason for the cancellation.
+        </Typography.Paragraph>
+        <div style={{ paddingBottom: 18 }}>
+          <Input.TextArea
+            value={cancellationReason}
+            rows={4}
+            maxLength={500}
+            showCount
+            placeholder="Describe why you want to cancel this contract..."
+            onChange={(event) => setCancellationReason(event.target.value)}
+          />
         </div>
-      )}
-    </Modal>
+      </Modal>
+    </>
   );
 }

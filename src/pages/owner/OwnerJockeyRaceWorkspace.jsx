@@ -33,6 +33,7 @@ import {
 import { createRegistration } from "../../api/services/registration.service";
 import { getTournamentById, getTournaments } from "../../api/services/tournament.service";
 import { getUserById, searchUsersByName } from "../../api/services/user.service";
+import { cancelContract } from "../../api/services/contract.service";
 import JockeyContractModal from "../../components/contracts/JockeyContractModal";
 
 const contractColor = {
@@ -984,6 +985,11 @@ export default function OwnerJockeyRaceWorkspace() {
       <JockeyContractModal
         contract={selectedContract}
         onCancel={() => setSelectedContract(null)}
+        cancellingParty="HORSE_OWNER"
+        onCancelContract={async (payload) => {
+          await cancelContract(payload);
+          await loadSentInvitations();
+        }}
       />
     </Space>
   );
