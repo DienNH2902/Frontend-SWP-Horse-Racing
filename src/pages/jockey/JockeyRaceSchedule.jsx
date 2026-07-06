@@ -118,7 +118,7 @@ export default function JockeyRaceSchedule() {
         </Col>
       </Row>
 
-      <Card title="My race schedule">
+      <Card title="My upcoming race schedule">
         <Table
           rowKey="id"
           loading={loading}
