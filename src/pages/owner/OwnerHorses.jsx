@@ -272,8 +272,6 @@ export default function OwnerHorses() {
       render: (value) => `${value || 0}%`,
       responsive: ["md"],
     },
-    { title: "Starts", dataIndex: "starts", responsive: ["lg"] },
-    { title: "Rating", dataIndex: "rating", responsive: ["lg"] },
     {
       title: "Action",
       key: "action",

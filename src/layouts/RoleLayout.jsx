@@ -1,7 +1,10 @@
-import { Avatar, Button, ConfigProvider, Layout, Menu, Space, Typography } from "antd";
+import { Avatar, Button, ConfigProvider, Layout, Menu, Space, Tooltip, Typography } from "antd";
+import { LogoutOutlined } from "@ant-design/icons";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getProfile } from "../api/services/auth.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
-import { getDisplayName, getInitials } from "../utils/roles";
+import { getInitials } from "../utils/roles";
 
 const { Sider, Header, Content } = Layout;
 
@@ -9,8 +12,15 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
     const navigate = useNavigate();
     const location = useLocation();
     const session = getAuthSession();
-    const user = session?.user || { fullName: role || "GoldenHoof User", role };
-    const displayName = getDisplayName(user);
+    const [user, setUser] = useState(
+        () => session?.user || { fullName: role || "GoldenHoof User", role },
+    );
+    const displayName =
+        user?.fullName ||
+        user?.name ||
+        user?.username ||
+        role ||
+        "GoldenHoof User";
     const initials = getInitials(displayName);
     const isOwnerRole = String(role).toLowerCase().includes("owner");
     const isJockeyRole = String(role).toLowerCase().includes("jockey");
@@ -33,6 +43,24 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
             .sort((first, second) => second.to.length - first.to.length)
             .find((item) => location.pathname.startsWith(item.to))?.key || navItems[0]?.key;
 
+    useEffect(() => {
+        let active = true;
+
+        getProfile()
+            .then((profile) => {
+                if (active && profile) {
+                    setUser((current) => ({ ...current, ...profile }));
+                }
+            })
+            .catch(() => {
+                // Keep the session data when the profile endpoint is unavailable.
+            });
+
+        return () => {
+            active = false;
+        };
+    }, []);
+
     function handleLogout() {
         clearAuthSession();
         navigate("/login", { replace: true });
@@ -44,20 +72,52 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
                 className={`role-layout${isOwnerRole ? " owner-role-layout" : ""}${isJockeyRole ? " jockey-role-layout" : ""}`}
             >
                 <Sider width={250} className="role-sider">
-                    <div className="role-brand">
-                        <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
-                        <span>GoldenHoof</span>
-                    </div>
+                    <div className="role-sider-inner">
+                        <div className="role-brand">
+                            <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
+                            <span>GoldenHoof</span>
+                        </div>
 
-                    <Menu
-                        mode="inline"
-                        selectedKeys={[selectedKey]}
-                        className="role-menu"
-                        items={navItems.map((item) => ({
-                            key: item.key,
-                            label: <NavLink className="role-link" to={item.to}>{item.label}</NavLink>,
-                        }))}
-                    />
+                        <div className="role-menu-scroll">
+                            <Menu
+                                mode="inline"
+                                selectedKeys={[selectedKey]}
+                                className="role-menu"
+                                items={navItems.map((item) => ({
+                                    key: item.key,
+                                    label: <NavLink className="role-link" to={item.to}>{item.label}</NavLink>,
+                                }))}
+                            />
+                        </div>
+
+                        <div className="role-sider-footer">
+                            <div className="role-account">
+                                <Avatar className="role-avatar">
+                                    {initials}
+                                </Avatar>
+                                <div className="role-account-copy">
+                                    <span className="role-account-name">{displayName}</span>
+                                    <span className="role-account-email">
+                                        {user.email || displayName}
+                                    </span>
+                                </div>
+                                <Tooltip title="Logout">
+                                    <Button
+                                        className="role-logout-icon"
+                                        shape="circle"
+                                        danger
+                                        icon={<LogoutOutlined />}
+                                        aria-label="Logout"
+                                        onClick={handleLogout}
+                                    />
+                                </Tooltip>
+                            </div>
+
+                            <Button block onClick={() => navigate("/home")}>
+                                Home
+                            </Button>
+                        </div>
+                    </div>
                 </Sider>
 
                 <Layout>
@@ -67,15 +127,6 @@ export default function RoleLayout({ role, title, subtitle, navItems }) {
                             <Typography.Title level={4} className="role-title">
                                 {title}
                             </Typography.Title>
-                        </Space>
-
-                        <Space>
-                            <Button onClick={() => navigate("/home")}>Home</Button>
-                            <Avatar className="role-avatar">
-                                {initials}
-                            </Avatar>
-                            <span>{displayName}</span>
-                            <Button onClick={handleLogout}>Logout</Button>
                         </Space>
                     </Header>
 

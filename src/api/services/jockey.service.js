@@ -1,5 +1,6 @@
 import { apiClient } from "../client";
 import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
+import { SCHEDULE_ENDPOINTS } from "../endpoints/schedule.endpoint";
 
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
@@ -19,10 +20,143 @@ function unwrapCollection(response) {
   if (Array.isArray(data?.items)) return data.items;
   if (Array.isArray(data?.invitations)) return data.invitations;
   if (Array.isArray(data?.jockeyInvitations)) return data.jockeyInvitations;
+  if (Array.isArray(data?.schedules)) return data.schedules;
+  if (Array.isArray(data?.upcomingSchedules)) return data.upcomingSchedules;
+  if (Array.isArray(data?.races)) return data.races;
   if (Array.isArray(data?.content)) return data.content;
   if (Array.isArray(data?.records)) return data.records;
 
   return [];
+}
+
+function pickFirstValue(source, keys, fallback = "") {
+  for (const key of keys) {
+    const value = source?.[key];
+
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return fallback;
+}
+
+function getReferenceId(reference) {
+  if (!reference) return "";
+  if (typeof reference === "string") return reference;
+
+  return pickFirstValue(reference, ["id", "_id", "raceId", "scheduleId"], "");
+}
+
+function normalizeUpcomingSchedule(schedule = {}, index = 0) {
+  const race = schedule.race || schedule.raceInfo || {};
+  const tournament =
+    schedule.tournament ||
+    schedule.tournamentInfo ||
+    race.tournament ||
+    race.tournamentInfo ||
+    {};
+  const horse = schedule.horse || schedule.horseInfo || race.horse || {};
+  const owner = schedule.owner || schedule.ownerInfo || horse.owner || {};
+  const raceCourse =
+    schedule.raceCourse ||
+    schedule.raceCourseInfo ||
+    race.raceCourse ||
+    race.raceCourseInfo ||
+    {};
+  const startTime = pickFirstValue(
+    schedule,
+    ["startTime", "scheduledAt"],
+    pickFirstValue(race, ["startTime", "scheduledAt"], ""),
+  );
+  const parsedStartTime = startTime ? new Date(startTime) : null;
+  const hasValidStartTime =
+    parsedStartTime && !Number.isNaN(parsedStartTime.getTime());
+
+  return {
+    ...schedule,
+    id:
+      pickFirstValue(schedule, ["id", "_id", "scheduleId"], "") ||
+      getReferenceId(race) ||
+      `upcoming-${index}`,
+    race: pickFirstValue(
+      schedule,
+      ["raceName", "name", "title"],
+      pickFirstValue(race, ["name", "title", "raceName"], "Unnamed race"),
+    ),
+    tournament: pickFirstValue(
+      schedule,
+      ["tournamentName", "tournamentTitle"],
+      pickFirstValue(tournament, ["title", "name"], "N/A"),
+    ),
+    horse: pickFirstValue(
+      schedule,
+      ["horseName"],
+      pickFirstValue(horse, ["name", "horseName"], "N/A"),
+    ),
+    owner: pickFirstValue(
+      schedule,
+      ["ownerName", "ownerFullName"],
+      pickFirstValue(owner, ["fullName", "name", "stableName"], "N/A"),
+    ),
+    date: pickFirstValue(
+      schedule,
+      ["date", "raceDate"],
+      pickFirstValue(
+        race,
+        ["date", "raceDate"],
+        hasValidStartTime ? parsedStartTime.toLocaleDateString("vi-VN") : "N/A",
+      ),
+    ),
+    time: pickFirstValue(
+      schedule,
+      ["time"],
+      pickFirstValue(
+        race,
+        ["time"],
+        hasValidStartTime
+          ? parsedStartTime.toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "N/A",
+      ),
+    ),
+    venue: pickFirstValue(
+      schedule,
+      ["venue", "location", "raceCourseName"],
+      pickFirstValue(raceCourse, ["name", "location"], "N/A"),
+    ),
+    assignmentStatus: pickFirstValue(
+      schedule,
+      ["assignmentStatus", "status"],
+      pickFirstValue(race, ["status"], "Upcoming"),
+    ),
+    gate: pickFirstValue(
+      schedule,
+      ["gate", "gateNumber"],
+      pickFirstValue(race, ["gate", "gateNumber"], "N/A"),
+    ),
+    distance: pickFirstValue(
+      schedule,
+      ["distance"],
+      pickFirstValue(race, ["distance"], pickFirstValue(raceCourse, ["distance"], "N/A")),
+    ),
+    surface: pickFirstValue(
+      schedule,
+      ["surface", "trackType"],
+      pickFirstValue(
+        race,
+        ["surface", "trackType"],
+        pickFirstValue(raceCourse, ["trackType", "surface"], "N/A"),
+      ),
+    ),
+    purse: pickFirstValue(
+      schedule,
+      ["purse", "prizePool"],
+      pickFirstValue(race, ["purse", "prizePool"], 0),
+    ),
+    horseInfo: typeof horse === "object" ? horse : {},
+    result: schedule.result || race.result || null,
+  };
 }
 
 let jockeyData = {
@@ -207,11 +341,16 @@ let jockeyData = {
 };
 
 export async function getJockeyDashboard() {
-  const invitations = await getJockeyInvitations();
+  const [invitations, scheduleData] = await Promise.all([
+    getJockeyInvitations(),
+    getJockeyRaceSchedule(),
+  ]);
 
   return {
     ...structuredClone(jockeyData),
     invitations,
+    schedules: scheduleData.schedules,
+    standings: scheduleData.standings,
   };
 }
 
@@ -254,8 +393,12 @@ export async function getJockeyInvitationContract(invitationId) {
 }
 
 export async function getJockeyRaceSchedule() {
-  return delay({
-    schedules: jockeyData.schedules,
-    standings: jockeyData.standings,
+  const response = await apiClient.get(SCHEDULE_ENDPOINTS.UPCOMING_JOCKEY, {
+    includeAuth: true,
   });
+
+  return {
+    schedules: unwrapCollection(response).map(normalizeUpcomingSchedule),
+    standings: [],
+  };
 }
