@@ -10,7 +10,11 @@ import {
   getAccessToken,
   getAuthSession,
 } from "../utils/storage";
-import { BellOutlined, WalletOutlined } from "@ant-design/icons";
+import {
+  BellOutlined,
+  FileTextOutlined,
+  WalletOutlined,
+} from "@ant-design/icons";
 import {
   getMyNotifications,
   markNotificationAsRead,
@@ -1933,9 +1937,6 @@ function Home() {
                 Bet Points
               </Link>
             )}
-            <Link className="home-live-btn" to="/report">
-              Report
-            </Link>
             <Link className="home-live-btn" to="/spectator/broadcast">
               <i aria-hidden="true" />
               Live Broadcast
@@ -2074,6 +2075,14 @@ function Home() {
                       >
                         <Icon name="chart" size={18} />
                         <span>Points</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/report"
+                      >
+                        <FileTextOutlined style={{ fontSize: "18px" }} />
+                        <span>Report</span>
                       </Link>
                     </>
                   )}

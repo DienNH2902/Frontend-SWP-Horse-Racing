@@ -8,6 +8,7 @@ import {
   Spin,
   Empty,
   Card,
+  ConfigProvider,
   Space,
   Form,
   Input,
@@ -402,6 +403,50 @@ export default function ReportPage() {
           color: #002d28 !important;
           font-weight: 700;
         }
+        .reports-page .report-category-select.ant-select {
+          width: 100%;
+          height: 40px;
+        }
+        .reports-page .report-category-select.ant-select .ant-select-selector {
+          background: #001c19 !important;
+          border-color: rgba(105, 248, 221, 0.42) !important;
+          color: #f4fffb !important;
+          box-shadow: none !important;
+        }
+        .reports-page .report-category-select.ant-select:hover .ant-select-selector,
+        .reports-page .report-category-select.ant-select-focused .ant-select-selector {
+          border-color: #69f8dd !important;
+        }
+        .reports-page .report-category-select .ant-select-selection-placeholder {
+          color: rgba(205, 245, 238, 0.5) !important;
+        }
+        .reports-page .report-category-select .ant-select-selection-item {
+          color: #f4fffb !important;
+          font-weight: 600;
+        }
+        .reports-page .report-category-select .ant-select-arrow {
+          color: #69f8dd !important;
+        }
+        .report-category-dropdown.ant-select-dropdown {
+          background: #002722 !important;
+          border: 1px solid rgba(105, 248, 221, 0.42) !important;
+          border-radius: 8px !important;
+          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4) !important;
+        }
+        .report-category-dropdown .ant-select-item-option {
+          color: #e7faf6 !important;
+          border-radius: 6px;
+        }
+        .report-category-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background: rgba(105, 248, 221, 0.12) !important;
+        }
+        .report-category-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          color: #052a26 !important;
+          background: #69f8dd !important;
+        }
+        .report-category-dropdown .ant-select-item-option-state {
+          color: #087a6d !important;
+        }
 
         .reports-table-card {
           background: rgba(0, 68, 60, 0.4) !important;
@@ -515,21 +560,49 @@ export default function ReportPage() {
                   { required: true, message: "Please select a category" },
                 ]}
               >
-                <Select placeholder="Select issue category">
-                  <Select.Option value="MISSING_WINNING_POINTS">
-                    Missing Winning Points
-                  </Select.Option>
-                  <Select.Option value="MISSING_COMPENSATION">
-                    Missing Compensation
-                  </Select.Option>
-                  <Select.Option value="UNAUTHORIZED_DEDUCTION">
-                    Unauthorized Deduction
-                  </Select.Option>
-                  <Select.Option value="FROZEN_POINTS_NOT_REFUNDED">
-                    Frozen Points Not Refunded
-                  </Select.Option>
-                  <Select.Option value="OTHER">Other</Select.Option>
-                </Select>
+                <ConfigProvider
+                  theme={{
+                    token: {
+                      colorPrimary: "#69f8dd",
+                      colorBgContainer: "#001c19",
+                      colorBgElevated: "#002722",
+                      colorBorder: "rgba(105, 248, 221, 0.42)",
+                      colorText: "#f4fffb",
+                      colorTextPlaceholder: "rgba(205, 245, 238, 0.5)",
+                    },
+                    components: {
+                      Select: {
+                        selectorBg: "#001c19",
+                        hoverBorderColor: "#69f8dd",
+                        activeBorderColor: "#69f8dd",
+                        activeOutlineColor: "rgba(105, 248, 221, 0.18)",
+                        optionActiveBg: "rgba(105, 248, 221, 0.12)",
+                        optionSelectedBg: "#69f8dd",
+                        optionSelectedColor: "#052a26",
+                      },
+                    },
+                  }}
+                >
+                  <Select
+                    className="report-category-select"
+                    popupClassName="report-category-dropdown"
+                    placeholder="Select issue category"
+                  >
+                    <Select.Option value="MISSING_WINNING_POINTS">
+                      Missing Winning Points
+                    </Select.Option>
+                    <Select.Option value="MISSING_COMPENSATION">
+                      Missing Compensation
+                    </Select.Option>
+                    <Select.Option value="UNAUTHORIZED_DEDUCTION">
+                      Unauthorized Deduction
+                    </Select.Option>
+                    <Select.Option value="FROZEN_POINTS_NOT_REFUNDED">
+                      Frozen Points Not Refunded
+                    </Select.Option>
+                    <Select.Option value="OTHER">Other</Select.Option>
+                  </Select>
+                </ConfigProvider>
               </Form.Item>
 
               <Form.Item
