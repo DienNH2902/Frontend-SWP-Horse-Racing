@@ -225,7 +225,7 @@ export default function LiveRaceChannels() {
   const updateLabel = useMemo(
     () =>
       lastUpdated
-        ? `Cập nhật lúc ${lastUpdated.toLocaleTimeString("vi-VN", {
+        ? `Last updated ${lastUpdated.toLocaleTimeString("vi-VN", {
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
