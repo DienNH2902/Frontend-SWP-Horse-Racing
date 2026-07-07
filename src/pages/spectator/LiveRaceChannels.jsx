@@ -8,7 +8,14 @@ function resolveList(response) {
   if (Array.isArray(response)) return response;
   if (!response || typeof response !== "object") return [];
 
-  for (const key of ["data", "items", "races", "content", "records", "result"]) {
+  for (const key of [
+    "data",
+    "items",
+    "races",
+    "content",
+    "records",
+    "result",
+  ]) {
     if (Array.isArray(response[key])) return response[key];
     const nested = resolveList(response[key]);
     if (nested.length) return nested;
@@ -79,18 +86,22 @@ function normalizeRace(race, tournament, index) {
 
 function isLive(status) {
   return ["ongoing", "live", "in progress", "in_progress"].includes(
-    String(status || "").trim().toLowerCase(),
+    String(status || "")
+      .trim()
+      .toLowerCase(),
   );
 }
 
 function isFinished(status) {
   return ["finished", "completed"].includes(
-    String(status || "").trim().toLowerCase(),
+    String(status || "")
+      .trim()
+      .toLowerCase(),
   );
 }
 
 function formatStartTime(value) {
-  if (!value) return "Đang diễn ra";
+  if (!value) return "Live Now";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
 
@@ -117,7 +128,7 @@ function RaceChannelCard({ race, index, replay = false }) {
         </div>
         <span className={`channel-live-badge ${replay ? "finished" : ""}`}>
           {!replay && <i aria-hidden="true" />}
-          {replay ? "XEM LẠI" : "LIVE"}
+          {replay ? "REPLAY" : "LIVE"}
         </span>
       </div>
 
@@ -127,14 +138,14 @@ function RaceChannelCard({ race, index, replay = false }) {
         <div className="channel-meta">
           <span>📍 {race.course}</span>
           <span>🕐 {formatStartTime(race.startAt)}</span>
-          <span>🐎 {race.horseCount || "—"} ngựa</span>
+          <span>🐎 {race.horseCount || "—"} horses</span>
           {race.round != null && <span>Vòng {race.round}</span>}
         </div>
         <Link
           className="watch-channel-button"
           to={`/spectator/broadcast/${encodeURIComponent(race.id)}`}
         >
-          {replay ? "Xem lại broadcast" : "Xem trực tiếp"}
+          {replay ? "Watch replay" : "Watch live"}
           <span aria-hidden="true">→</span>
         </Link>
       </div>
@@ -167,10 +178,11 @@ export default function LiveRaceChannels() {
       );
 
       const loadedRaces = raceResponses
-        .flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+        .flatMap((result) =>
+          result.status === "fulfilled" ? result.value : [],
+        )
         .filter(
-          (race) =>
-            race.id && (isLive(race.status) || isFinished(race.status)),
+          (race) => race.id && (isLive(race.status) || isFinished(race.status)),
         );
 
       const uniqueRaces = Array.from(
@@ -218,7 +230,7 @@ export default function LiveRaceChannels() {
             minute: "2-digit",
             second: "2-digit",
           })}`
-        : "Đang đồng bộ với đường đua",
+        : "Syncing with racetrack",
     [lastUpdated],
   );
   const liveRaces = races.filter((race) => isLive(race.status));
@@ -236,7 +248,7 @@ export default function LiveRaceChannels() {
           <div className="live-channels-actions">
             <span>{updateLabel}</span>
             <button type="button" onClick={loadLiveRaces} disabled={isLoading}>
-              {isLoading ? "Đang tải…" : "↻ Làm mới"}
+              {isLoading ? "Loading…" : "↻ Refresh"}
             </button>
           </div>
         </header>
@@ -245,17 +257,17 @@ export default function LiveRaceChannels() {
           <div>
             <span className="live-dot" aria-hidden="true" />
             <strong>{liveRaces.length}</strong>
-            <span>race đang live · {replayRaces.length} replay gần nhất</span>
+            <span>live races · {replayRaces.length} recent replays</span>
           </div>
-          <Link to="/home">Về Home</Link>
+          <Link to="/home">Back to Home</Link>
         </section>
 
         {error && (
           <section className="live-channel-state error" role="alert">
-            <strong>Không tải được danh sách</strong>
+            <strong>Failed to load list</strong>
             <span>{error}</span>
             <button type="button" onClick={loadLiveRaces}>
-              Thử lại
+              Retry
             </button>
           </section>
         )}
@@ -277,34 +289,33 @@ export default function LiveRaceChannels() {
             <span className="empty-icon">🏁</span>
             <strong>Chưa có race nào để theo dõi</strong>
             <button type="button" onClick={loadLiveRaces}>
-              Kiểm tra lại
+              Check again
             </button>
           </section>
         )}
 
         {!error && !isLoading && races.length > 0 && (
           <div className="channel-sections">
-            <section className="channel-section" aria-labelledby="live-races-title">
+            <section
+              className="channel-section"
+              aria-labelledby="live-races-title"
+            >
               <div className="channel-section-heading">
                 <div>
                   <span className="live-dot" aria-hidden="true" />
-                  <h2 id="live-races-title">Đang phát trực tiếp</h2>
+                  <h2 id="live-races-title">Live Broadcasts</h2>
                 </div>
                 <span>{liveRaces.length} race</span>
               </div>
               {liveRaces.length ? (
                 <div className="live-channel-grid">
                   {liveRaces.map((race, index) => (
-                    <RaceChannelCard
-                      race={race}
-                      index={index}
-                      key={race.id}
-                    />
+                    <RaceChannelCard race={race} index={index} key={race.id} />
                   ))}
                 </div>
               ) : (
                 <div className="channel-section-empty">
-                  Hiện chưa có race đang phát trực tiếp.
+                  There are currently no live races broadcasting.
                 </div>
               )}
             </section>
@@ -315,8 +326,10 @@ export default function LiveRaceChannels() {
             >
               <div className="channel-section-heading">
                 <div>
-                  <span className="replay-icon" aria-hidden="true">↻</span>
-                  <h2 id="replay-races-title">Replay gần đây</h2>
+                  <span className="replay-icon" aria-hidden="true">
+                    ↻
+                  </span>
+                  <h2 id="replay-races-title">Recent Replays</h2>
                 </div>
               </div>
               {replayRaces.length ? (
@@ -332,7 +345,7 @@ export default function LiveRaceChannels() {
                 </div>
               ) : (
                 <div className="channel-section-empty">
-                  Chưa có broadcast đã kết thúc để xem lại.
+                  No completed broadcasts available for replay yet.
                 </div>
               )}
             </section>
