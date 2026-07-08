@@ -4,11 +4,28 @@
 }
 
 .role-sider {
+  position: sticky !important;
+  top: 0;
+  align-self: flex-start;
+  height: 100dvh;
+  overflow: hidden;
   background: linear-gradient(180deg, #052a26 0%, #021b19 100%) !important;
   border-right: 1px solid rgba(105, 248, 221, 0.12);
 }
 
+.role-sider .ant-layout-sider-children,
+.role-sider-inner {
+  height: 100%;
+}
+
+.role-sider-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .role-brand {
+  flex: 0 0 72px;
   height: 72px;
   display: flex;
   align-items: center;
@@ -17,6 +34,15 @@
   color: #f4fffb;
   font-weight: 900;
   letter-spacing: 0;
+}
+
+.role-menu-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(105, 248, 221, 0.3) transparent;
 }
 
 .role-layout .role-brand-logo,
@@ -63,13 +89,76 @@
   width: 100%;
 }
 
+.role-sider-footer {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-top: 1px solid rgba(105, 248, 221, 0.12);
+  background: rgba(2, 27, 25, 0.78);
+}
+
+.role-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+
+.role-account-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.role-logout-icon {
+  flex: 0 0 auto;
+}
+
+.role-account-name,
+.role-account-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-account-name {
+  color: #f4fffb;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.role-account-email {
+  color: rgba(244, 255, 251, 0.58);
+  font-size: 12px;
+}
+
+.role-layout .role-sider-footer .ant-btn {
+  color: rgba(244, 255, 251, 0.86) !important;
+  border-color: rgba(105, 248, 221, 0.2) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.role-layout .role-sider-footer .ant-btn:hover,
+.role-layout .role-sider-footer .ant-btn:focus-visible {
+  color: #69f8dd !important;
+  border-color: rgba(105, 248, 221, 0.58) !important;
+  background: rgba(105, 248, 221, 0.1) !important;
+}
+
+.role-layout .role-sider-footer .ant-btn-dangerous {
+  color: #ffb3b3 !important;
+  border-color: rgba(255, 120, 117, 0.28) !important;
+}
+
 .role-header {
   background: #ffffff;
   padding: 0 24px;
   height: 72px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   border-bottom: 1px solid #e7efed;
 }
 

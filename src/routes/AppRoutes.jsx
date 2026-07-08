@@ -53,6 +53,8 @@ import { getAuthSession } from "../utils/storage";
 import AdminWithdrawalManagement from "../pages/admin/AdminWithdrawalManagement";
 import AdminBetManagement from "../pages/admin/AdminBetManagement";
 import BettingHistory from "../pages/spectator/BettingHistory";
+import AdminReportManagement from "../pages/admin/AdminReportManagement";
+import ReportPage from "../pages/ReportPage";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -174,10 +176,8 @@ export default function AppRoutes() {
         <Route path="/race-results" element={<AllRaceResults />} />
         <Route path="/spectator/broadcast" element={<LiveRaceChannels />} />
         <Route path="/spectator/broadcast/:raceId" element={<Broadcast />} />
-        <Route
-          path="notification"
-          element={<NotificationHistory allowedRole="Spectator" />}
-        />
+        <Route path="notification" element={<NotificationHistory />} />
+        <Route path="report" element={<ReportPage />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Spectator"]} />}>
@@ -280,6 +280,15 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <AdminBetManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
+          path="/admin/report"
+          element={
+            <AdminLayout>
+              <AdminReportManagement />
             </AdminLayout>
           }
         />

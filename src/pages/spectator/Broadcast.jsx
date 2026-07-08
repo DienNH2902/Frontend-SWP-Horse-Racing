@@ -73,7 +73,9 @@ function parseDuration(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return null;
 
-  const durationParts = value.match(/^(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/);
+  const durationParts = value.match(
+    /^(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/,
+  );
   if (!durationParts) return null;
   if (durationParts[3] !== undefined) {
     return (
@@ -600,11 +602,9 @@ export default function Broadcast() {
         ? "FINISHED"
         : `${(currentTick * TICK_DURATION_SECONDS).toFixed(1)} giây · FINISHED`;
     }
-    if (currentTick === null) return "Đang chờ dữ liệu race";
+    if (currentTick === null) return "Waiting for race...";
     const elapsedSeconds = currentTick * TICK_DURATION_SECONDS;
-    return `${elapsedSeconds.toFixed(1)} giây${
-      isCatchUp ? " · catch-up" : ""
-    }`;
+    return `${elapsedSeconds.toFixed(1)} giây${isCatchUp ? " · catch-up" : ""}`;
   }, [currentTick, isCatchUp, isFinished]);
 
   const liveLeaderboard = useMemo(() => {
@@ -633,7 +633,7 @@ export default function Broadcast() {
           <div>
             <p className="broadcast-eyebrow">GOLDEN HOOF · LIVE</p>
             <h1>🏇 Race Broadcast</h1>
-            <p>Theo dõi diễn biến cuộc đua theo thời gian thực.</p>
+            <p>Watch the race progress in real time.</p>
           </div>
           <span className={`broadcast-status ${connection.state}`}>
             <i aria-hidden="true" />
@@ -643,15 +643,15 @@ export default function Broadcast() {
 
         <section className="broadcast-controls" aria-label="Socket controls">
           <div className="selected-race">
-            <span>Kênh đang xem</span>
-            <strong>Race trực tiếp</strong>
+            <span>Current Channel</span>
+            <strong>Live Race</strong>
           </div>
           <div className="broadcast-button-row">
             <button type="button" className="accent" onClick={joinRace}>
-              Kết nối lại
+              Reconnect
             </button>
             <button type="button" onClick={leaveRace}>
-              Rời race
+              Leave Race
             </button>
           </div>
           <div className="broadcast-button-row socket-buttons">
@@ -668,11 +668,11 @@ export default function Broadcast() {
             </button>
           </div>
           <Link className="channel-back-link" to="/spectator/broadcast">
-            ← Chọn kênh khác
+            ← Select another channel
           </Link>
           {joinedRaceId && (
             <p className="joined-race">
-              <strong>✓ Đã kết nối vào race</strong>
+              <strong>✓ Connected to race</strong>
             </p>
           )}
         </section>
@@ -681,13 +681,13 @@ export default function Broadcast() {
           <div className="broadcast-card track-card">
             <div className="card-heading">
               <div>
-                <span>Đường đua</span>
+                <span>Race Track</span>
                 <strong>
-                  {isFinished ? statusLabel : `Thời gian: ${statusLabel}`}
+                  {isFinished ? statusLabel : `Time: ${statusLabel}`}
                 </strong>
               </div>
               <span className={isFinished ? "race-ended" : "race-live"}>
-                {isFinished ? "ĐÃ KẾT THÚC" : "LIVE"}
+                {isFinished ? "FINISHED" : "LIVE"}
               </span>
             </div>
 
@@ -695,8 +695,8 @@ export default function Broadcast() {
               {!horses.length && (
                 <div className="track-empty">
                   {results.length
-                    ? "Race đã kết thúc. Xem kết quả bên dưới."
-                    : "Đang chờ dữ liệu đường đua."}
+                    ? "The race has finished. View results below."
+                    : "Waiting for track to start."}
                 </div>
               )}
               {horses.map((horse) => (
@@ -728,20 +728,22 @@ export default function Broadcast() {
           <div className="broadcast-card leaderboard-card">
             <div className="card-heading">
               <div>
-                <span>Xếp hạng trực tiếp</span>
+                <span>Real-Time Leaderboard</span>
                 <strong>🏆 Live leaderboard</strong>
               </div>
-              <span>{liveLeaderboard.length} ngựa</span>
+              <span>{liveLeaderboard.length} horses</span>
             </div>
             <div className="live-leaderboard">
               <div className="leaderboard-head">
-                <span>Hạng</span>
-                <span>Ngựa</span>
-                <span>Làn</span>
-                <span>Tiến độ</span>
+                <span>Rank</span>
+                <span>Horse</span>
+                <span>Lane</span>
+                <span>Progress</span>
               </div>
               {!liveLeaderboard.length && (
-                <p className="leaderboard-empty">Đang chờ dữ liệu ngựa.</p>
+                <p className="leaderboard-empty">
+                  Waiting for horse information.
+                </p>
               )}
               {liveLeaderboard.map((horse) => (
                 <div
@@ -766,18 +768,18 @@ export default function Broadcast() {
           <section className="broadcast-card result-card">
             <div className="card-heading">
               <div>
-                <span>Kết quả chính thức</span>
-                <strong>🏆 Thứ hạng về đích</strong>
+                <span>Official Results</span>
+                <strong>🏆 Finish Standings</strong>
               </div>
-              <span>{results.length} ngựa</span>
+              <span>{results.length} horses</span>
             </div>
             <div className="result-table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Hạng</th>
+                    <th>Rank</th>
                     <th>Horse ID</th>
-                    <th>Thời gian hoàn thành</th>
+                    <th>Finish Time</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -787,7 +789,9 @@ export default function Broadcast() {
                       <tr
                         key={`${result.horseId}-${result.rawRank}`}
                         className={
-                          result.rawRank <= 3 ? `podium rank-${result.rawRank}` : ""
+                          result.rawRank <= 3
+                            ? `podium rank-${result.rawRank}`
+                            : ""
                         }
                       >
                         <td>

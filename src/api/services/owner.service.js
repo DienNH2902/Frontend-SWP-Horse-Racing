@@ -181,6 +181,17 @@ export async function getSentJockeyInvitations() {
   return unwrapCollection(response);
 }
 
+export async function getJockeyInvitationContract(invitationId) {
+  const response = await apiClient.get(
+    JOCKEY_INVITATION_ENDPOINTS.CONTRACT(invitationId),
+    {
+      includeAuth: true,
+    },
+  );
+
+  return unwrapData(response);
+}
+
 export async function confirmJockeyForRace(contractId) {
   jockeyWorkspace = {
     ...jockeyWorkspace,
