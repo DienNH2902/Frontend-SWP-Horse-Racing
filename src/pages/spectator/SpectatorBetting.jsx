@@ -21,6 +21,7 @@ import {
   getRacesByTournament,
 } from "../../api/services/race.service";
 import { getTournaments } from "../../api/services/tournament.service";
+import { getMyAssets } from "../../api/services/reward.service";
 
 function getId(item) {
   if (!item) return "";
@@ -77,6 +78,7 @@ export default function SpectatorBetting() {
   const [isLoadingHorses, setIsLoadingHorses] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [insuranceCount, setInsuranceCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,9 +88,10 @@ export default function SpectatorBetting() {
       setErrorMessage("");
 
       try {
-        const [tournaments, horses] = await Promise.all([
+        const [tournaments, horses, assets] = await Promise.all([
           getTournaments(),
           getHorses(),
+          getMyAssets(),
         ]);
         const horseMap = new Map(
           (horses || [])
@@ -126,6 +129,7 @@ export default function SpectatorBetting() {
         if (isMounted) {
           setHorsesById(horseMap);
           setRaces(uniqueRaces);
+          setInsuranceCount(assets?.insuranceCardsCount || 0);
         }
       } catch (error) {
         if (isMounted) {
@@ -203,8 +207,15 @@ export default function SpectatorBetting() {
         raceId: values.raceId,
         horseId: values.horseId,
         pointsWagered: values.pointsWagered,
+        useInsuranceCard: !!values.useInsuranceCard,
       });
       messageApi.success("Bet placed successfully");
+
+      // Cập nhật lại số lượng thẻ trong giao diện sau khi đặt cược thành công
+      if (values.useInsuranceCard) {
+        setInsuranceCount((prev) => Math.max(0, prev - 1));
+      }
+
       form.resetFields();
       setHorseOptions([]);
     } catch (error) {
@@ -380,6 +391,46 @@ export default function SpectatorBetting() {
                     placeholder="Minimum 50"
                     style={{ width: "100%" }}
                   />
+                </Form.Item>
+
+                <Form.Item
+                  label="Insurance Protection"
+                  name="useInsuranceCard"
+                  initialValue={false}
+                >
+                  <Select
+                    options={[
+                      {
+                        value: false,
+                        label: "Do not use insurance",
+                      },
+                      {
+                        value: true,
+                        label: `Use Insurance Card (Available: ${insuranceCount})`,
+                        disabled: insuranceCount <= 0, // Vô hiệu hóa lựa chọn nếu hết thẻ
+                      },
+                    ]}
+                    placeholder="Select insurance option"
+                  />
+                </Form.Item>
+
+                {/* Thêm một thông báo nhỏ trực quan khi người dùng bật bảo hiểm */}
+                <Form.Item
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.useInsuranceCard !==
+                    currentValues.useInsuranceCard
+                  }
+                >
+                  {({ getFieldValue }) => {
+                    return getFieldValue("useInsuranceCard") ? (
+                      <Alert
+                        style={{ marginBottom: 20, borderRadius: 8 }}
+                        message="Insurance Active: You will be refunded 50% of your wagered points if this horse does not win."
+                        type="success"
+                        showIcon
+                      />
+                    ) : null;
+                  }}
                 </Form.Item>
 
                 <div style={{ margin: "-8px 0 20px" }}>
