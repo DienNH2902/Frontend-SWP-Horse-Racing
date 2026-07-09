@@ -77,34 +77,48 @@ export default function NotificationHistory() {
   }, []);
 
   const typeConfigs = {
-    // Tài chính
+    // --- Hệ thống tài chính (Wallet / Payment) ---
     Deposit_success: { text: "Nạp tiền thành công", color: "cyan" },
     Deposit_failed: { text: "Nạp tiền thất bại", color: "volcano" },
-    Create_withdraw_success: { text: "Tạo đơn rút tiền thành công", color: "green" },
+    Create_withdraw_success: {
+      text: "Tạo đơn rút tiền thành công",
+      color: "green",
+    },
     Withdraw_success: { text: "Rút tiền thành công", color: "green" },
     Withdraw_failed: { text: "Rút tiền thất bại", color: "red" },
     Contract_paid: { text: "Thanh toán hợp đồng", color: "orange" },
     Reward_received: { text: "Nhận tiền thưởng", color: "gold" },
 
-    // Hợp đồng / Lời mời
+    // --- Hệ thống giao kèo / Thư mời (Invitation / Contract) ---
     Invitation_received: { text: "Lời mời mới", color: "blue" },
-    Invitation_accepted: { text: "Lời mời đã nhận", color: "geekblue" },
+    Invitation_accepted: { text: "Lời mời đã chấp nhận", color: "geekblue" },
     Invitation_rejected: { text: "Lời mời bị từ chối", color: "magenta" },
     Contract_cancelled: { text: "Hợp đồng bị hủy", color: "red" },
     Contract_breached: { text: "Vi phạm hợp đồng", color: "purple" },
     Contract_completed: { text: "Hợp đồng hoàn thành", color: "lime" },
 
-    // Giải đấu
+    // --- Hệ thống giải đấu / Vận hành (Tournament) ---
     Tournament_registered: { text: "Đăng ký giải đấu", color: "purple" },
-    Tournament_waitlist: { text: "Phòng chờ", color: "warning" },
+    Tournament_waitlist: { text: "Hàng chờ giải đấu", color: "warning" },
     Tournament_rejected: { text: "Đăng ký bị từ chối", color: "error" },
     Race_reminder: { text: "Lịch đua sắp tới", color: "processing" },
     Jockey_injured: { text: "Nài ngựa chấn thương", color: "error" },
 
-    // Hệ thống / Tài khoản
-    Account_locked: { text: "Tài khoản bị khóa", color: "darkred" },
+    // --- Hệ thống Cá cược & Trực tiếp (Betting & Broadcast) ---
+    Place_bet_success: { text: "Đặt cược thành công", color: "cyan" },
+    Update_bet_success: { text: "Cập nhật cược thành công", color: "blue" },
+    Bet_win: { text: "Thắng cược", color: "gold" },
+    Bet_lose: { text: "Thua cược", color: "red" },
+    Refund: { text: "Hoàn tiền cược", color: "green" },
+    "Race_broadcast-started": {
+      text: "Trận đua đang phát sóng",
+      color: "magenta",
+    },
+
+    // --- Tài khoản & Hệ thống (Account / System) ---
+    Account_locked: { text: "Tài khoản bị khóa", color: "volcano" },
     Profile_verified: { text: "Xác minh hồ sơ", color: "success" },
-    Balance_not_enough: { text: "Số dư không đủ", color: "amber" },
+    Balance_not_enough: { text: "Số dư không đủ", color: "warning" },
     System_alert: { text: "Cảnh báo hệ thống", color: "default" },
   };
 
