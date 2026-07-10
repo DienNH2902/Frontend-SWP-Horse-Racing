@@ -1,4 +1,4 @@
-import { Card, Empty, Space, Table, Tag, Typography } from "antd";
+import { Card, Empty, Table, Tag, Typography } from "antd";
 
 function asArray(value) {
   if (!value) return [];
@@ -31,6 +31,15 @@ function normalizeRound(value, fallback = "") {
   return match ? match[0] : String(value);
 }
 
+function formatRaceDate(value) {
+  if (!value) return "N/A";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleDateString("vi-VN");
+}
+
 function buildHistoryRows(history) {
   const rows = [];
 
@@ -47,8 +56,18 @@ function buildHistoryRows(history) {
 
     if (!raceId && !item?.raceName && !race?.name) return;
 
+    const result = item?.result || item?.raceResult || null;
+    const finalRank = pickFirstValue(item, ["finalRank", "rank", "rawRank"]) ||
+      pickFirstValue(result, ["finalRank", "rank", "rawRank"], "");
+
     rows.push({
-      key: `${context.tournamentId || "tournament"}-${context.round || "round"}-${raceId || rows.length}`,
+      key: [
+        context.tournamentId || "tournament",
+        context.round || "round",
+        raceId || "race",
+        pickFirstValue(item, ["horseId", "horse_id"]) || getReferenceId(horse, ["id", "_id", "horseId"]) || "horse",
+        rows.length,
+      ].join("-"),
       tournamentId:
         pickFirstValue(item, ["tournamentId", "tournament_id"]) ||
         getReferenceId(tournament, ["id", "_id", "tournamentId"]) ||
@@ -57,19 +76,22 @@ function buildHistoryRows(history) {
       tournamentName:
         pickFirstValue(item, ["tournamentName"]) ||
         pickFirstValue(tournament, ["name", "title"], ""),
-      round: normalizeRound(pickFirstValue(item, ["round", "roundNumber"]), context.round || "N/A"),
       raceId: raceId || "N/A",
       raceName:
         pickFirstValue(item, ["raceName", "name", "title"]) ||
         pickFirstValue(race, ["name", "title", "raceName"], ""),
+      date: formatRaceDate(
+        pickFirstValue(item, ["date", "raceDate", "startTime", "scheduledAt"]) ||
+          pickFirstValue(race, ["date", "raceDate", "startTime", "scheduledAt"], ""),
+      ),
       ownerId:
-        pickFirstValue(item, ["ownerId", "owner_id"]) ||
+        pickFirstValue(item, ["ownerProfileId", "ownerId", "owner_id"]) ||
         getReferenceId(owner, ["id", "_id", "ownerId"]),
       ownerName:
         pickFirstValue(item, ["ownerName"]) ||
         pickFirstValue(owner, ["fullName", "name", "stableName"], ""),
       jockeyId:
-        pickFirstValue(item, ["jockeyId", "jockey_id"]) ||
+        pickFirstValue(item, ["jockeyProfileId", "jockeyId", "jockey_id"]) ||
         getReferenceId(jockey, ["id", "_id", "jockeyId"]),
       jockeyName:
         pickFirstValue(item, ["jockeyName"]) ||
@@ -77,8 +99,8 @@ function buildHistoryRows(history) {
       horseName:
         pickFirstValue(item, ["horseName"]) ||
         pickFirstValue(horse, ["name", "horseName"], ""),
-      status: pickFirstValue(item, ["status", "raceStatus"], ""),
-      result: item?.result || item?.raceResult || null,
+      finalRank,
+      result,
     });
   }
 
@@ -114,13 +136,8 @@ function buildHistoryRows(history) {
   return rows;
 }
 
-function RaceLabel({ id, name }) {
-  return (
-    <Space direction="vertical" size={0}>
-      {name ? <Typography.Text strong>{name}</Typography.Text> : null}
-      <Typography.Text copyable={id !== "N/A"}>{id}</Typography.Text>
-    </Space>
-  );
+function RaceLabel({ name }) {
+  return name ? <Typography.Text strong>{name}</Typography.Text> : "N/A";
 }
 
 export default function RaceHistoryCard({ history, loading = false, participantLabel = "Participant" }) {
@@ -129,24 +146,19 @@ export default function RaceHistoryCard({ history, loading = false, participantL
   const columns = [
     {
       title: "Tournament",
-      dataIndex: "tournamentId",
-      render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          {record.tournamentName ? <Typography.Text strong>{record.tournamentName}</Typography.Text> : null}
-          <Typography.Text copyable={value !== "N/A"}>{value}</Typography.Text>
-        </Space>
-      ),
-    },
-    {
-      title: "Round",
-      dataIndex: "round",
-      width: 96,
-      render: (value) => <Tag color="blue">Round {value}</Tag>,
+      dataIndex: "tournamentName",
+      render: (value) => value || "N/A",
     },
     {
       title: "Race",
-      dataIndex: "raceId",
-      render: (value, record) => <RaceLabel id={value} name={record.raceName} />,
+      dataIndex: "raceName",
+      render: (value) => <RaceLabel name={value} />,
+    },
+    {
+      title: "Date",
+      dataIndex: "date",
+      width: 120,
+      responsive: ["md"],
     },
     {
       title: participantLabel,
@@ -165,10 +177,10 @@ export default function RaceHistoryCard({ history, loading = false, participantL
       responsive: ["lg"],
     },
     {
-      title: "Status",
-      dataIndex: "status",
-      render: (value) => (value ? <Tag color="green">{value}</Tag> : "N/A"),
-      responsive: ["md"],
+      title: "Rank",
+      dataIndex: "finalRank",
+      width: 96,
+      render: (value) => (value ? <Tag color={Number(value) === 1 ? "gold" : "blue"}>#{value}</Tag> : "N/A"),
     },
   ];
 

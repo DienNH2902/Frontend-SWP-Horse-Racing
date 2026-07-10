@@ -2,7 +2,7 @@ import { apiClient } from "../client";
 import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
 import { HORSE_ENDPOINTS } from "../endpoints/horse.endpoint";
 import { getProfile } from "./auth.service";
-import { getAvailableJockeys } from "./user.service";
+import { getAvailableJockeys, getUserById } from "./user.service";
 
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
@@ -106,6 +106,16 @@ function pickFirstValue(source, keys, fallback = "") {
   return fallback;
 }
 
+function pickExistingValues(source, keys) {
+  if (!source || typeof source !== "object") return [];
+
+  return keys
+    .map((key) => source[key])
+    .filter((value) => value !== undefined && value !== null && value !== "")
+    .map(String)
+    .filter((value, index, values) => values.indexOf(value) === index);
+}
+
 function getReferenceId(reference, keys = ["id", "_id"]) {
   if (!reference) return "";
   if (typeof reference === "string") return reference;
@@ -152,6 +162,9 @@ function normalizeOwnerHistoryRace(item = {}, profile = {}, context = {}, index 
   const horse = item.horse || item.horseInfo || race.horse || race.horseInfo || {};
   const jockey = item.jockey || item.jockeyInfo || race.jockey || race.jockeyInfo || {};
   const result = item.result || item.raceResult || item.finalResult || race.result || race.raceResult || null;
+  const finalRank =
+    pickFirstValue(item, ["finalRank", "rank", "rawRank"], null) ||
+    pickFirstValue(result, ["finalRank", "rank", "rawRank"], null);
   const raceId =
     pickFirstValue(item, ["raceId", "race_id"]) ||
     getReferenceId(race, ["id", "_id", "raceId"]);
@@ -207,9 +220,9 @@ function normalizeOwnerHistoryRace(item = {}, profile = {}, context = {}, index 
       pickFirstValue(item, ["jockeyName"]) ||
       pickFirstValue(jockey, ["fullName", "name"], "N/A"),
     ownerName: profile.stableName || profile.fullName || "My stable",
-    result: result
+    result: result || finalRank
       ? {
-          rank: pickFirstValue(result, ["finalRank", "rank", "rawRank"], null),
+          rank: finalRank,
           time: pickFirstValue(result, ["finishedTime", "finishTime", "time"], ""),
           prize: pickFirstValue(result, ["prize", "prizeMoney", "reward"], 0),
           points: pickFirstValue(result, ["points", "score"], 0),
@@ -403,11 +416,28 @@ export async function getOwnerRaceCenter() {
   return {
     races: normalizedRaces,
     standings: buildOwnerStandings(normalizedRaces),
+    historyRaceOwner: profile?.historyRaceOwner || [],
   };
 }
 
 export async function getOwnerProfile() {
   const profile = await getProfile();
+  const userIds = pickExistingValues(profile, ["id", "_id", "userId", "accountId", "profileId"]);
+
+  if (userIds.length === 0) return profile || {};
+
+  for (const userId of userIds) {
+    try {
+      const userDetail = await getUserById(userId);
+
+      return {
+        ...(profile || {}),
+        ...(userDetail || {}),
+      };
+    } catch {
+      // Try the next possible id shape from the auth profile.
+    }
+  }
 
   return profile || {};
 }

@@ -2,21 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Col, Empty, Row, Skeleton, Space, Statistic, Table, Tag, Typography } from "antd";
 import { Link } from "react-router-dom";
 import { getMyHorses } from "../../api/services/horse.service";
-import { getOwnerProfile } from "../../api/services/owner.service";
-import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 import { getHorseStatusColor, horseCollectionFrom, isActiveHorse, normalizeHorse } from "./horseViewModel";
 
 export default function OwnerDashboard() {
   const [horses, setHorses] = useState([]);
-  const [profile, setProfile] = useState({});
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    Promise.all([getMyHorses(), getOwnerProfile()])
-      .then(([horseData, profileData]) => {
+    getMyHorses()
+      .then((horseData) => {
         setHorses(horseCollectionFrom(horseData));
-        setProfile(profileData || {});
       })
       .catch((error) => setErrorMessage(error.message || "Could not load owner dashboard."))
       .finally(() => setLoading(false));
@@ -123,12 +119,6 @@ export default function OwnerDashboard() {
           />
         )}
       </Card>
-
-      <RaceHistoryCard
-        history={profile.historyRaceOwner}
-        loading={loading}
-        participantLabel="Jockey"
-      />
 
       <Row gutter={[16, 16]}>
         {rows.slice(0, 3).map((horse) => (
