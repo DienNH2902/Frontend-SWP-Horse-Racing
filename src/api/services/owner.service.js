@@ -1,6 +1,7 @@
 import { apiClient } from "../client";
 import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
 import { HORSE_ENDPOINTS } from "../endpoints/horse.endpoint";
+import { getProfile } from "./auth.service";
 import { getAvailableJockeys } from "./user.service";
 
 const delay = (value, ms = 180) =>
@@ -93,62 +94,216 @@ let jockeyWorkspace = {
   ],
 };
 
-const raceCenter = {
-  races: [
-    {
-      id: 301,
-      name: "Emerald Stakes",
-      tournament: "Summer Turf Championship",
-      venue: "Royal Turf Club",
-      date: "2026-06-18",
-      time: "15:00",
-      distance: "1,600m",
-      surface: "Turf",
-      purse: 50000,
-      status: "Upcoming",
-      myHorse: "Thunder",
-      jockey: "Liam O'Connor",
-      result: null,
-    },
-    {
-      id: 302,
-      name: "Sunshine Cup",
-      tournament: "Spring Classic",
-      venue: "Sunshine Racecourse",
-      date: "2026-05-26",
-      time: "16:00",
-      distance: "1,800m",
-      surface: "Turf",
-      purse: 42000,
-      status: "Finished",
-      myHorse: "Storm",
-      jockey: "Sophia Martinez",
-      result: { rank: 2, time: "1:48.63", prize: 9000, points: 32 },
-    },
-    {
-      id: 303,
-      name: "Rookie Sprint",
-      tournament: "Young Horse League",
-      venue: "Valley Racecourse",
-      date: "2026-05-12",
-      time: "13:30",
-      distance: "1,000m",
-      surface: "Dirt",
-      purse: 18000,
-      status: "Finished",
-      myHorse: "Midnight Arrow",
-      jockey: "Noah Henderson",
-      result: { rank: 1, time: "0:58.34", prize: 12000, points: 40 },
-    },
-  ],
-  standings: [
-    { rank: 1, horse: "Silver Bullet", owner: "Greenfield Stable", wins: 12, points: 1250, prize: 88000 },
-    { rank: 2, horse: "Thunder", owner: "Golden Hoof Stable", wins: 12, points: 1180, prize: 76000 },
-    { rank: 3, horse: "Emerald Dream", owner: "Skyline Racing", wins: 10, points: 1080, prize: 69000 },
-    { rank: 8, horse: "Storm", owner: "Golden Hoof Stable", wins: 7, points: 730, prize: 41000 },
-    { rank: 14, horse: "Midnight Arrow", owner: "Golden Hoof Stable", wins: 4, points: 430, prize: 18000 },
-  ],
-};
+function pickFirstValue(source, keys, fallback = "") {
+  if (!source || typeof source !== "object") return fallback;
+
+  for (const key of keys) {
+    const value = source[key];
+
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return fallback;
+}
+
+function getReferenceId(reference, keys = ["id", "_id"]) {
+  if (!reference) return "";
+  if (typeof reference === "string") return reference;
+
+  return pickFirstValue(reference, keys, "");
+}
+
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function toDateParts(race = {}) {
+  const startTime = pickFirstValue(race, ["startTime", "scheduledAt", "dateTime"], "");
+  const parsedStartTime = startTime ? new Date(startTime) : null;
+  const hasValidStartTime = parsedStartTime && !Number.isNaN(parsedStartTime.getTime());
+
+  return {
+    date:
+      pickFirstValue(race, ["date", "raceDate"]) ||
+      (hasValidStartTime ? parsedStartTime.toLocaleDateString("vi-VN") : "N/A"),
+    time:
+      pickFirstValue(race, ["time"]) ||
+      (hasValidStartTime
+        ? parsedStartTime.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "N/A"),
+  };
+}
+
+function normalizeRound(value, fallback = "") {
+  if (value === undefined || value === null || value === "") return fallback;
+
+  const match = String(value).match(/\d+/);
+  return match ? match[0] : String(value);
+}
+
+function normalizeOwnerHistoryRace(item = {}, profile = {}, context = {}, index = 0) {
+  const race = item.race || item.raceInfo || {};
+  const tournament = item.tournament || item.tournamentInfo || {};
+  const raceCourse = item.raceCourse || item.raceCourseInfo || race.raceCourse || race.raceCourseInfo || {};
+  const horse = item.horse || item.horseInfo || race.horse || race.horseInfo || {};
+  const jockey = item.jockey || item.jockeyInfo || race.jockey || race.jockeyInfo || {};
+  const result = item.result || item.raceResult || item.finalResult || race.result || race.raceResult || null;
+  const raceId =
+    pickFirstValue(item, ["raceId", "race_id"]) ||
+    getReferenceId(race, ["id", "_id", "raceId"]);
+
+  if (!raceId && !item.raceName && !race.name) return null;
+
+  const { date, time } = toDateParts({
+    ...race,
+    ...item,
+  });
+
+  return {
+    ...item,
+    id: raceId || `history-race-${index}`,
+    name:
+      pickFirstValue(item, ["raceName", "name", "title"]) ||
+      pickFirstValue(race, ["name", "title", "raceName"], raceId ? `Race ${raceId}` : "Unnamed race"),
+    tournament:
+      pickFirstValue(item, ["tournamentName", "tournamentTitle"]) ||
+      pickFirstValue(tournament, ["name", "title"]) ||
+      context.tournamentId ||
+      "N/A",
+    tournamentId:
+      pickFirstValue(item, ["tournamentId", "tournament_id"]) ||
+      getReferenceId(tournament, ["id", "_id", "tournamentId"]) ||
+      context.tournamentId ||
+      "",
+    round: normalizeRound(pickFirstValue(item, ["round", "roundNumber"]), context.round || ""),
+    venue:
+      pickFirstValue(item, ["venue", "location", "raceCourseName"]) ||
+      pickFirstValue(race, ["venue", "location", "raceCourseName"]) ||
+      pickFirstValue(raceCourse, ["name", "location"], "N/A"),
+    date,
+    time,
+    distance:
+      pickFirstValue(item, ["distance"]) ||
+      pickFirstValue(race, ["distance"]) ||
+      pickFirstValue(raceCourse, ["distance"], "N/A"),
+    surface:
+      pickFirstValue(item, ["surface", "trackType"]) ||
+      pickFirstValue(race, ["surface", "trackType"]) ||
+      pickFirstValue(raceCourse, ["surface", "trackType"], "N/A"),
+    purse: pickFirstValue(
+      item,
+      ["purse", "prizePool", "totalPrize"],
+      pickFirstValue(race, ["purse", "prizePool", "totalPrize"], 0),
+    ),
+    status: pickFirstValue(item, ["status", "raceStatus"], pickFirstValue(race, ["status"], result ? "Finished" : "Finished")),
+    myHorse:
+      pickFirstValue(item, ["horseName"]) ||
+      pickFirstValue(horse, ["name", "horseName"], "N/A"),
+    jockey:
+      pickFirstValue(item, ["jockeyName"]) ||
+      pickFirstValue(jockey, ["fullName", "name"], "N/A"),
+    ownerName: profile.stableName || profile.fullName || "My stable",
+    result: result
+      ? {
+          rank: pickFirstValue(result, ["finalRank", "rank", "rawRank"], null),
+          time: pickFirstValue(result, ["finishedTime", "finishTime", "time"], ""),
+          prize: pickFirstValue(result, ["prize", "prizeMoney", "reward"], 0),
+          points: pickFirstValue(result, ["points", "score"], 0),
+          status: pickFirstValue(result, ["status"], ""),
+        }
+      : null,
+  };
+}
+
+function raceContextFrom(item = {}, context = {}) {
+  const tournament = item.tournament || item.tournamentInfo || {};
+
+  return {
+    tournamentId:
+      pickFirstValue(item, ["tournamentId", "tournament_id"]) ||
+      getReferenceId(tournament, ["id", "_id", "tournamentId"]) ||
+      context.tournamentId,
+    round: normalizeRound(pickFirstValue(item, ["round", "roundNumber"]), context.round),
+  };
+}
+
+function historyRaceOwnerToRaces(history = [], profile = {}) {
+  const rows = [];
+
+  function visit(value, context = {}) {
+    asArray(value).forEach((item) => {
+      if (!item || typeof item !== "object") return;
+
+      const nextContext = raceContextFrom(item, context);
+
+      if (Array.isArray(item.historyRace)) visit(item.historyRace, nextContext);
+      if (Array.isArray(item.rounds)) visit(item.rounds, nextContext);
+      if (Array.isArray(item.races)) visit(item.races, nextContext);
+      if (Array.isArray(item.raceIds)) {
+        visit(
+          item.raceIds.map((raceId) => ({ raceId })),
+          nextContext,
+        );
+      }
+
+      Object.entries(item).forEach(([key, childValue]) => {
+        const roundMatch = key.match(/^round\s*(\d+)$/i);
+        if (roundMatch && Array.isArray(childValue)) {
+          visit(childValue, { ...nextContext, round: roundMatch[1] });
+        }
+      });
+
+      const normalized = normalizeOwnerHistoryRace(item, profile, nextContext, rows.length);
+      if (normalized) rows.push(normalized);
+    });
+  }
+
+  visit(history);
+
+  return rows;
+}
+
+function buildOwnerStandings(races = []) {
+  const byHorse = new Map();
+
+  races.forEach((race) => {
+    if (!race.myHorse || race.myHorse === "N/A") return;
+
+    const current =
+      byHorse.get(race.myHorse) ||
+      {
+        horse: race.myHorse,
+        owner: race.ownerName,
+        wins: 0,
+        points: 0,
+        prize: 0,
+        bestRank: 999,
+      };
+
+    const rank = Number(race.result?.rank || 999);
+    current.wins += rank === 1 ? 1 : 0;
+    current.points += Number(race.result?.points || 0);
+    current.prize += Number(race.result?.prize || 0);
+    current.bestRank = Math.min(current.bestRank, rank);
+
+    byHorse.set(race.myHorse, current);
+  });
+
+  return [...byHorse.values()]
+    .sort((first, second) => {
+      if (second.points !== first.points) return second.points - first.points;
+      if (second.prize !== first.prize) return second.prize - first.prize;
+      return first.bestRank - second.bestRank;
+    })
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    }));
+}
 
 export async function getOwnerJockeyWorkspace() {
   const [horsesResponse, jockeys] = await Promise.all([
@@ -242,5 +397,17 @@ export async function registerContractToTournament(contractId) {
 }
 
 export async function getOwnerRaceCenter() {
-  return delay(raceCenter);
+  const profile = await getOwnerProfile();
+  const normalizedRaces = historyRaceOwnerToRaces(profile?.historyRaceOwner || [], profile || {});
+
+  return {
+    races: normalizedRaces,
+    standings: buildOwnerStandings(normalizedRaces),
+  };
+}
+
+export async function getOwnerProfile() {
+  const profile = await getProfile();
+
+  return profile || {};
 }

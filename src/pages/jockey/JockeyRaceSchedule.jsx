@@ -14,7 +14,9 @@ import {
   Tag,
   Typography,
 } from "antd";
+import { getProfile } from "../../api/services/auth.service";
 import { getJockeyRaceSchedule } from "../../api/services/jockey.service";
+import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 
 function formatMoney(value) {
   return `$${Number(value || 0).toLocaleString()}`;
@@ -22,13 +24,17 @@ function formatMoney(value) {
 
 export default function JockeyRaceSchedule() {
   const [data, setData] = useState({ schedules: [], standings: [] });
+  const [profile, setProfile] = useState({});
   const [selectedRace, setSelectedRace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    getJockeyRaceSchedule()
-      .then(setData)
+    Promise.all([getJockeyRaceSchedule(), getProfile()])
+      .then(([scheduleData, profileData]) => {
+        setData(scheduleData);
+        setProfile(profileData || {});
+      })
       .catch((error) => setErrorMessage(error.message || "Could not load race schedule."))
       .finally(() => setLoading(false));
   }, []);
@@ -138,6 +144,12 @@ export default function JockeyRaceSchedule() {
           rowClassName={(record) => (record.jockey === "Demo Jockey" ? "jockey-highlight-row" : "")}
         />
       </Card>
+
+      <RaceHistoryCard
+        history={profile.historyRaceJockey}
+        loading={loading}
+        participantLabel="Owner"
+      />
 
       <Modal
         title={selectedRace ? selectedRace.race : "Race detail"}

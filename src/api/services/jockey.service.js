@@ -1,6 +1,7 @@
 import { apiClient } from "../client";
 import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
 import { SCHEDULE_ENDPOINTS } from "../endpoints/schedule.endpoint";
+import { getProfile } from "./auth.service";
 
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
@@ -341,13 +342,18 @@ let jockeyData = {
 };
 
 export async function getJockeyDashboard() {
-  const [invitations, scheduleData] = await Promise.all([
+  const [invitations, scheduleData, profile] = await Promise.all([
     getJockeyInvitations(),
     getJockeyRaceSchedule(),
+    getProfile(),
   ]);
 
   return {
     ...structuredClone(jockeyData),
+    profile: {
+      ...structuredClone(jockeyData.profile),
+      ...profile,
+    },
     invitations,
     schedules: scheduleData.schedules,
     standings: scheduleData.standings,
