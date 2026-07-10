@@ -114,6 +114,10 @@ export default function NotificationHistory() {
       text: "Trận đua đang phát sóng",
       color: "magenta",
     },
+    "Race_broadcast-end": {
+      text: "Trận đua đã kết thúc",
+      color: "lightgray",
+    },
 
     // --- Tài khoản & Hệ thống (Account / System) ---
     Account_locked: { text: "Tài khoản bị khóa", color: "volcano" },
