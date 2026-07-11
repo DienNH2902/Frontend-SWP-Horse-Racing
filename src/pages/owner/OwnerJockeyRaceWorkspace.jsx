@@ -248,6 +248,22 @@ function formatMeasurement(value, unit) {
   return /[a-z]/i.test(String(value)) ? value : `${value} ${unit}`;
 }
 
+function formatDateTime(value) {
+  if (!value) return "N/A";
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return String(value);
+
+  return parsed.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function OwnerJockeyRaceWorkspace() {
   const [form] = Form.useForm();
   const [registrationForm] = Form.useForm();
@@ -541,7 +557,12 @@ export default function OwnerJockeyRaceWorkspace() {
     { title: "Horse", dataIndex: "horse" },
     { title: "Jockey", dataIndex: "jockey" },
     { title: "Tournament", dataIndex: "tournament", responsive: ["md"] },
-    { title: "Sent at", dataIndex: "sentAt", responsive: ["lg"] },
+    {
+      title: "Sent at",
+      dataIndex: "sentAt",
+      responsive: ["lg"],
+      render: (value) => formatDateTime(value),
+    },
     {
       title: "Status",
       dataIndex: "status",
