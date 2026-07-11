@@ -85,8 +85,37 @@ function normalizeUpcomingSchedule(schedule = {}, index = 0) {
 
   return {
     ...schedule,
+    raceId:
+      pickFirstValue(schedule, ["raceId"], "") ||
+      pickFirstValue(race, ["id", "_id", "raceId"], ""),
+    raceName: pickFirstValue(
+      schedule,
+      ["raceName", "name", "title"],
+      pickFirstValue(race, ["name", "title", "raceName"], "Unnamed race"),
+    ),
+    tournamentId:
+      pickFirstValue(schedule, ["tournamentId"], "") ||
+      pickFirstValue(race, ["tournamentId"], "") ||
+      pickFirstValue(tournament, ["id", "_id", "tournamentId"], ""),
+    raceCourseName: pickFirstValue(
+      schedule,
+      ["raceCourseName"],
+      pickFirstValue(raceCourse, ["name"], "N/A"),
+    ),
+    totalSlots: pickFirstValue(schedule, ["totalSlots"], pickFirstValue(race, ["totalSlots"], 0)),
+    filledSlots: pickFirstValue(schedule, ["filledSlots"], pickFirstValue(race, ["filledSlots"], 0)),
+    availableSlots: pickFirstValue(
+      schedule,
+      ["availableSlots"],
+      pickFirstValue(race, ["availableSlots"], 0),
+    ),
+    status: pickFirstValue(
+      schedule,
+      ["status", "assignmentStatus"],
+      pickFirstValue(race, ["status"], "Upcoming"),
+    ),
     id:
-      pickFirstValue(schedule, ["id", "_id", "scheduleId"], "") ||
+      pickFirstValue(schedule, ["id", "_id", "scheduleId", "raceId"], "") ||
       getReferenceId(race) ||
       `upcoming-${index}`,
     race: pickFirstValue(

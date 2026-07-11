@@ -15,11 +15,8 @@ import {
   Typography,
 } from "antd";
 import { getJockeyProfile, getJockeyRaceSchedule } from "../../api/services/jockey.service";
+import { getTournamentById } from "../../api/services/tournament.service";
 import RaceHistoryCard from "../../components/races/RaceHistoryCard";
-
-function formatMoney(value) {
-  return `$${Number(value || 0).toLocaleString()}`;
-}
 
 function shouldShowRaceSubtitle(value) {
   const text = String(value || "").trim();
@@ -31,6 +28,12 @@ function shouldShowRaceSubtitle(value) {
   }
 
   return true;
+}
+
+function getDisplayValue(value) {
+  const text = String(value ?? "").trim();
+
+  return text && text !== "N/A" ? text : "";
 }
 
 function formatScheduleTime(record) {
@@ -64,6 +67,61 @@ function formatScheduleTime(record) {
   }
 
   return rawDateTime || "N/A";
+}
+
+function formatDateTime(value) {
+  if (!value) return "N/A";
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return String(value);
+
+  return parsed.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getTournamentTitle(tournament) {
+  return (
+    getDisplayValue(tournament?.title) ||
+    getDisplayValue(tournament?.name) ||
+    getDisplayValue(tournament?.tournamentName) ||
+    getDisplayValue(tournament?.data?.title) ||
+    getDisplayValue(tournament?.result?.title)
+  );
+}
+
+async function resolveScheduleTournamentTitles(schedules) {
+  const cache = new Map();
+
+  return Promise.all(
+    schedules.map(async (schedule) => {
+      if (shouldShowRaceSubtitle(schedule.tournament) || !schedule.tournamentId) {
+        return schedule;
+      }
+
+      try {
+        const tournamentId = getDisplayValue(schedule.tournamentId);
+
+        if (!tournamentId) return schedule;
+
+        if (!cache.has(tournamentId)) {
+          cache.set(tournamentId, getTournamentById(tournamentId));
+        }
+
+        const tournament = await cache.get(tournamentId);
+        const title = getTournamentTitle(tournament);
+
+        return title ? { ...schedule, tournament: title } : schedule;
+      } catch {
+        return schedule;
+      }
+    }),
+  );
 }
 
 function collectFinalRanks(history) {
@@ -103,8 +161,13 @@ export default function JockeyRaceSchedule() {
 
   useEffect(() => {
     Promise.all([getJockeyRaceSchedule(), getJockeyProfile()])
-      .then(([scheduleData, profileData]) => {
-        setData(scheduleData);
+      .then(async ([scheduleData, profileData]) => {
+        const schedules = await resolveScheduleTournamentTitles(scheduleData?.schedules || []);
+
+        setData({
+          ...scheduleData,
+          schedules,
+        });
         setProfile(profileData || {});
       })
       .catch((error) => setErrorMessage(error.message || "Could not load race schedule."))
@@ -112,6 +175,13 @@ export default function JockeyRaceSchedule() {
   }, []);
 
   const finishedRaces = data.schedules.filter((race) => race.result);
+  const upcomingRaces = useMemo(
+    () =>
+      data.schedules.filter(
+        (race) => String(race.status || "").toLowerCase() !== "finished",
+      ),
+    [data.schedules],
+  );
   const totalPrize = finishedRaces.reduce((sum, race) => sum + (race.result?.prize || 0), 0);
   const bestRank = useMemo(() => {
     const historyRanks = collectFinalRanks(profile.historyRaceJockey);
@@ -136,23 +206,22 @@ export default function JockeyRaceSchedule() {
         </Space>
       ),
     },
-    { title: "Horse", dataIndex: "horse" },
+    {
+      title: "Tournament",
+      dataIndex: "tournament",
+      responsive: ["md"],
+      render: (value) => getDisplayValue(value) || "N/A",
+    },
     {
       title: "Time",
       render: (_, record) => formatScheduleTime(record),
       responsive: ["md"],
     },
-    { title: "Venue", dataIndex: "venue", responsive: ["lg"] },
+    { title: "Race course", dataIndex: "raceCourseName", responsive: ["lg"] },
     {
       title: "Status",
-      dataIndex: "assignmentStatus",
+      dataIndex: "status",
       render: (value) => <Tag color={value === "Finished" ? "green" : "blue"}>{value}</Tag>,
-    },
-    {
-      title: "Result",
-      render: (_, record) =>
-        record.result ? `#${record.result.rank} - ${record.result.time}` : "Upcoming",
-      responsive: ["md"],
     },
     {
       title: "Action",
@@ -191,7 +260,7 @@ export default function JockeyRaceSchedule() {
           rowKey="id"
           loading={loading}
           columns={scheduleColumns}
-          dataSource={data.schedules}
+          dataSource={upcomingRaces}
           pagination={{ pageSize: 6, showSizeChanger: false }}
         />
       </Card>
@@ -200,10 +269,11 @@ export default function JockeyRaceSchedule() {
         history={profile.historyRaceJockey}
         loading={loading}
         participantLabel="Owner"
+        compact
       />
 
       <Modal
-        title={selectedRace ? selectedRace.race : "Race detail"}
+        title={selectedRace ? selectedRace.raceName || selectedRace.race : "Race detail"}
         open={Boolean(selectedRace)}
         onCancel={() => setSelectedRace(null)}
         footer={<Button onClick={() => setSelectedRace(null)}>Close</Button>}
@@ -212,29 +282,19 @@ export default function JockeyRaceSchedule() {
       >
         {selectedRace ? (
           <Descriptions bordered column={1} size="small">
-            <Descriptions.Item label="Tournament">{selectedRace.tournament}</Descriptions.Item>
-            <Descriptions.Item label="Date">{selectedRace.date}</Descriptions.Item>
-            <Descriptions.Item label="Time">{selectedRace.time}</Descriptions.Item>
-            <Descriptions.Item label="Venue">{selectedRace.venue}</Descriptions.Item>
-            <Descriptions.Item label="Gate">{selectedRace.gate}</Descriptions.Item>
-            <Descriptions.Item label="Distance">{selectedRace.distance}</Descriptions.Item>
-            <Descriptions.Item label="Surface">{selectedRace.surface}</Descriptions.Item>
-            <Descriptions.Item label="Purse">{formatMoney(selectedRace.purse)}</Descriptions.Item>
-            <Descriptions.Item label="Horse">{selectedRace.horse}</Descriptions.Item>
-            <Descriptions.Item label="Owner">{selectedRace.owner}</Descriptions.Item>
-            <Descriptions.Item label="Horse profile">
-              {selectedRace.horseInfo.breed}, {selectedRace.horseInfo.age} yrs, rating{" "}
-              {selectedRace.horseInfo.rating}, win rate {selectedRace.horseInfo.winRate}%
+            <Descriptions.Item label="Race name">
+              {selectedRace.raceName || selectedRace.race || "N/A"}
             </Descriptions.Item>
-            <Descriptions.Item label="Horse record">
-              {selectedRace.horseInfo.starts} starts, {selectedRace.horseInfo.podiums} podiums
+            <Descriptions.Item label="Date">{formatDateTime(selectedRace.date)}</Descriptions.Item>
+            <Descriptions.Item label="Start time">
+              {formatDateTime(selectedRace.startTime)}
             </Descriptions.Item>
-            <Descriptions.Item label="Result">
-              {selectedRace.result
-                ? `Rank #${selectedRace.result.rank}, ${selectedRace.result.time}, ${formatMoney(
-                    selectedRace.result.prize,
-                  )}, ${selectedRace.result.points} points`
-                : "Waiting for race day"}
+            <Descriptions.Item label="Status">{selectedRace.status || "N/A"}</Descriptions.Item>
+            <Descriptions.Item label="Tournament">
+              {getDisplayValue(selectedRace.tournament) || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Race course">
+              {selectedRace.raceCourseName || "N/A"}
             </Descriptions.Item>
           </Descriptions>
         ) : (
