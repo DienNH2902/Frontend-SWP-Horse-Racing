@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Form,
+  Image,
   Input,
   InputNumber,
   Modal,
@@ -17,7 +18,7 @@ import {
   Upload,
   message,
 } from "antd";
-import { CameraOutlined } from "@ant-design/icons";
+import { CameraOutlined, UploadOutlined } from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../../api/client";
 import {
@@ -49,6 +50,8 @@ export default function OwnerHorses() {
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
 
   const loadHorses = useCallback(async () => {
     setLoading(true);
@@ -91,7 +94,8 @@ export default function OwnerHorses() {
           .includes(query);
       const matchesStatus =
         statusFilter === "all" ||
-        String(horse.status).toLowerCase() === String(statusFilter).toLowerCase();
+        String(horse.status).toLowerCase() ===
+          String(statusFilter).toLowerCase();
 
       return matchesKeyword && matchesStatus;
     });
@@ -99,6 +103,7 @@ export default function OwnerHorses() {
 
   function openEditModal(horse) {
     setEditingHorse(horse);
+    setImagePreview(getImageUrl(horse.imageUrl));
     form.setFieldsValue(toHorseFormValues(horse));
     setModalOpen(true);
   }
@@ -115,7 +120,14 @@ export default function OwnerHorses() {
   }
 
   function getUploadedImagePath(data) {
-    return data?.imageUrl || data?.avatar || data?.avatarUrl || data?.url || data?.path || data;
+    return (
+      data?.imageUrl ||
+      data?.avatar ||
+      data?.avatarUrl ||
+      data?.url ||
+      data?.path ||
+      data
+    );
   }
 
   function buildHorsePayloadWithImage(horse, imageUrl) {
@@ -142,6 +154,7 @@ export default function OwnerHorses() {
     }
 
     setUploadingHorseId(horse.id);
+    setIsUploading(true);
 
     try {
       const uploaded = await uploadHorseAvatar(file);
@@ -159,6 +172,8 @@ export default function OwnerHorses() {
             : item,
         ),
       );
+      form.setFieldsValue({ imageUrl });
+      setImagePreview(getImageUrl(imageUrl));
       messageApi.success("Horse photo uploaded");
       onSuccess(uploaded);
     } catch (error) {
@@ -167,6 +182,7 @@ export default function OwnerHorses() {
       onError(error);
     } finally {
       setUploadingHorseId("");
+      setIsUploading(false);
     }
   }
 
@@ -219,7 +235,9 @@ export default function OwnerHorses() {
             name="file"
             accept="image/*"
             showUploadList={false}
-            customRequest={(options) => handleHorseAvatarUpload(record, options)}
+            customRequest={(options) =>
+              handleHorseAvatarUpload(record, options)
+            }
             disabled={uploadingHorseId === record.id}
           >
             <button
@@ -391,14 +409,42 @@ export default function OwnerHorses() {
             </Form.Item>
           </Space>
 
-          <Form.Item label="Image URL" name="imageUrl">
-            <Input placeholder="https://example.com/horse.png" />
+          <Form.Item label="Horse Image" name="imageUrl">
+            <Upload
+              name="file"
+              accept="image/*"
+              showUploadList={false}
+              customRequest={(options) =>
+                handleHorseAvatarUpload(editingHorse, options)
+              }
+              disabled={isUploading || uploadingHorseId === editingHorse?.id}
+            >
+              <Button
+                icon={<UploadOutlined />}
+                loading={isUploading || uploadingHorseId === editingHorse?.id}
+              >
+                {isUploading || uploadingHorseId === editingHorse?.id
+                  ? "Uploading..."
+                  : "Upload horse image"}
+              </Button>
+            </Upload>
+
+            {imagePreview && (
+              <div style={{ marginTop: 16 }}>
+                <Image
+                  src={imagePreview}
+                  alt="Horse preview"
+                  width={200}
+                  height={130}
+                  style={{ borderRadius: 8, objectFit: "cover" }}
+                />
+              </div>
+            )}
           </Form.Item>
 
           <Form.Item label="Status" name="horseStatus">
             <Select options={HORSE_STATUS_OPTIONS} />
           </Form.Item>
-
         </Form>
       </Modal>
 
