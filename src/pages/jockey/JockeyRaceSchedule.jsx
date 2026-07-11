@@ -21,6 +21,51 @@ function formatMoney(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
+function shouldShowRaceSubtitle(value) {
+  const text = String(value || "").trim();
+
+  if (!text || text === "N/A") return false;
+  if (/^[a-f0-9]{24}$/i.test(text)) return false;
+  if (/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(text)) {
+    return false;
+  }
+
+  return true;
+}
+
+function formatScheduleTime(record) {
+  const date = String(record.date || "").trim();
+  const time = String(record.time || "").trim();
+  const hasDate = date && date !== "N/A";
+  const hasTime = time && time !== "N/A";
+  const parsedDate = hasDate ? new Date(date) : null;
+
+  if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+    const formattedDate = parsedDate.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
+    return hasTime ? `${formattedDate} ${time}` : formattedDate;
+  }
+
+  const rawDateTime = [date, time].filter((value) => value && value !== "N/A").join(" ");
+  const parsedDateTime = rawDateTime ? new Date(rawDateTime) : null;
+
+  if (parsedDateTime && !Number.isNaN(parsedDateTime.getTime())) {
+    return parsedDateTime.toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return rawDateTime || "N/A";
+}
+
 function collectFinalRanks(history) {
   const ranks = [];
 
@@ -85,14 +130,16 @@ export default function JockeyRaceSchedule() {
       render: (value, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.tournament}</Typography.Text>
+          {shouldShowRaceSubtitle(record.tournament) && (
+            <Typography.Text type="secondary">{record.tournament}</Typography.Text>
+          )}
         </Space>
       ),
     },
     { title: "Horse", dataIndex: "horse" },
     {
       title: "Time",
-      render: (_, record) => `${record.date} ${record.time}`,
+      render: (_, record) => formatScheduleTime(record),
       responsive: ["md"],
     },
     { title: "Venue", dataIndex: "venue", responsive: ["lg"] },
