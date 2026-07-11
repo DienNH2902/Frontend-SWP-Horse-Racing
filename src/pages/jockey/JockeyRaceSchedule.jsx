@@ -14,21 +14,54 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { getJockeyRaceSchedule } from "../../api/services/jockey.service";
+import { getJockeyProfile, getJockeyRaceSchedule } from "../../api/services/jockey.service";
+import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 
 function formatMoney(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
+function collectFinalRanks(history) {
+  const ranks = [];
+
+  function visit(value) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const rank = Number(value.finalRank ?? value.rank ?? value.rawRank);
+    if (Number.isFinite(rank)) {
+      ranks.push(rank);
+    }
+
+    ["historyRace", "rounds", "races"].forEach((key) => {
+      if (Array.isArray(value[key])) visit(value[key]);
+    });
+  }
+
+  visit(history);
+
+  return ranks;
+}
+
 export default function JockeyRaceSchedule() {
   const [data, setData] = useState({ schedules: [], standings: [] });
+  const [profile, setProfile] = useState({});
   const [selectedRace, setSelectedRace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    getJockeyRaceSchedule()
-      .then(setData)
+    Promise.all([getJockeyRaceSchedule(), getJockeyProfile()])
+      .then(([scheduleData, profileData]) => {
+        setData(scheduleData);
+        setProfile(profileData || {});
+      })
       .catch((error) => setErrorMessage(error.message || "Could not load race schedule."))
       .finally(() => setLoading(false));
   }, []);
@@ -36,9 +69,14 @@ export default function JockeyRaceSchedule() {
   const finishedRaces = data.schedules.filter((race) => race.result);
   const totalPrize = finishedRaces.reduce((sum, race) => sum + (race.result?.prize || 0), 0);
   const bestRank = useMemo(() => {
-    const ranks = finishedRaces.map((race) => race.result?.rank || 99);
+    const historyRanks = collectFinalRanks(profile.historyRaceJockey);
+    const scheduleRanks = finishedRaces
+      .map((race) => Number(race.result?.rank))
+      .filter((rank) => Number.isFinite(rank));
+    const ranks = historyRanks.length ? historyRanks : scheduleRanks;
+
     return ranks.length ? Math.min(...ranks) : null;
-  }, [finishedRaces]);
+  }, [finishedRaces, profile.historyRaceJockey]);
 
   const scheduleColumns = [
     {
@@ -79,23 +117,6 @@ export default function JockeyRaceSchedule() {
     },
   ];
 
-  const standingColumns = [
-    { title: "#", dataIndex: "rank", width: 70 },
-    {
-      title: "Jockey",
-      dataIndex: "jockey",
-      render: (value) => <Typography.Text strong={value === "Demo Jockey"}>{value}</Typography.Text>,
-    },
-    { title: "Wins", dataIndex: "wins", responsive: ["md"] },
-    { title: "Points", dataIndex: "points" },
-    {
-      title: "Prize",
-      dataIndex: "prize",
-      render: formatMoney,
-      responsive: ["lg"],
-    },
-  ];
-
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
@@ -128,16 +149,11 @@ export default function JockeyRaceSchedule() {
         />
       </Card>
 
-      <Card title="Personal ranking">
-        <Table
-          rowKey={(record) => `${record.rank}-${record.jockey}`}
-          loading={loading}
-          columns={standingColumns}
-          dataSource={data.standings}
-          pagination={false}
-          rowClassName={(record) => (record.jockey === "Demo Jockey" ? "jockey-highlight-row" : "")}
-        />
-      </Card>
+      <RaceHistoryCard
+        history={profile.historyRaceJockey}
+        loading={loading}
+        participantLabel="Owner"
+      />
 
       <Modal
         title={selectedRace ? selectedRace.race : "Race detail"}
@@ -178,12 +194,6 @@ export default function JockeyRaceSchedule() {
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Select a race" />
         )}
       </Modal>
-
-      <style>{`
-        .jockey-highlight-row td {
-          background: #effffb !important;
-        }
-      `}</style>
     </Space>
   );
 }

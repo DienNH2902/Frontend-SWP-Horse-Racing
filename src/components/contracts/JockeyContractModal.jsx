@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input, Modal, Radio, Tag, Typography, message } from "antd";
+import { Button, Input, Modal, Tag, Typography, message } from "antd";
 
 const statusColor = {
   ACTIVE: "green",
@@ -25,10 +25,7 @@ function formatContractDate(value) {
 }
 
 function getInitial(value) {
-  return String(value || "?")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
+  return String(value || "?").trim().charAt(0).toUpperCase();
 }
 
 function PartyCard({ label, name, accent }) {
@@ -122,19 +119,16 @@ export default function JockeyContractModal({
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [cancellationLoading, setCancellationLoading] = useState(false);
-  const [actionType, setActionType] = useState("SELF_CANCEL");
   const contractStatus = String(contract?.status || "").toUpperCase();
   const cancellationDisabled = ["CANCELLED", "COMPLETED", "BREACHED"].includes(
     contractStatus,
   );
-
-  const opponentParty =
-    cancellingParty === "HORSE_OWNER" ? "JOCKEY" : "HORSE_OWNER";
+  const cancellingPartyLabel =
+    cancellingParty === "HORSE_OWNER" ? "Horse Owner" : "Jockey";
 
   function handleClose() {
     setCancellationModalOpen(false);
     setCancellationReason("");
-    setActionType("SELF_CANCEL");
     onCancel?.();
   }
 
@@ -155,20 +149,12 @@ export default function JockeyContractModal({
     setCancellationLoading(true);
 
     try {
-      const breachingParty =
-        actionType === "SELF_CANCEL" ? cancellingParty : opponentParty;
-
       await onCancelContract({
         contractId,
-        actionType,
-        breachingParty,
+        breachingParty: cancellingParty,
         reason,
       });
-      message.success(
-        actionType === "SELF_CANCEL"
-          ? "Contract cancelled successfully."
-          : "Report submitted successfully.",
-      );
+      message.success("Contract cancelled successfully.");
       handleClose();
     } catch (error) {
       message.error(
@@ -230,194 +216,176 @@ export default function JockeyContractModal({
             </div>
 
             <div style={{ padding: 28 }}>
-              <Typography.Title level={5} style={{ marginTop: 0 }}>
-                Contract parties
-              </Typography.Title>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                  gap: 14,
+            <Typography.Title level={5} style={{ marginTop: 0 }}>
+              Contract parties
+            </Typography.Title>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 14,
+              }}
+            >
+              <PartyCard
+                label="Horse Owner"
+                name={contract.ownerName}
+                accent={{
+                  border: "#b9e4da",
+                  background: "#f0fbf8",
+                  avatar: "linear-gradient(135deg, #075e54, #0fa58f)",
+                  label: "#087a6d",
                 }}
-              >
-                <PartyCard
-                  label="Horse Owner"
-                  name={contract.ownerName}
-                  accent={{
-                    border: "#b9e4da",
-                    background: "#f0fbf8",
-                    avatar: "linear-gradient(135deg, #075e54, #0fa58f)",
-                    label: "#087a6d",
-                  }}
-                />
-                <PartyCard
-                  label="Jockey"
-                  name={contract.jockeyName}
-                  accent={{
-                    border: "#c8dcf4",
-                    background: "#f3f8fe",
-                    avatar: "linear-gradient(135deg, #245b91, #4b8bc8)",
-                    label: "#356d9f",
-                  }}
-                />
-              </div>
+              />
+              <PartyCard
+                label="Jockey"
+                name={contract.jockeyName}
+                accent={{
+                  border: "#c8dcf4",
+                  background: "#f3f8fe",
+                  avatar: "linear-gradient(135deg, #245b91, #4b8bc8)",
+                  label: "#356d9f",
+                }}
+              />
+            </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                  gap: 14,
-                  marginTop: 14,
-                  padding: "14px 16px",
-                  border: "1px solid #e2ecea",
-                  borderRadius: 10,
-                  background: "#fafcfb",
-                }}
-              >
-                <div>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Horse
-                  </Typography.Text>
-                  <Typography.Text
-                    strong
-                    style={{ display: "block", marginTop: 2 }}
-                  >
-                    {contract.horseName || "N/A"}
-                  </Typography.Text>
-                </div>
-                <div>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Tournament
-                  </Typography.Text>
-                  <Typography.Text
-                    strong
-                    style={{ display: "block", marginTop: 2 }}
-                  >
-                    {contract.tournamentName || "N/A"}
-                  </Typography.Text>
-                </div>
-              </div>
-
-              <Typography.Title level={5} style={{ marginTop: 26 }}>
-                Financial terms
-              </Typography.Title>
-              <div
-                style={{
-                  width: "100%",
-                  marginBottom: 14,
-                  padding: "18px 20px",
-                  border: "1px solid #9bd6c9",
-                  borderRadius: 12,
-                  background: "linear-gradient(135deg, #e8f8f4, #f7fcfa)",
-                }}
-              >
-                <Typography.Text
-                  style={{
-                    display: "block",
-                    marginBottom: 4,
-                    color: "#52726e",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: 0.5,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Contract Amount
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 14,
+                marginTop: 14,
+                padding: "14px 16px",
+                border: "1px solid #e2ecea",
+                borderRadius: 10,
+                background: "#fafcfb",
+              }}
+            >
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Horse
                 </Typography.Text>
-                <Typography.Text
-                  strong
-                  style={{ color: "#087a6d", fontSize: 24 }}
-                >
-                  {formatMoney(contract.contractAmount)}
+                <Typography.Text strong style={{ display: "block", marginTop: 2 }}>
+                  {contract.horseName || "N/A"}
                 </Typography.Text>
               </div>
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Tournament
+                </Typography.Text>
+                <Typography.Text strong style={{ display: "block", marginTop: 2 }}>
+                  {contract.tournamentName || "N/A"}
+                </Typography.Text>
+              </div>
+            </div>
 
-              <div
+            <Typography.Title level={5} style={{ marginTop: 26 }}>
+              Financial terms
+            </Typography.Title>
+            <div
+              style={{
+                width: "100%",
+                marginBottom: 14,
+                padding: "18px 20px",
+                border: "1px solid #9bd6c9",
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #e8f8f4, #f7fcfa)",
+              }}
+            >
+              <Typography.Text
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                  gap: 12,
+                  display: "block",
+                  marginBottom: 4,
+                  color: "#52726e",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: 0.5,
+                  textTransform: "uppercase",
                 }}
               >
-                <TermCard label="Owner Share" value={contract.ownerShareRate} />
-                <TermCard
-                  label="Jockey Share"
-                  value={contract.jockeyShareRate}
-                />
-                <TermCard
-                  label="Owner Compensation"
-                  value={contract.ownerCompensationRate}
-                />
-                <TermCard
-                  label="Jockey Compensation"
-                  value={contract.jockeyCompensationRate}
-                />
-              </div>
+                Contract Amount
+              </Typography.Text>
+              <Typography.Text strong style={{ color: "#087a6d", fontSize: 24 }}>
+                {formatMoney(contract.contractAmount)}
+              </Typography.Text>
+            </div>
 
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: 12,
+              }}
+            >
+              <TermCard label="Owner Share" value={contract.ownerShareRate} />
+              <TermCard label="Jockey Share" value={contract.jockeyShareRate} />
+              <TermCard
+                label="Owner Compensation"
+                value={contract.ownerCompensationRate}
+              />
+              <TermCard
+                label="Jockey Compensation"
+                value={contract.jockeyCompensationRate}
+              />
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                gap: 10,
+                marginTop: 24,
+                paddingTop: 18,
+                borderTop: "1px solid #d9eee9",
+                color: "#52726e",
+                fontSize: 13,
+              }}
+            >
+              <span>Signed: {formatContractDate(contract.signedAt)}</span>
+              <span>Contract ID: {contract._id || contract.id || "N/A"}</span>
+            </div>
+
+            {onCancelContract && (
               <div
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
+                  alignItems: "center",
                   justifyContent: "space-between",
-                  gap: 10,
-                  marginTop: 24,
-                  paddingTop: 18,
-                  borderTop: "1px solid #d9eee9",
-                  color: "#52726e",
-                  fontSize: 13,
+                  gap: 14,
+                  marginTop: 20,
+                  padding: 16,
+                  border: "1px solid #ffd2d2",
+                  borderRadius: 10,
+                  background: "#fff7f7",
                 }}
               >
-                <span>Signed: {formatContractDate(contract.signedAt)}</span>
-                <span>Contract ID: {contract._id || contract.id || "N/A"}</span>
-              </div>
-
-              {onCancelContract && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 14,
-                    marginTop: 20,
-                    padding: 16,
-                    border: "1px solid #ffd2d2",
-                    borderRadius: 10,
-                    background: "#fff7f7",
-                  }}
-                >
-                  <div>
-                    <Typography.Text strong style={{ display: "block" }}>
-                      Contract cancellation
-                    </Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      Cancel this contract as the current contract party.
-                    </Typography.Text>
-                  </div>
-                  <Button
-                    danger
-                    disabled={cancellationDisabled}
-                    onClick={() => setCancellationModalOpen(true)}
-                  >
-                    Cancel contract
-                  </Button>
+                <div>
+                  <Typography.Text strong style={{ display: "block" }}>
+                    Contract cancellation
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Cancel this contract as the current contract party.
+                  </Typography.Text>
                 </div>
-              )}
+                <Button
+                  danger
+                  disabled={cancellationDisabled}
+                  onClick={() => setCancellationModalOpen(true)}
+                >
+                  Cancel contract
+                </Button>
+              </div>
+            )}
             </div>
           </div>
         )}
       </Modal>
 
       <Modal
-        title={
-          actionType === "SELF_CANCEL"
-            ? "Cancel Contract"
-            : "Report Opponent Violation"
-        }
+        title="Cancel contract"
         open={cancellationModalOpen}
-        okText={
-          actionType === "SELF_CANCEL" ? "Submit Cancellation" : "Submit Report"
-        }
+        okText="Submit cancellation"
         okButtonProps={{ danger: true }}
         confirmLoading={cancellationLoading}
         styles={{
@@ -429,47 +397,22 @@ export default function JockeyContractModal({
           if (!cancellationLoading) {
             setCancellationModalOpen(false);
             setCancellationReason("");
-            setActionType("SELF_CANCEL");
           }
         }}
         destroyOnHidden
       >
         <Typography.Paragraph type="secondary">
-          Select action type and enter a clear reason.
+          You are cancelling this contract as{" "}
+          <strong>{cancellingPartyLabel}</strong>. Please provide a clear
+          reason for the cancellation.
         </Typography.Paragraph>
-
-        {/* Tùy chọn Loại hành động */}
-        <div style={{ marginBottom: 16 }}>
-          <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
-            Action Type:
-          </Typography.Text>
-          <Radio.Group
-            value={actionType}
-            onChange={(e) => setActionType(e.target.value)}
-            optionType="button"
-            buttonStyle="solid"
-          >
-            <Radio.Button value="SELF_CANCEL">
-              Self Cancel (Your fault)
-            </Radio.Button>
-            <Radio.Button value="REPORT_OPPONENT">Report Opponent</Radio.Button>
-          </Radio.Group>
-        </div>
-
         <div style={{ paddingBottom: 18 }}>
-          <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
-            Reason:
-          </Typography.Text>
           <Input.TextArea
             value={cancellationReason}
             rows={4}
             maxLength={500}
             showCount
-            placeholder={
-              actionType === "SELF_CANCEL"
-                ? "Describe why you are cancelling..."
-                : "Describe how the opponent breached the contract..."
-            }
+            placeholder="Describe why you want to cancel this contract..."
             onChange={(event) => setCancellationReason(event.target.value)}
           />
         </div>

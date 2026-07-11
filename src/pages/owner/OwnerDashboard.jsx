@@ -11,7 +11,9 @@ export default function OwnerDashboard() {
 
   useEffect(() => {
     getMyHorses()
-      .then((data) => setHorses(horseCollectionFrom(data)))
+      .then((horseData) => {
+        setHorses(horseCollectionFrom(horseData));
+      })
       .catch((error) => setErrorMessage(error.message || "Could not load owner dashboard."))
       .finally(() => setLoading(false));
   }, []);

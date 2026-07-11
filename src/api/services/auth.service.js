@@ -1,6 +1,10 @@
 import { apiClient } from "../client";
 import { AUTH_ENDPOINTS } from "../endpoints/auth.endpoint";
-import { getAuthSession } from "../../utils/storage";
+import { getAccessToken, getAuthSession } from "../../utils/storage";
+
+let profileCache = null;
+let profileCacheToken = null;
+let profileRequest = null;
 
 function pickFirstValue(source, keys) {
   if (!source || typeof source !== "object") {
@@ -45,6 +49,10 @@ function normalizeLoginResponse(response) {
 }
 
 export async function login(credentials) {
+  profileCache = null;
+  profileCacheToken = null;
+  profileRequest = null;
+
   console.log(
     "BASE URL TRONG LOGIN:",
     apiClient.defaults.baseURL
@@ -65,20 +73,42 @@ export async function login(credentials) {
 }
 
 export async function getProfile() {
-  try {
-    const response = await apiClient.get(AUTH_ENDPOINTS.PROFILE, {
-      includeAuth: true,
-      includeRefreshToken: true,
-    });
+  const accessToken = getAccessToken();
 
-    return (
-      pickFirstValue(response.data, ["data", "result", "user", "profile"]) ||
-      response.data
-    );
+  if (profileCache && profileCacheToken === accessToken) {
+    return profileCache;
+  }
+
+  if (profileRequest && profileCacheToken === accessToken) {
+    return profileRequest;
+  }
+
+  profileCacheToken = accessToken;
+
+  try {
+    profileRequest = apiClient
+      .get(AUTH_ENDPOINTS.PROFILE, {
+        includeAuth: true,
+        includeRefreshToken: true,
+      })
+      .then((response) => (
+        pickFirstValue(response.data, ["data", "result", "user", "profile"]) ||
+        response.data
+      ))
+      .then((profile) => {
+        profileCache = profile;
+        return profile;
+      })
+      .finally(() => {
+        profileRequest = null;
+      });
+
+    return await profileRequest;
   } catch (error) {
     const sessionUser = getAuthSession()?.user;
 
     if (sessionUser) {
+      profileCache = sessionUser;
       return sessionUser;
     }
 

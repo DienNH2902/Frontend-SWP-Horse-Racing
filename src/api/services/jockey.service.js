@@ -1,6 +1,8 @@
 import { apiClient } from "../client";
 import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
 import { SCHEDULE_ENDPOINTS } from "../endpoints/schedule.endpoint";
+import { getProfile } from "./auth.service";
+import { getUserById } from "./user.service";
 
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
@@ -37,6 +39,16 @@ function pickFirstValue(source, keys, fallback = "") {
   }
 
   return fallback;
+}
+
+function pickExistingValues(source, keys) {
+  if (!source || typeof source !== "object") return [];
+
+  return keys
+    .map((key) => source[key])
+    .filter((value) => value !== undefined && value !== null && value !== "")
+    .map(String)
+    .filter((value, index, values) => values.indexOf(value) === index);
 }
 
 function getReferenceId(reference) {
@@ -341,17 +353,44 @@ let jockeyData = {
 };
 
 export async function getJockeyDashboard() {
-  const [invitations, scheduleData] = await Promise.all([
+  const [invitations, scheduleData, profile] = await Promise.all([
     getJockeyInvitations(),
     getJockeyRaceSchedule(),
+    getJockeyProfile(),
   ]);
 
   return {
     ...structuredClone(jockeyData),
+    profile: {
+      ...structuredClone(jockeyData.profile),
+      ...profile,
+    },
     invitations,
     schedules: scheduleData.schedules,
     standings: scheduleData.standings,
   };
+}
+
+export async function getJockeyProfile() {
+  const profile = await getProfile();
+  const userIds = pickExistingValues(profile, ["id", "_id", "userId", "accountId", "profileId"]);
+
+  if (userIds.length === 0) return profile || {};
+
+  for (const userId of userIds) {
+    try {
+      const userDetail = await getUserById(userId);
+
+      return {
+        ...(profile || {}),
+        ...(userDetail || {}),
+      };
+    } catch {
+      // Try the next possible id shape from the auth profile.
+    }
+  }
+
+  return profile || {};
 }
 
 export async function getJockeyInvitations() {

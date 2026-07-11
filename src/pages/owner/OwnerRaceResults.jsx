@@ -1,14 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
-import { Alert, Card, Col, Descriptions, Empty, Row, Space, Statistic, Table, Tag, Typography } from "antd";
+import { useEffect, useState } from "react";
+import { Alert, Card, Col, Row, Space, Statistic, Table, Tag, Typography } from "antd";
 import { getOwnerRaceCenter } from "../../api/services/owner.service";
+import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 
 function formatMoney(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
+function collectFinalRanks(history) {
+  const ranks = [];
+
+  function visit(value) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const rank = Number(value.finalRank ?? value.rank ?? value.rawRank);
+    if (Number.isFinite(rank)) {
+      ranks.push(rank);
+    }
+
+    ["historyRace", "rounds", "races"].forEach((key) => {
+      if (Array.isArray(value[key])) visit(value[key]);
+    });
+  }
+
+  visit(history);
+
+  return ranks;
+}
+
 export default function OwnerRaceResults() {
-  const [data, setData] = useState({ races: [], standings: [] });
-  const [selectedRaceId, setSelectedRaceId] = useState(null);
+  const [data, setData] = useState({ races: [], standings: [], historyRaceOwner: [] });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -19,7 +47,6 @@ export default function OwnerRaceResults() {
       .then((result) => {
         if (!mounted) return;
         setData(result);
-        setSelectedRaceId(result.races[0]?.id || null);
       })
       .catch((error) => {
         if (mounted) {
@@ -37,14 +64,14 @@ export default function OwnerRaceResults() {
     };
   }, []);
 
-  const selectedRace = useMemo(
-    () => data.races.find((race) => race.id === selectedRaceId),
-    [data.races, selectedRaceId],
-  );
-
   const finishedRaces = data.races.filter((race) => race.status === "Finished");
   const totalPrize = finishedRaces.reduce((sum, race) => sum + (race.result?.prize || 0), 0);
-  const bestRank = Math.min(...finishedRaces.map((race) => race.result?.rank || 99));
+  const historyRanks = collectFinalRanks(data.historyRaceOwner);
+  const raceRanks = data.races
+    .map((race) => Number(race.result?.rank))
+    .filter((rank) => Number.isFinite(rank));
+  const bestRanks = historyRanks.length ? historyRanks : raceRanks;
+  const bestRank = bestRanks.length ? Math.min(...bestRanks) : null;
 
   const raceColumns = [
     {
@@ -52,7 +79,7 @@ export default function OwnerRaceResults() {
       dataIndex: "name",
       render: (value, record) => (
         <Space direction="vertical" size={0}>
-          <Typography.Link onClick={() => setSelectedRaceId(record.id)}>{value}</Typography.Link>
+          <Typography.Text strong>{value}</Typography.Text>
           <Typography.Text type="secondary">{record.tournament}</Typography.Text>
         </Space>
       ),
@@ -72,28 +99,6 @@ export default function OwnerRaceResults() {
     {
       title: "Prize",
       render: (_, record) => formatMoney(record.result?.prize),
-      responsive: ["lg"],
-    },
-  ];
-
-  const standingColumns = [
-    { title: "#", dataIndex: "rank", width: 70 },
-    {
-      title: "Horse",
-      dataIndex: "horse",
-      render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong={record.owner === "Golden Hoof Stable"}>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.owner}</Typography.Text>
-        </Space>
-      ),
-    },
-    { title: "Wins", dataIndex: "wins", responsive: ["md"] },
-    { title: "Points", dataIndex: "points" },
-    {
-      title: "Prize money",
-      dataIndex: "prize",
-      render: formatMoney,
       responsive: ["lg"],
     },
   ];
@@ -120,58 +125,21 @@ export default function OwnerRaceResults() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={14}>
-          <Card title="Race information and results">
-            <Table
-              rowKey="id"
-              loading={loading}
-              columns={raceColumns}
-              dataSource={data.races}
-              pagination={false}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} xl={10}>
-          <Card title="Selected race">
-            {selectedRace ? (
-              <Descriptions bordered column={1} size="small">
-                <Descriptions.Item label="Race">{selectedRace.name}</Descriptions.Item>
-                <Descriptions.Item label="Tournament">{selectedRace.tournament}</Descriptions.Item>
-                <Descriptions.Item label="Venue">{selectedRace.venue}</Descriptions.Item>
-                <Descriptions.Item label="Time">
-                  {selectedRace.date} {selectedRace.time}
-                </Descriptions.Item>
-                <Descriptions.Item label="Distance">{selectedRace.distance}</Descriptions.Item>
-                <Descriptions.Item label="Surface">{selectedRace.surface}</Descriptions.Item>
-                <Descriptions.Item label="Horse">{selectedRace.myHorse}</Descriptions.Item>
-                <Descriptions.Item label="Jockey">{selectedRace.jockey}</Descriptions.Item>
-                <Descriptions.Item label="Purse">{formatMoney(selectedRace.purse)}</Descriptions.Item>
-                <Descriptions.Item label="Result">
-                  {selectedRace.result
-                    ? `Rank #${selectedRace.result.rank}, ${selectedRace.result.points} points, ${formatMoney(
-                        selectedRace.result.prize,
-                      )}`
-                    : "Waiting for race day"}
-                </Descriptions.Item>
-              </Descriptions>
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Select a race" />
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      <Card title="Leaderboard and prize money">
+      <Card title="Race information and results">
         <Table
-          rowKey={(record) => `${record.rank}-${record.horse}`}
+          rowKey="id"
           loading={loading}
-          columns={standingColumns}
-          dataSource={data.standings}
+          columns={raceColumns}
+          dataSource={data.races}
           pagination={false}
-          rowClassName={(record) => (record.owner === "Golden Hoof Stable" ? "owner-highlight-row" : "")}
         />
       </Card>
+
+      <RaceHistoryCard
+        history={data.historyRaceOwner}
+        loading={loading}
+        participantLabel="Jockey"
+      />
     </Space>
   );
 }
