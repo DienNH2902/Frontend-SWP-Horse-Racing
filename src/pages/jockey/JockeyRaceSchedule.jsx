@@ -14,21 +14,99 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { getJockeyRaceSchedule } from "../../api/services/jockey.service";
+import { getJockeyProfile, getJockeyRaceSchedule } from "../../api/services/jockey.service";
+import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 
 function formatMoney(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
+function shouldShowRaceSubtitle(value) {
+  const text = String(value || "").trim();
+
+  if (!text || text === "N/A") return false;
+  if (/^[a-f0-9]{24}$/i.test(text)) return false;
+  if (/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(text)) {
+    return false;
+  }
+
+  return true;
+}
+
+function formatScheduleTime(record) {
+  const date = String(record.date || "").trim();
+  const time = String(record.time || "").trim();
+  const hasDate = date && date !== "N/A";
+  const hasTime = time && time !== "N/A";
+  const parsedDate = hasDate ? new Date(date) : null;
+
+  if (parsedDate && !Number.isNaN(parsedDate.getTime())) {
+    const formattedDate = parsedDate.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+
+    return hasTime ? `${formattedDate} ${time}` : formattedDate;
+  }
+
+  const rawDateTime = [date, time].filter((value) => value && value !== "N/A").join(" ");
+  const parsedDateTime = rawDateTime ? new Date(rawDateTime) : null;
+
+  if (parsedDateTime && !Number.isNaN(parsedDateTime.getTime())) {
+    return parsedDateTime.toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return rawDateTime || "N/A";
+}
+
+function collectFinalRanks(history) {
+  const ranks = [];
+
+  function visit(value) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const rank = Number(value.finalRank ?? value.rank ?? value.rawRank);
+    if (Number.isFinite(rank)) {
+      ranks.push(rank);
+    }
+
+    ["historyRace", "rounds", "races"].forEach((key) => {
+      if (Array.isArray(value[key])) visit(value[key]);
+    });
+  }
+
+  visit(history);
+
+  return ranks;
+}
+
 export default function JockeyRaceSchedule() {
   const [data, setData] = useState({ schedules: [], standings: [] });
+  const [profile, setProfile] = useState({});
   const [selectedRace, setSelectedRace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    getJockeyRaceSchedule()
-      .then(setData)
+    Promise.all([getJockeyRaceSchedule(), getJockeyProfile()])
+      .then(([scheduleData, profileData]) => {
+        setData(scheduleData);
+        setProfile(profileData || {});
+      })
       .catch((error) => setErrorMessage(error.message || "Could not load race schedule."))
       .finally(() => setLoading(false));
   }, []);
@@ -36,9 +114,14 @@ export default function JockeyRaceSchedule() {
   const finishedRaces = data.schedules.filter((race) => race.result);
   const totalPrize = finishedRaces.reduce((sum, race) => sum + (race.result?.prize || 0), 0);
   const bestRank = useMemo(() => {
-    const ranks = finishedRaces.map((race) => race.result?.rank || 99);
+    const historyRanks = collectFinalRanks(profile.historyRaceJockey);
+    const scheduleRanks = finishedRaces
+      .map((race) => Number(race.result?.rank))
+      .filter((rank) => Number.isFinite(rank));
+    const ranks = historyRanks.length ? historyRanks : scheduleRanks;
+
     return ranks.length ? Math.min(...ranks) : null;
-  }, [finishedRaces]);
+  }, [finishedRaces, profile.historyRaceJockey]);
 
   const scheduleColumns = [
     {
@@ -47,14 +130,16 @@ export default function JockeyRaceSchedule() {
       render: (value, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.tournament}</Typography.Text>
+          {shouldShowRaceSubtitle(record.tournament) && (
+            <Typography.Text type="secondary">{record.tournament}</Typography.Text>
+          )}
         </Space>
       ),
     },
     { title: "Horse", dataIndex: "horse" },
     {
       title: "Time",
-      render: (_, record) => `${record.date} ${record.time}`,
+      render: (_, record) => formatScheduleTime(record),
       responsive: ["md"],
     },
     { title: "Venue", dataIndex: "venue", responsive: ["lg"] },
@@ -76,23 +161,6 @@ export default function JockeyRaceSchedule() {
           View detail
         </Button>
       ),
-    },
-  ];
-
-  const standingColumns = [
-    { title: "#", dataIndex: "rank", width: 70 },
-    {
-      title: "Jockey",
-      dataIndex: "jockey",
-      render: (value) => <Typography.Text strong={value === "Demo Jockey"}>{value}</Typography.Text>,
-    },
-    { title: "Wins", dataIndex: "wins", responsive: ["md"] },
-    { title: "Points", dataIndex: "points" },
-    {
-      title: "Prize",
-      dataIndex: "prize",
-      render: formatMoney,
-      responsive: ["lg"],
     },
   ];
 
@@ -128,16 +196,11 @@ export default function JockeyRaceSchedule() {
         />
       </Card>
 
-      <Card title="Personal ranking">
-        <Table
-          rowKey={(record) => `${record.rank}-${record.jockey}`}
-          loading={loading}
-          columns={standingColumns}
-          dataSource={data.standings}
-          pagination={false}
-          rowClassName={(record) => (record.jockey === "Demo Jockey" ? "jockey-highlight-row" : "")}
-        />
-      </Card>
+      <RaceHistoryCard
+        history={profile.historyRaceJockey}
+        loading={loading}
+        participantLabel="Owner"
+      />
 
       <Modal
         title={selectedRace ? selectedRace.race : "Race detail"}
@@ -178,12 +241,6 @@ export default function JockeyRaceSchedule() {
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Select a race" />
         )}
       </Modal>
-
-      <style>{`
-        .jockey-highlight-row td {
-          background: #effffb !important;
-        }
-      `}</style>
     </Space>
   );
 }

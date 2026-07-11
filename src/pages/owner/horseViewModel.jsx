@@ -34,6 +34,11 @@ export function horseDetailFrom(data) {
 }
 
 export function normalizeHorse(horse = {}) {
+    const historyRace = Array.isArray(horse.historyRace) ? horse.historyRace : [];
+    const totalRace = historyRace.length;
+    const totalWin = historyRace.filter((race) => Number(race?.finalRank) === 1).length;
+    const calculatedWinRate = totalRace ? (totalWin / totalRace) * 100 : 0;
+
     return {
         id: horse.id ?? horse._id ?? "",
         name: horse.name ?? "",
@@ -42,16 +47,23 @@ export function normalizeHorse(horse = {}) {
         height: horse.height ?? 0,
         weight: horse.weight ?? 0,
         status: horse.horseStatus ?? horse.status ?? "IDLE",
-        totalWin: horse.totalWin ?? 0,
-        winRate: horse.winRate ?? 0,
-        starts: horse.starts ?? 0,
+        totalWin: totalRace ? totalWin : horse.stats?.totalWin ?? horse.totalWin ?? 0,
+        totalRace: totalRace || horse.stats?.totalRace || horse.totalRace || horse.starts || 0,
+        winRate: totalRace
+            ? Number(calculatedWinRate.toFixed(2))
+            : horse.stats?.winRate ?? horse.winRate ?? 0,
+        starts: totalRace || horse.starts || horse.stats?.totalRace || 0,
         podiums: horse.podiums ?? 0,
         rating: horse.rating ?? 0,
         lastRace: horse.lastRace ?? "",
         ownerName: horse.ownerName ?? "",
+        ownerEmail: horse.ownerEmail ?? "",
+        userId: horse.userId ?? "",
         stable: horse.stable ?? "",
         description: horse.description ?? "",
         imageUrl: horse.imageUrl ?? horse.avatar ?? horse.avatarUrl ?? horse.photoUrl ?? "",
+        historyRace,
+        raw: horse,
     };
 }
 
