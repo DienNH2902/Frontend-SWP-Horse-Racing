@@ -108,7 +108,8 @@ export default function OwnerHorses() {
           .includes(query);
       const matchesStatus =
         statusFilter === "all" ||
-        String(horse.status).toLowerCase() === String(statusFilter).toLowerCase();
+        String(horse.status).toLowerCase() ===
+          String(statusFilter).toLowerCase();
 
       return matchesKeyword && matchesStatus;
     });
@@ -166,7 +167,14 @@ export default function OwnerHorses() {
   }
 
   function getUploadedImagePath(data) {
-    return data?.imageUrl || data?.avatar || data?.avatarUrl || data?.url || data?.path || data;
+    return (
+      data?.imageUrl ||
+      data?.avatar ||
+      data?.avatarUrl ||
+      data?.url ||
+      data?.path ||
+      data
+    );
   }
 
   function buildHorsePayloadWithImage(horse, imageUrl) {
@@ -193,6 +201,7 @@ export default function OwnerHorses() {
     }
 
     setUploadingHorseId(horse.id);
+    setIsUploading(true);
 
     try {
       const uploaded = await uploadHorseAvatar(file);
@@ -210,6 +219,8 @@ export default function OwnerHorses() {
             : item,
         ),
       );
+      form.setFieldsValue({ imageUrl });
+      setImagePreview(getImageUrl(imageUrl));
       messageApi.success("Horse photo uploaded");
       onSuccess(uploaded);
     } catch (error) {
@@ -218,6 +229,7 @@ export default function OwnerHorses() {
       onError(error);
     } finally {
       setUploadingHorseId("");
+      setIsUploading(false);
     }
   }
 
@@ -300,7 +312,9 @@ export default function OwnerHorses() {
             name="file"
             accept="image/*"
             showUploadList={false}
-            customRequest={(options) => handleHorseAvatarUpload(record, options)}
+            customRequest={(options) =>
+              handleHorseAvatarUpload(record, options)
+            }
             disabled={uploadingHorseId === record.id}
           >
             <button
@@ -619,7 +633,6 @@ export default function OwnerHorses() {
           <Form.Item label="Status" name="horseStatus">
             <Select options={HORSE_STATUS_OPTIONS} />
           </Form.Item>
-
         </Form>
       </Modal>
 

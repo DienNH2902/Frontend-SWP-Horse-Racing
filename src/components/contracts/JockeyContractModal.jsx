@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Button, Input, Modal, Tag, Typography, message } from "antd";
 
+const statusColor = {
+  ACTIVE: "green",
+  COMPLETED: "green",
+  CANCELLED: "red",
+  BREACHED: "red",
+};
+
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString("vi-VN")} VND`;
 }
@@ -203,7 +210,7 @@ export default function JockeyContractModal({
               >
                 Jockey Service Contract
               </Typography.Title>
-              <Tag color={contract.status === "ACTIVE" ? "green" : "default"}>
+              <Tag color={statusColor[contract.status] || "default"}>
                 {contract.status || "N/A"}
               </Tag>
             </div>
