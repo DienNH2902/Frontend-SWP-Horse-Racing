@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input, Modal, Tag, Typography, message } from "antd";
+import { Button, Input, Modal, Tag, Radio,  Typography, message } from "antd";
 
 const statusColor = {
   ACTIVE: "green",
@@ -119,16 +119,18 @@ export default function JockeyContractModal({
   const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
   const [cancellationReason, setCancellationReason] = useState("");
   const [cancellationLoading, setCancellationLoading] = useState(false);
+  const [actionType, setActionType] = useState("SELF_CANCEL");
   const contractStatus = String(contract?.status || "").toUpperCase();
   const cancellationDisabled = ["CANCELLED", "COMPLETED", "BREACHED"].includes(
     contractStatus,
   );
-  const cancellingPartyLabel =
-    cancellingParty === "HORSE_OWNER" ? "Horse Owner" : "Jockey";
+  const opponentParty =
+    cancellingParty === "HORSE_OWNER" ? "JOCKEY" : "HORSE_OWNER";
 
   function handleClose() {
     setCancellationModalOpen(false);
     setCancellationReason("");
+    setActionType("SELF_CANCEL");
     onCancel?.();
   }
 
@@ -149,12 +151,19 @@ export default function JockeyContractModal({
     setCancellationLoading(true);
 
     try {
+      const breachingParty =
+        actionType === "SELF_CANCEL" ? cancellingParty : opponentParty;
       await onCancelContract({
         contractId,
-        breachingParty: cancellingParty,
+        actionType,
+        breachingParty,
         reason,
       });
-      message.success("Contract cancelled successfully.");
+      message.success(
+        actionType === "SELF_CANCEL"
+          ? "Contract cancelled successfully."
+          : "Report submitted successfully.",
+      );
       handleClose();
     } catch (error) {
       message.error(
@@ -227,25 +236,25 @@ export default function JockeyContractModal({
               }}
             >
               <PartyCard
-                label="Horse Owner"
-                name={contract.ownerName}
-                accent={{
-                  border: "#b9e4da",
-                  background: "#f0fbf8",
-                  avatar: "linear-gradient(135deg, #075e54, #0fa58f)",
-                  label: "#087a6d",
-                }}
-              />
-              <PartyCard
-                label="Jockey"
-                name={contract.jockeyName}
-                accent={{
-                  border: "#c8dcf4",
-                  background: "#f3f8fe",
-                  avatar: "linear-gradient(135deg, #245b91, #4b8bc8)",
-                  label: "#356d9f",
-                }}
-              />
+                  label="Horse Owner"
+                  name={contract.ownerName}
+                  accent={{
+                    border: "#b9e4da",
+                    background: "#f0fbf8",
+                    avatar: "linear-gradient(135deg, #075e54, #0fa58f)",
+                    label: "#087a6d",
+                  }}
+                />
+                <PartyCard
+                  label="Jockey"
+                  name={contract.jockeyName}
+                  accent={{
+                    border: "#c8dcf4",
+                    background: "#f3f8fe",
+                    avatar: "linear-gradient(135deg, #245b91, #4b8bc8)",
+                    label: "#356d9f",
+                  }}
+                />
             </div>
 
             <div
@@ -383,9 +392,15 @@ export default function JockeyContractModal({
       </Modal>
 
       <Modal
-        title="Cancel contract"
+        title={
+          actionType === "SELF_CANCEL"
+            ? "Cancel Contract"
+            : "Report Opponent Violation"
+        }
         open={cancellationModalOpen}
-        okText="Submit cancellation"
+        okText={
+          actionType === "SELF_CANCEL" ? "Submit Cancellation" : "Submit Report"
+        }
         okButtonProps={{ danger: true }}
         confirmLoading={cancellationLoading}
         styles={{
@@ -397,22 +412,45 @@ export default function JockeyContractModal({
           if (!cancellationLoading) {
             setCancellationModalOpen(false);
             setCancellationReason("");
+            setActionType("SELF_CANCEL");
           }
         }}
         destroyOnHidden
       >
         <Typography.Paragraph type="secondary">
-          You are cancelling this contract as{" "}
-          <strong>{cancellingPartyLabel}</strong>. Please provide a clear
-          reason for the cancellation.
+           Select action type and enter a clear reason.
         </Typography.Paragraph>
+         {/* Tùy chọn Loại hành động */}
+        <div style={{ marginBottom: 16 }}>
+          <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
+            Action Type:
+          </Typography.Text>
+          <Radio.Group
+            value={actionType}
+            onChange={(e) => setActionType(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+          >
+            <Radio.Button value="SELF_CANCEL">
+              Self Cancel (Your fault)
+            </Radio.Button>
+            <Radio.Button value="REPORT_OPPONENT">Report Opponent</Radio.Button>
+          </Radio.Group>
+        </div>
         <div style={{ paddingBottom: 18 }}>
+           <Typography.Text strong style={{ display: "block", marginBottom: 8 }}>
+            Reason:
+          </Typography.Text>
           <Input.TextArea
             value={cancellationReason}
             rows={4}
             maxLength={500}
             showCount
-            placeholder="Describe why you want to cancel this contract..."
+            placeholder={
+              actionType === "SELF_CANCEL"
+                ? "Describe why you are cancelling..."
+                : "Describe how the opponent breached the contract..."
+            }
             onChange={(event) => setCancellationReason(event.target.value)}
           />
         </div>
