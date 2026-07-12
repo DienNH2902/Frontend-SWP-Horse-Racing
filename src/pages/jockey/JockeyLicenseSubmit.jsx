@@ -17,9 +17,11 @@ import {
   Typography,
   Upload,
   message,
+  Popconfirm,
 } from "antd";
 import {
   CalendarOutlined,
+  DeleteOutlined,
   EditOutlined,
   EyeOutlined,
   FileImageOutlined,
@@ -28,6 +30,7 @@ import {
 import dayjs from "dayjs";
 import {
   createJockeyLicense,
+  deleteJockeyLicense,
   getMyJockeyLicenses,
   updateJockeyLicense,
   uploadJockeyLicenseFile,
@@ -65,7 +68,8 @@ function getLicenseStatus(license) {
 function getStatusColor(status) {
   const value = String(status || "").toLowerCase();
 
-  if (["approved", "accepted", "active", "valid"].includes(value)) return "green";
+  if (["approved", "accepted", "active", "valid"].includes(value))
+    return "green";
   if (["pending", "submitted", "reviewing"].includes(value)) return "gold";
   if (["rejected", "declined", "invalid"].includes(value)) return "red";
   if (["expired", "inactive"].includes(value)) return "default";
@@ -87,6 +91,7 @@ export default function JockeyLicenseSubmit() {
   const [licenses, setLicenses] = useState([]);
   const [editingLicense, setEditingLicense] = useState(null);
   const [previewingLicense, setPreviewingLicense] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const loadLicenses = useCallback(async () => {
     setIsLoadingLicenses(true);
@@ -222,6 +227,27 @@ export default function JockeyLicenseSubmit() {
       messageApi.error(error.message || "Could not submit license");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeleteLicense(license) {
+    const licenseId = license?.id || license?._id;
+
+    if (!licenseId) {
+      messageApi.error("Missing license id");
+      return;
+    }
+
+    setDeletingId(licenseId);
+
+    try {
+      await deleteJockeyLicense(licenseId);
+      messageApi.success("License deleted successfully");
+      await loadLicenses();
+    } catch (error) {
+      messageApi.error(error.message || "Could not delete license");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -403,7 +429,10 @@ export default function JockeyLicenseSubmit() {
                           </Title>
                         </div>
                         {status && (
-                          <Tag color={getStatusColor(status)} style={{ margin: 0 }}>
+                          <Tag
+                            color={getStatusColor(status)}
+                            style={{ margin: 0 }}
+                          >
                             {status}
                           </Tag>
                         )}
@@ -436,6 +465,26 @@ export default function JockeyLicenseSubmit() {
                         >
                           Edit
                         </Button>
+                        <Popconfirm
+                          title="Delete license?"
+                          description="Are you sure you want to delete this license?"
+                          okText="Delete"
+                          cancelText="Cancel"
+                          okButtonProps={{
+                            danger: true,
+                            loading: deletingId === (license.id || license._id),
+                          }}
+                          onConfirm={() => handleDeleteLicense(license)}
+                        >
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            loading={deletingId === (license.id || license._id)}
+                          >
+                            Delete
+                          </Button>
+                        </Popconfirm>
                       </Space>
                     </div>
                   </Card>
