@@ -213,6 +213,12 @@ export default function JockeyRaceSchedule() {
       render: (value) => getDisplayValue(value) || "N/A",
     },
     {
+      title: "Tournament",
+      dataIndex: "tournament",
+      responsive: ["md"],
+      render: (value) => getDisplayValue(value) || "N/A",
+    },
+    {
       title: "Time",
       render: (_, record) => formatScheduleTime(record),
       responsive: ["md"],
@@ -295,6 +301,9 @@ export default function JockeyRaceSchedule() {
             </Descriptions.Item>
             <Descriptions.Item label="Race course">
               {selectedRace.raceCourseName || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Horse">
+              {selectedRace.horseName || "N/A"}
             </Descriptions.Item>
           </Descriptions>
         ) : (
