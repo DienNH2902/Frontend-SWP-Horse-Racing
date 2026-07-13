@@ -6,7 +6,6 @@ import {
     Descriptions,
     Empty,
     Form,
-    Input,
     InputNumber,
     Row,
     Space,
@@ -18,27 +17,27 @@ import {
     Typography,
     message,
     Select,
-    Modal,
-    Tabs,
 } from "antd";
 import {
     CheckCircleOutlined,
     PlayCircleOutlined,
     ReloadOutlined,
+    TeamOutlined,
 } from "@ant-design/icons";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 
 import RefereeHorseDetailModal from "./RefereeHorseDetailModal";
 import RefereeJockeyDetailModal from "./RefereeJockeyDetailModal";
 import RefereeOwnerDetailModal from "./RefereeOwnerDetailModal";
+import RefereeResultReviewModal from "./RefereeResultReviewModal";
+import "./RefereeRaceDetail.css";
 
 import {
     getRaceById,
     confirmRaceReady,
     runSimulation,
     startRaceBroadcast,
-    replayRaceBroadcast,
     getBroadcastStatus,
 } from "../../api/services/race.service";
 
@@ -51,6 +50,7 @@ import {
 
 import {
     createEndReport,
+    getReports,
 } from "../../api/services/refereeReport.service";
 
 import { getRaceCourseById } from "../../api/services/race-course.service";
@@ -67,22 +67,6 @@ import {
 import {
     getTournamentParticipants,
 } from "../../api/services/tournament.service";
-
-function getHorseName(record) {
-    return (
-        participantMap[record.horseId]?.horse?.name ||
-        horseMap[record.horseId] ||
-        record.horseId
-    );
-}
-
-function getJockeyName(record) {
-    return (
-        participantMap[record.horseId]?.jockey?.fullName ||
-        jockeyMap[record.jockeyId] ||
-        record.jockeyId
-    );
-}
 
 function renderResultStatus(status) {
     return (
@@ -162,6 +146,9 @@ export default function RefereeRaceDetail() {
 
     const [raceCourse, setRaceCourse] = useState(null);
 
+    const [report, setReport] =
+        useState(null);
+
     const [rawResults, setRawResults] =
         useState([]);
 
@@ -174,8 +161,11 @@ export default function RefereeRaceDetail() {
     const [disqualifiedHorseIds, setDisqualifiedHorseIds] =
         useState([]);
 
-    const [confirmingResult, setConfirmingResult] =
-        useState(false);
+    const [selectedRawResultIds, setSelectedRawResultIds] =
+        useState([]);
+
+    const [reportReason, setReportReason] =
+        useState("");
 
     const [loading, setLoading] =
         useState(true);
@@ -203,14 +193,13 @@ export default function RefereeRaceDetail() {
     const [conditionForm] =
         Form.useForm();
 
-    const [reportForm] =
-        Form.useForm();
-
     useEffect(() => {
         if (id) {
             loadData();
         }
     }, [id]);
+
+    const statCardClass = "race-detail-card race-stat-card";
 
     function validateReady() {
         if (!race.raceCourseId) {
@@ -245,19 +234,6 @@ export default function RefereeRaceDetail() {
             setLoading(true);
 
             const raceData = await getRaceById(id);
-            console.log(raceData);
-
-            console.log("Race Data:", raceData);
-
-            console.log(
-                "Referee ID:",
-                raceData.refereeId
-            );
-
-            console.log(
-                "Race Course ID:",
-                raceData.raceCourseId
-            );
 
             setRace(raceData);
 
@@ -272,9 +248,6 @@ export default function RefereeRaceDetail() {
                 );
 
             setParticipants(raceParticipants);
-
-            console.log(raceParticipants.length);
-            console.log(raceParticipants);
 
             const promises = [];
 
@@ -308,7 +281,6 @@ export default function RefereeRaceDetail() {
 
             promises.push(
                 getRawResults(id).catch(error => {
-                    console.error("Raw Result", error);
                     return [];
                 })
             );
@@ -325,6 +297,12 @@ export default function RefereeRaceDetail() {
                 )
             );
 
+            promises.push(
+                getReports(id).catch(
+                    () => []
+                )
+            );
+
             const [
                 refereeData,
                 raceCourseData,
@@ -332,16 +310,46 @@ export default function RefereeRaceDetail() {
                 rawResultsData,
                 finalResultsData,
                 broadcastData,
+                reportsData,
             ] = await Promise.all(promises);
 
-            console.log("Referee:", refereeData);
-            console.log("Race Course:", raceCourseData);
-
+            setBroadcastStatus(broadcastData);
             setReferee(refereeData);
             setRaceCourse(raceCourseData);
             setRawResults(rawResultsData || []);
             setFinalResults(finalResultsData || []);
             setBroadcastStatus(broadcastData);
+
+            const endReport =
+                reportsData.find(
+                    (item) => item.type === "end"
+                );
+
+            setReport(endReport || null);
+
+            if (endReport?.rawResultId) {
+
+                const ids = Array.isArray(endReport.rawResultId)
+                    ? endReport.rawResultId
+                    : endReport.rawResultId.split(",");
+
+                setSelectedRawResultIds(ids);
+
+                const horseIds = rawResultsData
+                    .filter(item => ids.includes(item._id))
+                    .map(item => item.horseId);
+
+                setDisqualifiedHorseIds(horseIds);
+
+                setReportReason(endReport.reason || "");
+
+            } else {
+
+                setSelectedRawResultIds([]);
+                setDisqualifiedHorseIds([]);
+                setReportReason("");
+
+            }
 
             if (conditionData) {
                 setCondition(conditionData);
@@ -355,8 +363,6 @@ export default function RefereeRaceDetail() {
                 });
             }
         } catch (error) {
-            console.error(error);
-
             message.error(
                 "Failed to load race."
             );
@@ -364,6 +370,8 @@ export default function RefereeRaceDetail() {
             setLoading(false);
         }
     }
+
+
 
     const horseMap = useMemo(() => {
         return Object.fromEntries(
@@ -426,47 +434,35 @@ export default function RefereeRaceDetail() {
             title: "Result",
             render: (_, record) => {
 
-                const checked =
-                    disqualifiedHorseIds.includes(
-                        record.horseId
-                    );
-
                 return (
                     <Select
+                        value={
+                            selectedRawResultIds.includes(record._id)
+                                ? "Disqualified"
+                                : "Qualified"
+                        }
                         disabled={hasFinalResult}
-                        value={checked ? "Disqualified" : "Qualified"}
                         style={{
-                            width: 160,
+                            width: 160
                         }}
                         onChange={(value) => {
 
-                            if (
-                                value ===
-                                "Disqualified"
-                            ) {
+                            if (value === "Disqualified") {
 
-                                setDisqualifiedHorseIds(
-                                    (
-                                        prev
-                                    ) => [
-                                            ...prev,
-                                            record.horseId,
-                                        ]
+                                setSelectedRawResultIds(prev =>
+                                    prev.includes(record._id)
+                                        ? prev
+                                        : [...prev, record._id]
                                 );
 
                             } else {
 
-                                setDisqualifiedHorseIds(
-                                    (
-                                        prev
-                                    ) =>
-                                        prev.filter(
-                                            (
-                                                id
-                                            ) =>
-                                                id !==
-                                                record.horseId
-                                        )
+                                setSelectedRawResultIds(prev =>
+                                    prev.filter(id => id !== record._id)
+                                );
+
+                                setDisqualifiedHorseIds(prev =>
+                                    prev.filter(id => id !== record.horseId)
                                 );
 
                             }
@@ -474,13 +470,11 @@ export default function RefereeRaceDetail() {
                         }}
                         options={[
                             {
-                                value:
-                                    "Qualified",
+                                value: "Qualified"
                             },
                             {
-                                value:
-                                    "Disqualified",
-                            },
+                                value: "Disqualified"
+                            }
                         ]}
                     />
                 );
@@ -521,12 +515,19 @@ export default function RefereeRaceDetail() {
         {
             title: "Gate",
             dataIndex: "gateNumber",
+            align: "center",
+            render: (gate) => (
+                <div className="race-gate">
+                    {gate}
+                </div>
+            ),
         },
         {
             title: "Horse",
             render: (_, record) => (
                 <Button
                     type="link"
+                    className="race-link-btn"
                     style={{
                         padding: 0,
                         fontWeight: 600,
@@ -545,6 +546,7 @@ export default function RefereeRaceDetail() {
             render: (_, record) => (
                 <Button
                     type="link"
+                    className="race-link-btn"
                     onClick={() => {
                         setSelectedJockeyId(record.jockey.jockeyId);
                         setJockeyOpen(true);
@@ -559,6 +561,7 @@ export default function RefereeRaceDetail() {
             render: (_, record) => (
                 <Button
                     type="link"
+                    className="race-link-btn"
                     onClick={() => {
                         setSelectedHorseId(record.horse.horseId);
                         setOwnerOpen(true);
@@ -571,7 +574,10 @@ export default function RefereeRaceDetail() {
         {
             title: "Status",
             render: () => (
-                <Tag color="success">
+                <Tag
+                    color="success"
+                    className="race-status-tag"
+                >
                     Assigned
                 </Tag>
             ),
@@ -641,14 +647,19 @@ export default function RefereeRaceDetail() {
         try {
             setRunningSimulation(true);
 
-            await runSimulation(id);
+            const result = await runSimulation(id);
 
-            message.success(
-                "Simulation completed successfully."
-            );
+            console.log(result);
+
+            message.success("Simulation completed successfully.");
 
             await loadData();
         } catch (error) {
+            console.log(error);
+            console.log(error.response);
+            console.log(error.response?.status);
+            console.log(error.response?.data);
+
             message.error(
                 error.response?.data?.message ||
                 "Cannot run simulation."
@@ -680,24 +691,57 @@ export default function RefereeRaceDetail() {
             }
         };
 
-    const handleSubmitReport =
+    const handleSubmitFinalReview =
         async (values) => {
             try {
                 setReportLoading(true);
 
-                await createEndReport(
-                    id,
-                    values
+                console.log(rawResults);
+                console.log(disqualifiedHorseIds);
+
+                const payload = {};
+
+                if (selectedRawResultIds.length) {
+
+                    payload.rawResultId =
+                        selectedRawResultIds;
+
+                }
+
+                if (reportReason.trim()) {
+
+                    payload.reason =
+                        reportReason.trim();
+
+                }
+
+                console.log("Payload:", payload);
+
+                await createEndReport(id, payload);
+
+                const reports = await getReports(id);
+
+                const endReport = reports.find(
+                    item =>
+                        item.type?.toLowerCase() === "end"
                 );
+
+                setReport(endReport || null);
+
+                await loadData();
 
                 message.success(
                     "Report submitted."
                 );
             } catch (error) {
+                console.log(error);
+
+                console.log("Status:", error.response?.status);
+                console.log("Data:", error.response?.data);
+
                 message.error(
-                    error.response?.data
-                        ?.message ||
-                    "Cannot submit report."
+                    error.response?.data?.message ??
+                    "Cannot submit report"
                 );
             } finally {
                 setReportLoading(false);
@@ -714,11 +758,16 @@ export default function RefereeRaceDetail() {
 
             console.log(disqualifiedHorseIds);
 
-            const result =
-                await confirmRawResults(
-                    id,
-                    disqualifiedHorseIds
-                );
+            const horseIds = rawResults
+                .filter(item =>
+                    selectedRawResultIds.includes(item._id)
+                )
+                .map(item => item.horseId);
+
+            const result = await confirmRawResults(
+                id,
+                horseIds
+            );
 
             console.log(result);
 
@@ -764,560 +813,682 @@ export default function RefereeRaceDetail() {
     }
 
     return (
-        <Space
-            orientation="vertical"
-        >
-            <Card
-                style={{
-                    borderRadius: 16,
-                    marginBottom: 16,
-                }}
+        <div className="race-detail-page">
+
+            <Space
+                orientation="vertical"
+                size={20}
+                style={{ width: "100%" }}
             >
-                <Space
-                    direction="vertical"
-                    size={8}
+                <Card
+                    className="race-detail-hero"
                 >
-                    <Typography.Title
-                        level={2}
-                        style={{ margin: 0 }}
+                    <Row
+                        align="middle"
+                        gutter={[48, 32]}
                     >
-                        {race.name}
-                    </Typography.Title>
 
-                    <Typography.Text type="secondary">
-                        {race.tournamentTitle}
-                    </Typography.Text>
+                        <Col xs={24} md={17}>
+                            <Typography.Title
+                                level={1}
+                                className="race-detail-title"
+                            >
+                                {race.name}
+                            </Typography.Title>
 
-                    <Space wrap>
-                        <Tag color={statusColor(race.status)}>
-                            {race.status}
-                        </Tag>
-
-                        <Tag color="blue">
-                            Round {race.roundNumber}
-                        </Tag>
-
-                        <Tag color="purple">
-                            Race #{race.raceOrder}
-                        </Tag>
-                    </Space>
-                </Space>
-            </Card>
-
-            <Card
-                style={{
-                    borderRadius: 16,
-                    marginBottom: 16,
-                }}
-            >
-                <Space wrap>
-                    <Button onClick={() => navigate(-1)}>
-                        Back
-                    </Button>
-
-                    <Button
-                        icon={<ReloadOutlined />}
-                        onClick={loadData}
-                    >
-                        Refresh
-                    </Button>
-
-                    <Button
-                        type="primary"
-                        icon={<CheckCircleOutlined />}
-                        loading={confirmingReady}
-                        disabled={race.status !== "Scheduled"}
-                        onClick={handleConfirmReady}
-                    >
-                        Confirm Ready
-                    </Button>
-
-                    <Button
-                        type="primary"
-                        icon={<PlayCircleOutlined />}
-                        loading={runningSimulation}
-                        disabled={race.status !== "Ready"}
-                        onClick={handleRunSimulation}
-                    >
-                        Run Simulation
-                    </Button>
-
-                    <Button
-                        type="primary"
-                        loading={startingBroadcast}
-                        disabled={
-                            race.status !== "Simulated" ||
-                            broadcastStatus?.isBroadcasting
-                        }
-                        onClick={handleStartBroadcast}
-                    >
-                        Start Broadcast
-                    </Button>
-                </Space>
-            </Card>
-
-            <Card title="Race Information">
-                <Descriptions
-                    bordered
-                    column={2}
-                    size="middle"
-                >
-                    <Descriptions.Item label="Status">
-                        <Tag
-                            color={statusColor(
-                                race.status
-                            )}
-                        >
-                            {race.status}
-                        </Tag>
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Tournament">
-                        {race.tournamentTitle}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Round">
-                        {race.roundNumber}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Race Order">
-                        {race.raceOrder}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Race Course">
-                        {raceCourse ? (
-                            <Space direction="vertical" size={0}>
-                                <Typography.Text strong>
-                                    {raceCourse.name}
-                                </Typography.Text>
-
-                                <Typography.Text type="secondary">
-                                    {raceCourse.location}
-                                </Typography.Text>
-
-                                <Tag color="cyan">
-                                    {raceCourse.distance} m
-                                </Tag>
-
-                                <Tag color="processing">
-                                    {raceCourse.trackType}
-                                </Tag>
-                            </Space>
-                        ) : (
-                            "-"
-                        )}
-                    </Descriptions.Item>
-
-                    <Descriptions.Item label="Referee">
-                        <Space direction="vertical" size={0}>
-                            <Typography.Text strong>
-                                {referee.fullName}
+                            <Typography.Text
+                                className="race-detail-subtitle"
+                            >
+                                {race.tournamentTitle}
                             </Typography.Text>
 
-                            <Tag color="green">
-                                {referee.role}
-                            </Tag>
-                        </Space>
-                    </Descriptions.Item>
+                            <Space wrap>
+                                <Tag color={statusColor(race.status)}>
+                                    {race.status}
+                                </Tag>
 
-                    <Descriptions.Item label="Date">
-                        {new Date(
-                            race.date
-                        ).toLocaleDateString()}
-                    </Descriptions.Item>
+                                <Tag color="blue">
+                                    Round {race.roundNumber}
+                                </Tag>
 
-                    <Descriptions.Item label="Start Time">
-                        {new Date(
-                            race.startTime
-                        ).toLocaleString()}
-                    </Descriptions.Item>
-                </Descriptions>
-            </Card>
+                                <Tag color="purple">
+                                    Race #{race.raceOrder}
+                                </Tag>
+                            </Space>
+                            <Typography.Paragraph
+                                className="race-detail-description"
+                            >
+                                Monitor race progress, verify participants,
+                                review incidents and confirm official results.
+                            </Typography.Paragraph>
+                        </Col>
+                        <Col xs={24} md={7}>
 
-            <Card
-                title="Broadcast Status"
-                style={{ borderRadius: 16 }}
-            >
-                <Badge
-                    status={
-                        broadcastStatus?.isBroadcasting
-                            ? "success"
-                            : "default"
-                    }
-                    text={
-                        broadcastStatus?.isBroadcasting
-                            ? "Broadcasting"
-                            : "Not Broadcasting"
-                    }
-                />
-            </Card>
+                            <img
+                                src="/goldenhoof-hero.png"
+                                alt="Golden Hoof"
+                                className="race-detail-image"
+                            />
 
-            <Row gutter={16}>
-                <Col span={6}>
-                    <Card
-                        bordered={false}
-                        style={{
-                            borderRadius: 16,
-                            textAlign: "center",
-                        }}
-                    >
-                        <Statistic
-                            title="Horses"
-                            value={participants.length}
-                        />
-                    </Card>
-                </Col>
+                        </Col>
+                    </Row>
+                </Card>
 
-                <Col span={6}>
-                    <Card
-                        bordered={false}
-                        style={{
-                            borderRadius: 16,
-                            textAlign: "center",
-                        }}
-                    >
-                        <Statistic
-                            title="Filled Slots"
-                            value={race.filledSlots ?? 0}
-                        />
-                    </Card>
-                </Col>
-
-                <Col span={6}>
-                    <Card
-                        bordered={false}
-                        style={{
-                            borderRadius: 16,
-                            textAlign: "center",
-                        }}
-                    >
-                        <Statistic
-                            title="Available Slots"
-                            value={race.availableSlots ?? 0}
-                        />
-                    </Card>
-                </Col>
-
-                <Col span={6}>
-                    <Card
-                        bordered={false}
-                        style={{
-                            borderRadius: 16,
-                            textAlign: "center",
-                        }}
-                    >
-                        <Statistic
-                            title="Total Bettors"
-                            value={race.totalBettors ?? 0}
-                        />
-                    </Card>
-                </Col>
-            </Row>
-
-            <Card
-                title="Participants"
-                style={{ borderRadius: 16 }}
-            >
-                {participants.length ===
-                    0 ? (
-                    <Empty
-                        description="No horses assigned."
-                    />
-                ) : (
-                    <Table
-                        bordered
-                        size="middle"
-                        rowKey={(record) => record.registrationId}
-                        columns={
-                            participantColumns
-                        }
-                        dataSource={
-                            participants
-                        }
-                        pagination={false}
-                    />
-                )}
-            </Card>
-
-            <Card
-                title="Current Race Condition"
-                style={{ borderRadius: 16 }}
-            >
-                <Descriptions
-                    bordered
-                    column={3}
-                    size="middle"
+                <Card
+                    className="race-detail-card"
                 >
-                    <Descriptions.Item label="Weather">
-                        {condition?.weather || "-"}
-                    </Descriptions.Item>
+                    <Space wrap>
+                        <Button type="primary"
+                            className="race-detail-btn" onClick={() => navigate(-1)}>
+                            Back
+                        </Button>
 
-                    <Descriptions.Item label="Wind Speed">
-                        {condition?.windSpeed
-                            ? `${condition.windSpeed} km/h`
-                            : "-"}
-                    </Descriptions.Item>
+                        <Button
+                            icon={<ReloadOutlined />}
+                            onClick={loadData}
+                            type="primary"
+                            className="race-detail-btn"
+                        >
+                            Refresh
+                        </Button>
 
-                    <Descriptions.Item label="Track">
-                        {condition?.trackCondition ? (
+                        <Button
+                            type="primary"
+                            className="race-detail-btn btn-ready"
+                            icon={<CheckCircleOutlined />}
+                            loading={confirmingReady}
+                            disabled={race.status !== "Scheduled"}
+                            onClick={handleConfirmReady}
+                        >
+                            Confirm Ready
+                        </Button>
+
+                        <Button
+                            type="primary"
+                            className="race-detail-btn btn-simulation"
+                            icon={<PlayCircleOutlined />}
+                            loading={runningSimulation}
+                            disabled={race.status !== "Ready"}
+                            onClick={handleRunSimulation}
+                        >
+                            Run Simulation
+                        </Button>
+
+                        <Button
+                            type="primary"
+                            className="race-detail-btn btn-broadcast"
+                            loading={startingBroadcast}
+                            disabled={
+                                race.status !== "Simulated" ||
+                                broadcastStatus?.isBroadcasting
+                            }
+                            onClick={handleStartBroadcast}
+                        >
+                            Start Broadcast
+                        </Button>
+                    </Space>
+                </Card>
+
+                <Card
+                    className="race-detail-card"
+                    title={
+                        <span className="race-section-title">
+                            Race Information
+                        </span>
+                    }
+                >
+                    <Descriptions
+                        className="race-description"
+                        bordered
+                        column={2}
+                        size="middle"
+                    >
+                        <Descriptions.Item label="Status">
                             <Tag
-                                color={trackConditionColor(
-                                    condition.trackCondition
+                                color={statusColor(
+                                    race.status
                                 )}
                             >
-                                {condition.trackCondition}
+                                {race.status}
                             </Tag>
-                        ) : (
-                            "-"
-                        )}
-                    </Descriptions.Item>
-                </Descriptions>
-            </Card>
+                        </Descriptions.Item>
 
-            <Card
-                title="Update Race Condition"
-                style={{ borderRadius: 16 }}
-            >
-                <Form
-                    form={conditionForm}
-                    layout="vertical"
-                    disabled={race.status !== "Scheduled"}
-                    onFinish={handleSaveCondition}
+                        <Descriptions.Item label="Tournament">
+                            {race.tournamentTitle}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Round">
+                            {race.roundNumber}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Race Order">
+                            {race.raceOrder}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Race Course">
+                            {raceCourse ? (
+                                <Space orientation="vertical" size={0}>
+                                    <Typography.Text className="race-white-text" strong>
+                                        {raceCourse.name}
+                                    </Typography.Text>
+                                    <Typography.Text
+                                        className="race-sub-text"                                    >
+                                        {raceCourse.location}
+                                    </Typography.Text>
+
+                                    <Tag color="cyan">
+                                        {raceCourse.distance}
+                                    </Tag>
+
+                                    <Tag color="processing">
+                                        {raceCourse.trackType}
+                                    </Tag>
+                                </Space>
+                            ) : (
+                                "-"
+                            )}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Referee">
+                            <Space orientation="vertical" size={0}>
+                                <Typography.Text className="race-white-text" strong>
+                                    {referee?.fullName || "-"}
+                                </Typography.Text>
+
+                                <Tag color="green">
+                                    {referee.role}
+                                </Tag>
+                            </Space>
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Date">
+                            {new Date(
+                                race.date
+                            ).toLocaleDateString()}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Start Time">
+                            {new Date(
+                                race.startTime
+                            ).toLocaleString()}
+                        </Descriptions.Item>
+                    </Descriptions>
+                </Card>
+
+                <Card
+                    className="race-detail-card"
+                    title={
+                        <span className="race-section-title">
+                            Broadcast Status
+                        </span>
+                    }
                 >
-                    <Form.Item
-                        label="Weather"
-                        name="weather"
-                    >
-                        <Select
-                            options={[
-                                { value: "Sunny" },
-                                { value: "Cloudy" },
-                                { value: "Rainy" },
-                                { value: "Snowy" },
-                            ]}
-                        />
-                    </Form.Item>
-                    <Form.Item
-                        label="Wind Speed"
-                        name="windSpeed"
-                    >
-                        <InputNumber
-                            min={0}
-                            max={100}
-                            addonAfter="km/h"
-                            style={{ width: "100%" }}
-                        />
-                    </Form.Item>
+                    <Badge
+                        status={
+                            broadcastStatus?.isBroadcasting
+                                ? "success"
+                                : "default"
+                        } text={
+                            <span className="race-white-text">
+                                {
+                                    broadcastStatus?.isBroadcasting
+                                        ? "Broadcasting"
+                                        : "Not Broadcasting"
+                                }
+                            </span>
+                        }
+                    />
+                </Card>
 
-                    <Form.Item
-                        label="Track Condition"
-                        name="trackCondition"
+                <Row gutter={[24, 24]}>
+                    <Col span={6}>
+                        <Card
+                            className={statCardClass}
+                            styles={{
+                                body: {
+                                    padding: 24,
+                                },
+                            }}
+                            variant="borderless"
+                        >
+                            <Statistic
+                                title={
+                                    <span className="race-stat-title">
+                                        Horses
+                                    </span>
+                                }
+                                value={participants.length}
+                                className="race-stat-value"
+                                styles={{
+                                    color: "white",
+                                    fontSize: 40,
+                                    fontWeight: 800
+                                }}
+                            />
+                        </Card>
+                    </Col>
+
+                    <Col span={6}>
+                        <Card
+                            className={statCardClass}
+                            styles={{
+                                body: {
+                                    padding: 24,
+                                },
+                            }}
+                            variant="borderless"
+                        >
+                            <Statistic
+                                title={
+                                    <span className="race-stat-title">
+                                        Filled Slot
+                                    </span>
+                                }
+                                value={race.filledSlots ?? 0}
+                                className="race-stat-value"
+                                styles={{
+                                    color: "white",
+                                    fontSize: 40,
+                                    fontWeight: 800
+                                }}
+                            />
+                        </Card>
+                    </Col>
+
+                    <Col span={6}>
+                        <Card
+                            className={statCardClass}
+                            styles={{
+                                body: {
+                                    padding: 24,
+                                },
+                            }}
+                            variant="borderless"
+                        >
+                            <Statistic
+                                title={
+                                    <span className="race-stat-title">
+                                        Available Slot
+                                    </span>
+                                }
+                                value={race.availableSlots ?? 0}
+                                className="race-stat-value"
+                                styles={{
+                                    color: "white",
+                                    fontSize: 40,
+                                    fontWeight: 800,
+                                }}
+                            />
+                        </Card>
+                    </Col>
+
+                    <Col span={6}>
+                        <Card
+                            className={statCardClass}
+                            styles={{
+                                body: {
+                                    padding: 24,
+                                },
+                            }}
+                            variant="borderless"
+                        >
+                            <Statistic
+                                title={
+                                    <span className="race-stat-title">
+                                        Total Bettors
+                                    </span>
+                                }
+                                value={race.totalBettors ?? 0}
+                                className="race-stat-value"
+                                styles={{
+                                    color: "white",
+                                    fontSize: 40,
+                                    fontWeight: 800,
+                                }}
+                            />
+                        </Card>
+                    </Col>
+                </Row>
+
+                <Card
+                    className="race-detail-card"
+                    title={
+                        <span className="race-section-title">
+                            <TeamOutlined />
+                            <span style={{ marginLeft: 8 }}>
+                                Participants
+                            </span>
+                        </span>
+                    }
+                    styles={{
+                        body: {
+                            padding: 0,
+                        },
+                    }}
+                >
+                    {participants.length ===
+                        0 ? (
+                        <Empty
+                            description={
+                                <span className="race-white-text">
+                                    No horses assigned.
+                                </span>
+                            }
+                        />
+                    ) : (
+                        <div className="rounded-2xl overflow-hidden">
+                            <Table
+                                className="race-table"
+                                bordered={false}
+                                pagination={false}
+                                size="large"
+                                rowClassName={() => "bg-transparent"}
+                                bordered={false}
+                                size="middle"
+                                rowKey={(record) => record.registrationId}
+                                columns={
+                                    participantColumns
+                                }
+                                dataSource={
+                                    participants
+                                }
+                                pagination={false}
+                            />
+                        </div>
+                    )}
+                </Card>
+
+                <Card
+                    className="race-detail-card"
+                    styles={{
+                        header: {
+                            color: "white",
+                            borderBottom: "1px solid rgba(255,255,255,.08)"
+                        },
+                        body: {
+                            color: "white"
+                        }
+                    }}
+                    title={
+                        <span className="race-section-title">
+                            Current Race Condition
+                        </span>
+                    }
+                >
+                    <Descriptions
+                        className="race-description"
+                        bordered
+                        column={3}
+                        size="middle"
                     >
-                        <Select
-                            options={[
-                                { value: "Good" },
-                                { value: "Muddy" },
-                                { value: "Soft" },
-                                { value: "Heavy" },
+                        <Descriptions.Item label="Weather">
+                            {condition?.weather || "-"}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Wind Speed">
+                            {condition?.windSpeed
+                                ? `${condition.windSpeed} km/h`
+                                : "-"}
+                        </Descriptions.Item>
+
+                        <Descriptions.Item label="Track">
+                            {condition?.trackCondition ? (
+                                <Tag
+                                    color={trackConditionColor(
+                                        condition.trackCondition
+                                    )}
+                                >
+                                    {condition.trackCondition}
+                                </Tag>
+                            ) : (
+                                "-"
+                            )}
+                        </Descriptions.Item>
+                    </Descriptions>
+                </Card>
+
+                <Card
+                    className="race-detail-card"
+                    styles={{
+                        header: {
+                            color: "white",
+                            borderBottom: "1px solid rgba(255,255,255,.08)"
+                        },
+                        body: {
+                            color: "white"
+                        }
+                    }}
+                    title={
+                        <span className="race-section-title">
+                            Update Race Condition
+                        </span>
+                    }
+                >
+                    <Form
+                        form={conditionForm}
+                        layout="vertical"
+                        onFinish={handleSaveCondition}
+                    >
+                        <Form.Item
+                            name="weather"
+                            label={
+                                <span className="race-white-text">
+                                    Weather
+                                </span>
+                            }
+                        >
+                            <Select
+                                className="race-select"
+                                popupClassName="dark-select"
+                                options={[
+                                    { value: "Sunny" },
+                                    { value: "Cloudy" },
+                                    { value: "Rainy" },
+                                    { value: "Snowy" },
+                                ]}
+                            />
+                        </Form.Item>
+                        <Form.Item
+                            label={
+                                <span className="race-white-text">
+                                    Wind Speed
+                                </span>
+                            }
+                            name="windSpeed"
+                        >
+                            <InputNumber
+                                className="race-input-number"
+                                min={0}
+                                max={100}
+                                addonAfter="km/h"
+                                style={{ width: "100%" }}
+                            />
+                        </Form.Item>
+
+                        <Form.Item
+                            label={
+                                <span className="race-white-text">
+                                    Track Condition
+                                </span>
+                            }
+                            name="trackCondition"
+                        >
+                            <Select
+                                className="race-select"
+                                popupClassName="dark-select"
+                                options={[
+                                    { value: "Good" },
+                                    { value: "Muddy" },
+                                    { value: "Soft" },
+                                    { value: "Heavy" },
+                                ]}
+                            />
+                        </Form.Item>
+
+                        <Button
+                            className="race-detail-btn"
+                            type="primary"
+                            htmlType="submit"
+                            loading={savingCondition}
+                            size="large"
+                        >
+                            Save Condition
+                        </Button>
+                    </Form>
+                </Card>
+
+                <Card
+                    className="race-detail-card"
+                    styles={{
+                        header: {
+                            color: "white",
+                            borderBottom: "1px solid rgba(255,255,255,.08)"
+                        },
+                        body: {
+                            color: "white"
+                        }
+                    }}
+                    title={
+                        <span className="race-section-title">
+                            Race Timeline
+                        </span>
+                    }
+                >
+                    <div className="race-timeline">
+                        <Timeline mode="left"
+                            items={[
+                                {
+                                    color: "green",
+                                    children: `Created: ${race.createdAt
+                                        ? new Date(
+                                            race.createdAt
+                                        ).toLocaleString()
+                                        : "-"
+                                        }`,
+                                },
+                                {
+                                    color:
+                                        race.refereeConfirmedAt
+                                            ? "green"
+                                            : "gray",
+                                    children: `Referee Confirmed: ${race.refereeConfirmedAt
+                                        ? new Date(
+                                            race.refereeConfirmedAt
+                                        ).toLocaleString()
+                                        : "-"
+                                        }`,
+                                },
+                                {
+                                    color:
+                                        race.simulatedAt
+                                            ? "green"
+                                            : "gray",
+                                    children: `Simulated: ${race.simulatedAt
+                                        ? new Date(
+                                            race.simulatedAt
+                                        ).toLocaleString()
+                                        : "-"
+                                        }`,
+                                },
                             ]}
                         />
-                    </Form.Item>
+                    </div>
+                </Card>
+
+                <Card
+                    className="race-detail-card race-review-card"
+                    styles={{
+                        header: {
+                            color: "white",
+                            borderBottom: "1px solid rgba(255,255,255,.08)"
+                        },
+                        body: {
+                            color: "white"
+                        }
+                    }}
+                    style={{
+                        textAlign: "center"
+                    }}
+                >
+                    <Typography.Title
+                        level={4}
+                        className="race-review-title"
+                    >
+                        Race Result Review
+                    </Typography.Title>
+
+                    <Typography.Paragraph
+                        className="race-review-description"
+                    >
+                        Review raw rankings, submit referee reports,
+                        and confirm the final race results.
+                    </Typography.Paragraph>
 
                     <Button
                         type="primary"
-                        htmlType="submit"
-                        loading={savingCondition}
+                        className="race-detail-btn"
                         size="large"
+                        onClick={() => setReviewOpen(true)}
                     >
-                        Save Condition
+                        Open Review Center
                     </Button>
-                </Form>
-            </Card>
+                </Card>
 
-            <Card
-                title="Race Timeline"
-                style={{ borderRadius: 16 }}
-            >
-                <Timeline mode="left"
-                    items={[
-                        {
-                            color: "green",
-                            children: `Created: ${race.createdAt
-                                ? new Date(
-                                    race.createdAt
-                                ).toLocaleString()
-                                : "-"
-                                }`,
-                        },
-                        {
-                            color:
-                                race.refereeConfirmedAt
-                                    ? "green"
-                                    : "gray",
-                            children: `Referee Confirmed: ${race.refereeConfirmedAt
-                                ? new Date(
-                                    race.refereeConfirmedAt
-                                ).toLocaleString()
-                                : "-"
-                                }`,
-                        },
-                        {
-                            color:
-                                race.simulatedAt
-                                    ? "green"
-                                    : "gray",
-                            children: `Simulated: ${race.simulatedAt
-                                ? new Date(
-                                    race.simulatedAt
-                                ).toLocaleString()
-                                : "-"
-                                }`,
-                        },
-                    ]}
+                <RefereeResultReviewModal
+                    open={reviewOpen}
+                    onClose={() => setReviewOpen(false)}
+
+                    participants={participants}
+
+                    rawResults={rawResults}
+                    rawColumns={rawColumns}
+
+                    finalResults={finalResults}
+                    finalColumns={finalColumns}
+
+                    report={report}
+
+                    reportLoading={reportLoading}
+                    confirmLoading={confirmLoading}
+                    hasFinalResult={hasFinalResult}
+
+                    handleSubmitFinalReview={handleSubmitFinalReview}
+                    handleConfirmFinalResult={handleConfirmFinalResult}
+
+                    selectedRawResultIds={selectedRawResultIds}
+                    setSelectedRawResultIds={setSelectedRawResultIds}
+
+                    reportReason={reportReason}
+                    setReportReason={setReportReason}
                 />
-            </Card>
 
-            <Card
-                style={{
-                    borderRadius: 16,
-                    textAlign: "center",
-                }}
-            >
-                <Typography.Title level={4}>
-                    Race Result Review
-                </Typography.Title>
-
-                <Typography.Paragraph type="secondary">
-                    Review raw rankings, submit referee reports,
-                    and confirm the final race results.
-                </Typography.Paragraph>
-
-                <Button
-                    type="primary"
-                    size="large"
-                    onClick={() => setReviewOpen(true)}
-                >
-                    Open Review Center
-                </Button>
-            </Card>
-            <Modal
-                title="Result Review"
-                open={reviewOpen}
-                onCancel={() => setReviewOpen(false)}
-                footer={null}
-                width={1400}
-            >
-                <Tabs
-                    items={[
-                        {
-                            key: "raw",
-                            label: "Raw Results",
-                            children: (
-                                <>
-                                    <Table
-                                        rowKey="_id"
-                                        columns={rawColumns}
-                                        dataSource={rawResults}
-                                        pagination={false}
-                                    />
-
-                                    <div
-                                        style={{
-                                            marginTop: 16,
-                                            textAlign: "right",
-                                        }}
-                                    >
-                                        <Button
-                                            type="primary"
-                                            loading={confirmLoading}
-                                            disabled={hasFinalResult}
-                                            onClick={handleConfirmFinalResult}
-                                        >
-                                            Confirm Final Result
-                                        </Button>
-                                    </div>
-                                </>
-                            ),
-                        },
-                        {
-                            key: "report",
-                            label: "Referee Report",
-                            children: (
-                                <Form
-                                    form={reportForm}
-                                    layout="vertical"
-                                    onFinish={handleSubmitReport}
-                                >
-                                    <Form.Item
-                                        name="summary"
-                                        label="Summary"
-                                        rules={[
-                                            {
-                                                required: true,
-                                            },
-                                        ]}
-                                    >
-                                        <Input.TextArea rows={4} />
-                                    </Form.Item>
-
-                                    <Form.Item
-                                        name="note"
-                                        label="Note"
-                                    >
-                                        <Input.TextArea rows={4} />
-                                    </Form.Item>
-
-                                    <Button
-                                        type="primary"
-                                        htmlType="submit"
-                                        loading={reportLoading}
-                                    >
-                                        Submit Report
-                                    </Button>
-                                </Form>
-                            ),
-                        },
-                        {
-                            key: "final",
-                            label: "Final Results",
-                            children: (
-                                <Table
-                                    rowKey="_id"
-                                    columns={finalColumns}
-                                    dataSource={finalResults}
-                                    pagination={false}
-                                />
-                            ),
-                        },
-                    ]}
+                <RefereeHorseDetailModal
+                    open={horseOpen}
+                    horseId={selectedHorseId}
+                    onClose={() => {
+                        setHorseOpen(false);
+                        setSelectedHorseId(null);
+                    }}
                 />
-            </Modal>
-            <RefereeHorseDetailModal
-                open={horseOpen}
-                horseId={selectedHorseId}
-                onClose={() => {
-                    setHorseOpen(false);
-                    setSelectedHorseId(null);
-                }}
-            />
 
-            <RefereeJockeyDetailModal
-                open={jockeyOpen}
-                jockeyId={selectedJockeyId}
-                onClose={() => {
-                    setJockeyOpen(false);
-                    setSelectedJockeyId(null);
-                }} />
+                <RefereeJockeyDetailModal
+                    open={jockeyOpen}
+                    jockeyId={selectedJockeyId}
+                    onClose={() => {
+                        setJockeyOpen(false);
+                        setSelectedJockeyId(null);
+                    }} />
 
-            <RefereeOwnerDetailModal
-                open={ownerOpen}
-                horseId={selectedHorseId}
-                onClose={() => {
-                    setOwnerOpen(false);
-                    setSelectedHorseId(null);
-                }}
-            />
-        </Space>
+                <RefereeOwnerDetailModal
+                    open={ownerOpen}
+                    horseId={selectedHorseId}
+                    onClose={() => {
+                        setOwnerOpen(false);
+                        setSelectedHorseId(null);
+                    }}
+                />
+            </Space>
+        </div>
     );
 }
 
