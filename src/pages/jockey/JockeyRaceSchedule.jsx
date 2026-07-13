@@ -213,12 +213,6 @@ export default function JockeyRaceSchedule() {
       render: (value) => getDisplayValue(value) || "N/A",
     },
     {
-      title: "Tournament",
-      dataIndex: "tournament",
-      responsive: ["md"],
-      render: (value) => getDisplayValue(value) || "N/A",
-    },
-    {
       title: "Time",
       render: (_, record) => formatScheduleTime(record),
       responsive: ["md"],
