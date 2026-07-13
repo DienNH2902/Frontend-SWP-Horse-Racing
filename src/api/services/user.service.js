@@ -33,12 +33,9 @@ export async function getUsers() {
 }
 
 export async function getUserById(id) {
-  const response = await apiClient.get(
-    USER_ENDPOINTS.DETAIL(id),
-    {
-      includeAuth: true,
-    }
-  );
+  const response = await apiClient.get(USER_ENDPOINTS.DETAIL(id), {
+    includeAuth: true,
+  });
 
   return unwrapData(response);
 }
@@ -222,6 +219,36 @@ export async function changePassword(payload) {
     {
       includeAuth: true,
     },
+  );
+
+  return response.data;
+}
+
+export async function adjustSpectatorPoints(userId, amount) {
+  const response = await apiClient.patch(
+    USER_ENDPOINTS.ADJUST_SPECTATOR_POINTS(userId),
+    { amount },
+    { includeAuth: true },
+  );
+
+  return response.data;
+}
+
+export async function adjustJockeyReputation(userId, amount) {
+  const response = await apiClient.patch(
+    USER_ENDPOINTS.ADJUST_JOCKEY_REPUTATION(userId),
+    { amount },
+    { includeAuth: true },
+  );
+
+  return response.data;
+}
+
+export async function adjustHorseOwnerReputation(userId, amount) {
+  const response = await apiClient.patch(
+    USER_ENDPOINTS.ADJUST_HORSE_OWNER_REPUTATION(userId),
+    { amount },
+    { includeAuth: true },
   );
 
   return response.data;
