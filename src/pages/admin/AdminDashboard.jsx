@@ -14,6 +14,7 @@ import {
   Typography,
 } from "antd";
 import {
+  CheckCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
   FlagOutlined,
@@ -28,7 +29,7 @@ import { getHorses } from "../../api/services/horse.service";
 import { getRaceCourses } from "../../api/services/race-course.service";
 import { getRacesByTournament } from "../../api/services/race.service";
 import { getTournaments } from "../../api/services/tournament.service";
-import { getUsers } from "../../api/services/user.service";
+import { getAdminDashboardStats } from "../../api/services/user.service";
 import { getSystemWalletOverview } from "../../api/services/wallet.service";
 
 const ROLE_ORDER = ["Spectator", "Horse Owner", "Jockey", "Referee"];
@@ -92,6 +93,51 @@ function normalizeRole(value) {
   if (role.includes("owner") || role.includes("horse")) return "Horse Owner";
 
   return "Spectator";
+}
+
+function formatStatusLabel(value) {
+  return String(value || "")
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getAccountStatusMeta(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+
+  if (normalizedStatus.includes("active")) {
+    return {
+      color: "#087a6d",
+      border: "#9be5d9",
+      background: "#e8fff9",
+      icon: <CheckCircleOutlined />,
+    };
+  }
+
+  return {
+    color: "#be123c",
+    border: "#fecdd3",
+    background: "#fff1f2",
+    icon: <WarningOutlined />,
+  };
+}
+
+function getJockeyStatusMeta(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+
+  if (normalizedStatus.includes("available")) {
+    return {
+      color: "#0f9f89",
+      border: "#9be5d9",
+      background: "#e8fff9",
+    };
+  }
+
+  return {
+    color: "#d97706",
+    border: "#fed7aa",
+    background: "#fff8e6",
+  };
 }
 
 function formatVnd(value) {
@@ -259,7 +305,12 @@ function RevenueChart({ data }) {
 export default function AdminDashboard() {
   const currentYear = new Date().getFullYear();
   const [dashboard, setDashboard] = useState({
-    users: [],
+    adminStats: {
+      totalUsers: 0,
+      roles: {},
+      accountStatuses: {},
+      jockeyStatuses: {},
+    },
     horses: [],
     tournaments: [],
     races: [],
@@ -276,28 +327,34 @@ export default function AdminDashboard() {
 
     try {
       const [
-        usersResult,
+        adminStatsResult,
         horsesResult,
         tournamentsResult,
         coursesResult,
         walletResult,
       ] =
         await Promise.allSettled([
-          getUsers(),
+          getAdminDashboardStats(),
           getHorses(),
           getTournaments(),
           getRaceCourses(),
           getSystemWalletOverview(),
         ]);
 
-      const users =
-        usersResult.status === "fulfilled"
-          ? resolveList(usersResult.value).filter(
-              (user) =>
-                normalizeRole(user?.role || user?.roleName || user?.type) !==
-                "Admin",
-            )
-          : [];
+      const adminStats =
+        adminStatsResult.status === "fulfilled" && adminStatsResult.value
+          ? {
+              totalUsers: Number(adminStatsResult.value?.totalUsers) || 0,
+              roles: adminStatsResult.value?.roles || {},
+              accountStatuses: adminStatsResult.value?.accountStatuses || {},
+              jockeyStatuses: adminStatsResult.value?.jockeyStatuses || {},
+            }
+          : {
+              totalUsers: 0,
+              roles: {},
+              accountStatuses: {},
+              jockeyStatuses: {},
+            };
       const horses =
         horsesResult.status === "fulfilled"
           ? resolveList(horsesResult.value)
@@ -325,14 +382,14 @@ export default function AdminDashboard() {
         result.status === "fulfilled" ? resolveList(result.value) : [],
       );
       const failedMainRequests = [
-        usersResult,
+        adminStatsResult,
         horsesResult,
         tournamentsResult,
         coursesResult,
       ].filter((result) => result.status === "rejected").length;
 
       setDashboard({
-        users,
+        adminStats,
         horses,
         tournaments,
         races: Array.from(
@@ -395,13 +452,24 @@ export default function AdminDashboard() {
   const roleCounts = useMemo(() => {
     const counts = Object.fromEntries(ROLE_ORDER.map((role) => [role, 0]));
 
-    dashboard.users.forEach((user) => {
-      const role = normalizeRole(user?.role || user?.roleName || user?.type);
-      counts[role] += 1;
-    });
+    Object.entries(dashboard.adminStats.roles || {}).forEach(
+      ([role, count]) => {
+        const normalizedRole = normalizeRole(role);
+        counts[normalizedRole] =
+          (counts[normalizedRole] || 0) + (Number(count) || 0);
+      },
+    );
 
     return counts;
-  }, [dashboard.users]);
+  }, [dashboard.adminStats.roles]);
+
+  const totalUsers = dashboard.adminStats.totalUsers;
+  const accountStatusEntries = Object.entries(
+    dashboard.adminStats.accountStatuses || {},
+  );
+  const jockeyStatusEntries = Object.entries(
+    dashboard.adminStats.jockeyStatuses || {},
+  );
 
   const raceStats = useMemo(() => {
     const stats = { scheduled: 0, ongoing: 0, finished: 0 };
@@ -442,7 +510,7 @@ export default function AdminDashboard() {
   const summaryCards = [
     {
       title: "Total Users",
-      value: dashboard.users.length,
+      value: totalUsers,
       icon: <TeamOutlined />,
       color: "#087a6d",
       background: "#e8fff9",
@@ -551,6 +619,10 @@ export default function AdminDashboard() {
           box-shadow: 0 14px 36px rgba(13, 70, 63, 0.06);
         }
 
+        .admin-role-panel {
+          height: auto;
+        }
+
         .role-breakdown-row {
           display: grid;
           grid-template-columns: 120px 1fr 44px;
@@ -561,6 +633,84 @@ export default function AdminDashboard() {
 
         .role-breakdown-row strong {
           color: #244a46;
+        }
+
+        .account-health-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+          gap: 10px;
+        }
+
+        .status-section-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 9px;
+        }
+
+        .status-section-title strong {
+          color: #06332e;
+          font-size: 15px;
+          font-weight: 900;
+        }
+
+        .user-status-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+          margin-top: 20px;
+        }
+
+        .account-health-card {
+          position: relative;
+          overflow: hidden;
+          min-height: 72px;
+          padding: 10px 12px;
+          border: 1px solid var(--status-border);
+          border-radius: 10px;
+          background: linear-gradient(135deg, var(--status-bg), #ffffff 76%);
+          box-shadow: 0 8px 18px rgba(13, 70, 63, 0.04);
+        }
+
+        .account-health-card::before {
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: 4px;
+          background: var(--status-color);
+          content: "";
+        }
+
+        .account-health-top {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .account-health-icon {
+          width: 26px;
+          height: 26px;
+          display: grid;
+          place-items: center;
+          border-radius: 8px;
+          color: var(--status-color);
+          background: rgba(255, 255, 255, 0.8);
+          font-size: 14px;
+        }
+
+        .account-health-value {
+          margin-top: 5px;
+          color: #06332e;
+          font-size: 22px;
+          font-weight: 950;
+          line-height: 1;
+        }
+
+        .account-health-name {
+          margin-top: 3px;
+          color: #456560;
+          font-size: 12px;
+          font-weight: 800;
         }
 
         .race-status-grid {
@@ -647,6 +797,12 @@ export default function AdminDashboard() {
           }
           .role-breakdown-row {
             grid-template-columns: 100px 1fr 36px;
+          }
+          .account-health-grid {
+            grid-template-columns: 1fr;
+          }
+          .user-status-row {
+            grid-template-columns: 1fr;
           }
           .wallet-overview-header {
             align-items: flex-start;
@@ -802,16 +958,16 @@ export default function AdminDashboard() {
               </Card>
             </Col>
 
-            <Col xs={24} xl={14}>
+            <Col xs={24}>
               <Card
-                className="admin-dashboard-panel"
+                className="admin-dashboard-panel admin-role-panel"
                 title="Users by Role"
-                extra={<Tag color="green">{dashboard.users.length} accounts</Tag>}
+                extra={<Tag color="green">{totalUsers} accounts</Tag>}
               >
                 {ROLE_ORDER.map((role) => {
                   const count = roleCounts[role];
-                  const percent = dashboard.users.length
-                    ? Math.round((count / dashboard.users.length) * 100)
+                  const percent = totalUsers
+                    ? Math.round((count / totalUsers) * 100)
                     : 0;
 
                   return (
@@ -827,10 +983,97 @@ export default function AdminDashboard() {
                     </div>
                   );
                 })}
+
+                <div className="user-status-row">
+                  <div>
+                    <div className="status-section-title">
+                      <strong>Account Status</strong>
+                    </div>
+                    <div className="account-health-grid">
+                      {accountStatusEntries.length ? (
+                        accountStatusEntries.map(([status, count]) => {
+                          const numericCount = Number(count) || 0;
+                          const meta = getAccountStatusMeta(status);
+
+                          return (
+                            <div
+                              className="account-health-card"
+                              key={status}
+                              style={{
+                                "--status-bg": meta.background,
+                                "--status-border": meta.border,
+                                "--status-color": meta.color,
+                              }}
+                            >
+                              <div className="account-health-top">
+                                <span className="account-health-icon">
+                                  {meta.icon}
+                                </span>
+                              </div>
+                              <div className="account-health-value">
+                                {numericCount}
+                              </div>
+                              <div className="account-health-name">
+                                {formatStatusLabel(status)}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <Typography.Text type="secondary">
+                          No account status data
+                        </Typography.Text>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="status-section-title">
+                      <strong>Jockey Status</strong>
+                      <Tag color="orange">Jockeys</Tag>
+                    </div>
+                    <div className="account-health-grid">
+                      {jockeyStatusEntries.length ? (
+                        jockeyStatusEntries.map(([status, count]) => {
+                          const numericCount = Number(count) || 0;
+                          const meta = getJockeyStatusMeta(status);
+
+                          return (
+                            <div
+                              className="account-health-card"
+                              key={status}
+                              style={{
+                                "--status-bg": meta.background,
+                                "--status-border": meta.border,
+                                "--status-color": meta.color,
+                              }}
+                            >
+                              <div className="account-health-top">
+                                <span className="account-health-icon">
+                                  <TeamOutlined />
+                                </span>
+                              </div>
+                              <div className="account-health-value">
+                                {numericCount}
+                              </div>
+                              <div className="account-health-name">
+                                {formatStatusLabel(status)}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <Typography.Text type="secondary">
+                          No jockey status data
+                        </Typography.Text>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </Card>
             </Col>
 
-            <Col xs={24} xl={10}>
+            <Col xs={24}>
               <Card
                 className="admin-dashboard-panel"
                 title="Race Status"

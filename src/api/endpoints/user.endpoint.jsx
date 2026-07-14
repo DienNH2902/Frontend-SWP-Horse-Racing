@@ -1,5 +1,6 @@
 export const USER_ENDPOINTS = {
   ROOT: "/users",
+  ADMIN_DASHBOARD_STATS: "/users/admin/dashboard/stats",
   DETAIL: (id) => `/users/${id}`,
   UPDATE_SPECTATOR: (id) => `/users/spectator/${id}`,
   UPDATE_JOCKEY: (id) => `/users/jockey/${id}`,

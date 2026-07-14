@@ -32,6 +32,14 @@ export async function getUsers() {
   return response.data;
 }
 
+export async function getAdminDashboardStats() {
+  const response = await apiClient.get(USER_ENDPOINTS.ADMIN_DASHBOARD_STATS, {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
+}
+
 export async function getUserById(id) {
   const response = await apiClient.get(USER_ENDPOINTS.DETAIL(id), {
     includeAuth: true,
