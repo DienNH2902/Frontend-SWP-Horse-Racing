@@ -35,6 +35,15 @@ export async function getHorses() {
   return unwrapCollection(response);
 }
 
+export async function getAdminHorseStats() {
+  const response = await apiClient.get(
+    HORSE_ENDPOINTS.ADMIN_DASHBOARD_STATS,
+    authConfig(),
+  );
+
+  return unwrapData(response);
+}
+
 export async function getMyHorses() {
   const response = await apiClient.get(HORSE_ENDPOINTS.MY_HORSES, authConfig());
 

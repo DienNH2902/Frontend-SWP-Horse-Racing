@@ -26,7 +26,7 @@ import {
   WarningOutlined,
   WalletOutlined,
 } from "@ant-design/icons";
-import { getHorses } from "../../api/services/horse.service";
+import { getAdminHorseStats } from "../../api/services/horse.service";
 import { getRaceCourses } from "../../api/services/race-course.service";
 import { getAdminRaceStats } from "../../api/services/race.service";
 import { getAdminRegistrationStats } from "../../api/services/registration.service";
@@ -136,6 +136,38 @@ function getJockeyStatusMeta(status) {
     border: "#fed7aa",
     background: "#fff8e6",
   };
+}
+
+function getHorseStatusMeta(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+
+  if (normalizedStatus.includes("idle")) {
+    return { color: "#0f9f89", border: "#9be5d9", background: "#e8fff9" };
+  }
+  if (normalizedStatus.includes("registered")) {
+    return { color: "#2563eb", border: "#bfdbfe", background: "#edf4ff" };
+  }
+  if (normalizedStatus.includes("injured")) {
+    return { color: "#be123c", border: "#fecdd3", background: "#fff1f2" };
+  }
+
+  return { color: "#d97706", border: "#fed7aa", background: "#fff8e6" };
+}
+
+function getStatusDonutGradient(entries, total) {
+  if (!total || !entries.length) return "#edf5f3";
+
+  let cursor = 0;
+  const segments = entries.map(([status, count]) => {
+    const value = Number(count) || 0;
+    const start = cursor;
+    const end = cursor + (value / total) * 360;
+    cursor = end;
+
+    return `${getHorseStatusMeta(status).color} ${start}deg ${end}deg`;
+  });
+
+  return `conic-gradient(${segments.join(", ")})`;
 }
 
 function formatVnd(value) {
@@ -321,7 +353,10 @@ export default function AdminDashboard() {
       totalRaces: 0,
       statuses: {},
     },
-    horses: [],
+    horseStats: {
+      totalHorses: 0,
+      statuses: {},
+    },
     raceCourses: [],
     walletOverview: null,
   });
@@ -336,7 +371,7 @@ export default function AdminDashboard() {
     try {
       const [
         adminStatsResult,
-        horsesResult,
+        horseStatsResult,
         coursesResult,
         tournamentStatsResult,
         raceStatsResult,
@@ -345,7 +380,7 @@ export default function AdminDashboard() {
       ] =
         await Promise.allSettled([
           getAdminDashboardStats(),
-          getHorses(),
+          getAdminHorseStats(),
           getRaceCourses(),
           getAdminTournamentStats(),
           getAdminRaceStats(),
@@ -367,10 +402,16 @@ export default function AdminDashboard() {
               accountStatuses: {},
               jockeyStatuses: {},
             };
-      const horses =
-        horsesResult.status === "fulfilled"
-          ? resolveList(horsesResult.value)
-          : [];
+      const horseStats =
+        horseStatsResult.status === "fulfilled" && horseStatsResult.value
+          ? {
+              totalHorses: Number(horseStatsResult.value?.totalHorses) || 0,
+              statuses: horseStatsResult.value?.statuses || {},
+            }
+          : {
+              totalHorses: 0,
+              statuses: {},
+            };
       const raceCourses =
         coursesResult.status === "fulfilled"
           ? resolveList(coursesResult.value)
@@ -413,7 +454,7 @@ export default function AdminDashboard() {
             };
       const failedMainRequests = [
         adminStatsResult,
-        horsesResult,
+        horseStatsResult,
         coursesResult,
         tournamentStatsResult,
         raceStatsResult,
@@ -425,7 +466,7 @@ export default function AdminDashboard() {
         registrationStats,
         tournamentStats,
         raceStats,
-        horses,
+        horseStats,
         raceCourses,
         walletOverview,
       });
@@ -497,6 +538,9 @@ export default function AdminDashboard() {
   const jockeyStatusEntries = Object.entries(
     dashboard.adminStats.jockeyStatuses || {},
   );
+  const horseStatusEntries = Object.entries(
+    dashboard.horseStats.statuses || {},
+  );
   const competitionCards = [
     {
       title: "Tournaments",
@@ -545,7 +589,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Horses",
-      value: dashboard.horses.length,
+      value: dashboard.horseStats.totalHorses,
       icon: <TrophyOutlined />,
       color: "#b45309",
       background: "#fff8e6",
@@ -743,15 +787,105 @@ export default function AdminDashboard() {
 
         .competition-overview-grid {
           display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-columns: 1fr;
           gap: 12px;
+        }
+
+        .horse-overview {
+          display: grid;
+          grid-template-columns: minmax(180px, 240px) 1fr;
+          gap: 22px;
+          align-items: center;
+        }
+
+        .horse-donut-wrap {
+          display: grid;
+          place-items: center;
+        }
+
+        .horse-donut {
+          width: 176px;
+          aspect-ratio: 1;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: var(--horse-donut);
+          box-shadow: inset 0 0 0 1px rgba(13, 70, 63, 0.06);
+        }
+
+        .horse-donut-center {
+          width: 104px;
+          aspect-ratio: 1;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #ffffff;
+          box-shadow: 0 10px 28px rgba(13, 70, 63, 0.08);
+          text-align: center;
+        }
+
+        .horse-donut-center strong {
+          display: block;
+          color: #06332e;
+          font-size: 30px;
+          font-weight: 950;
+          line-height: 1;
+        }
+
+        .horse-donut-center span {
+          display: block;
+          margin-top: 5px;
+          color: #52726e;
+          font-size: 12px;
+          font-weight: 850;
+        }
+
+        .horse-status-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+          gap: 10px;
+        }
+
+        .horse-status-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 13px;
+          border: 1px solid var(--horse-status-border);
+          border-radius: 10px;
+          background: var(--horse-status-bg);
+        }
+
+        .horse-status-name {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          color: #244a46;
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .horse-status-dot {
+          width: 9px;
+          height: 9px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: var(--horse-status-color);
+        }
+
+        .horse-status-count {
+          color: #06332e;
+          font-size: 18px;
+          font-weight: 950;
         }
 
         .competition-overview-item {
           display: flex;
           align-items: center;
           gap: 14px;
-          min-height: 94px;
+          min-height: 82px;
           padding: 16px;
           border: 1px solid #ccefe7;
           border-radius: 10px;
@@ -761,13 +895,32 @@ export default function AdminDashboard() {
         .competition-overview-icon {
           width: 42px;
           height: 42px;
-          display: grid;
+          position: relative;
+          display: block;
           flex: 0 0 auto;
-          place-items: center;
           border-radius: 10px;
           color: var(--competition-color);
           background: var(--competition-bg);
           font-size: 20px;
+          line-height: 1;
+        }
+
+        .competition-overview-icon .anticon {
+          position: absolute;
+          inset: 50% auto auto 50%;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+          transform: translate(-50%, -50%);
+        }
+
+        .competition-overview-icon .anticon svg {
+          display: block;
+          width: 20px;
+          height: 20px;
         }
 
         .competition-overview-item strong {
@@ -861,6 +1014,9 @@ export default function AdminDashboard() {
             grid-template-columns: 1fr;
           }
           .user-status-row {
+            grid-template-columns: 1fr;
+          }
+          .horse-overview {
             grid-template-columns: 1fr;
           }
           .competition-overview-grid {
@@ -1134,7 +1290,73 @@ export default function AdminDashboard() {
               </Card>
             </Col>
 
-            <Col xs={24}>
+            <Col xs={24} xl={12}>
+              <Card
+                className="admin-dashboard-panel"
+                title="Horses"
+                extra={
+                  <Tag color="gold">
+                    {dashboard.horseStats.totalHorses} total
+                  </Tag>
+                }
+              >
+                <div
+                  className="horse-overview"
+                  style={{
+                    "--horse-donut": getStatusDonutGradient(
+                      horseStatusEntries,
+                      dashboard.horseStats.totalHorses,
+                    ),
+                  }}
+                >
+                  <div className="horse-donut-wrap">
+                    <div className="horse-donut">
+                      <div className="horse-donut-center">
+                        <div>
+                          <strong>{dashboard.horseStats.totalHorses}</strong>
+                          <span>Horses</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {horseStatusEntries.length ? (
+                    <div className="horse-status-list">
+                      {horseStatusEntries.map(([status, count]) => {
+                        const numericCount = Number(count) || 0;
+                        const meta = getHorseStatusMeta(status);
+
+                        return (
+                          <div
+                            className="horse-status-row"
+                            key={status}
+                            style={{
+                              "--horse-status-bg": meta.background,
+                              "--horse-status-border": meta.border,
+                              "--horse-status-color": meta.color,
+                            }}
+                          >
+                            <span className="horse-status-name">
+                              <span className="horse-status-dot" />
+                              {formatStatusLabel(status)}
+                            </span>
+                            <span className="horse-status-count">
+                              {numericCount}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Typography.Text type="secondary">
+                      No horse status data
+                    </Typography.Text>
+                  )}
+                </div>
+              </Card>
+            </Col>
+
+            <Col xs={24} xl={12}>
               <Card
                 className="admin-dashboard-panel"
                 title="Competition Overview"
