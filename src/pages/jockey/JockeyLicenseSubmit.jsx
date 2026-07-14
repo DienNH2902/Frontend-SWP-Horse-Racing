@@ -3,22 +3,34 @@ import {
   Alert,
   Button,
   Card,
+  Col,
   DatePicker,
+  Empty,
   Form,
   Image,
   Input,
-  List,
   Modal,
+  Row,
   Spin,
   Space,
+  Tag,
   Typography,
   Upload,
   message,
+  Popconfirm,
 } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import {
+  CalendarOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileImageOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   createJockeyLicense,
+  deleteJockeyLicense,
   getMyJockeyLicenses,
   updateJockeyLicense,
   uploadJockeyLicenseFile,
@@ -49,6 +61,22 @@ function parseLicenseDate(value) {
   return parsed.isValid() ? parsed : dayjs();
 }
 
+function getLicenseStatus(license) {
+  return license?.status || license?.licenseStatus || "";
+}
+
+function getStatusColor(status) {
+  const value = String(status || "").toLowerCase();
+
+  if (["approved", "accepted", "active", "valid"].includes(value))
+    return "green";
+  if (["pending", "submitted", "reviewing"].includes(value)) return "gold";
+  if (["rejected", "declined", "invalid"].includes(value)) return "red";
+  if (["expired", "inactive"].includes(value)) return "default";
+
+  return "blue";
+}
+
 export default function JockeyLicenseSubmit() {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
@@ -62,6 +90,8 @@ export default function JockeyLicenseSubmit() {
   const [editLicensePreview, setEditLicensePreview] = useState("");
   const [licenses, setLicenses] = useState([]);
   const [editingLicense, setEditingLicense] = useState(null);
+  const [previewingLicense, setPreviewingLicense] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const loadLicenses = useCallback(async () => {
     setIsLoadingLicenses(true);
@@ -200,6 +230,27 @@ export default function JockeyLicenseSubmit() {
     }
   }
 
+  async function handleDeleteLicense(license) {
+    const licenseId = license?.id || license?._id;
+
+    if (!licenseId) {
+      messageApi.error("Missing license id");
+      return;
+    }
+
+    setDeletingId(licenseId);
+
+    try {
+      await deleteJockeyLicense(licenseId);
+      messageApi.success("License deleted successfully");
+      await loadLicenses();
+    } catch (error) {
+      messageApi.error(error.message || "Could not delete license");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
@@ -233,11 +284,11 @@ export default function JockeyLicenseSubmit() {
           </Form.Item>
 
           <Form.Item
-            label="License image"
             name="licenseUrl"
+            hidden
             rules={[{ required: true, message: "Upload license image" }]}
           >
-            <Input placeholder="License image URL" disabled />
+            <Input />
           </Form.Item>
 
           <Upload
@@ -285,74 +336,189 @@ export default function JockeyLicenseSubmit() {
 
         {isLoadingLicenses ? (
           <Spin />
-        ) : (
-          <List
-            itemLayout="vertical"
-            dataSource={licenses}
-            locale={{ emptyText: "No licenses submitted yet" }}
-            renderItem={(license) => (
-              <List.Item
-                key={license.id || license._id || license.licenseCode}
-                extra={
-                  license.licenseUrl ? (
-                    <Image
-                      src={license.licenseUrl}
-                      alt={`License ${license.licenseCode}`}
-                      width={220}
-                      height={140}
-                      style={{
-                        borderRadius: 8,
-                        objectFit: "cover",
-                        border: "1px solid #f0f0f0",
-                      }}
-                    />
-                  ) : null
-                }
-                actions={
-                  license.licenseUrl
-                    ? [
-                        <a
-                          href={license.licenseUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          key="view-license"
-                        >
-                          View source file
-                        </a>,
-                        <Button
-                          type="link"
-                          key="edit-license"
-                          onClick={() => openEditModal(license)}
-                        >
-                          Edit
-                        </Button>,
-                      ]
-                    : [
-                        <Button
-                          type="link"
-                          key="edit-license"
-                          onClick={() => openEditModal(license)}
-                        >
-                          Edit
-                        </Button>,
-                      ]
-                }
-              >
-                <List.Item.Meta
-                  title={
-                    <Text strong>
-                      License Code: {license.licenseCode || "N/A"}
-                    </Text>
-                  }
-                  description={`Racing Start Date: ${formatDate(
-                    license.racingStartDate,
-                  )}`}
-                />
-              </List.Item>
-            )}
+        ) : licenses.length === 0 ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="No licenses submitted yet"
           />
+        ) : (
+          <Row gutter={[16, 16]}>
+            {licenses.map((license) => {
+              const status = getLicenseStatus(license);
+
+              return (
+                <Col
+                  xs={24}
+                  md={12}
+                  xl={8}
+                  key={license.id || license._id || license.licenseCode}
+                >
+                  <Card
+                    hoverable
+                    styles={{ body: { padding: 16 } }}
+                    style={{
+                      height: "100%",
+                      overflow: "hidden",
+                      borderColor: "#dcebe8",
+                    }}
+                    cover={
+                      <button
+                        type="button"
+                        aria-label={`Preview license ${license.licenseCode || ""}`}
+                        onClick={() =>
+                          license.licenseUrl && setPreviewingLicense(license)
+                        }
+                        style={{
+                          display: "grid",
+                          width: "100%",
+                          height: 132,
+                          padding: 0,
+                          placeItems: "center",
+                          overflow: "hidden",
+                          cursor: license.licenseUrl ? "zoom-in" : "default",
+                          border: 0,
+                          borderBottom: "1px solid #e3efec",
+                          background:
+                            "linear-gradient(135deg, #edf8f5, #f9fcfb)",
+                        }}
+                      >
+                        {license.licenseUrl ? (
+                          <img
+                            src={license.licenseUrl}
+                            alt={`License ${license.licenseCode || ""}`}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <FileImageOutlined
+                            style={{ color: "#87aaa4", fontSize: 46 }}
+                          />
+                        )}
+                      </button>
+                    }
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        minHeight: 118,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            LICENSE CODE
+                          </Text>
+                          <Title
+                            level={5}
+                            ellipsis={{ tooltip: license.licenseCode || "N/A" }}
+                            style={{ margin: "2px 0 0", color: "#06332e" }}
+                          >
+                            {license.licenseCode || "N/A"}
+                          </Title>
+                        </div>
+                        {status && (
+                          <Tag
+                            color={getStatusColor(status)}
+                            style={{ margin: 0 }}
+                          >
+                            {status}
+                          </Tag>
+                        )}
+                      </div>
+
+                      <Space
+                        size={8}
+                        style={{ marginTop: 10, color: "#52726e" }}
+                      >
+                        <CalendarOutlined />
+                        <Text type="secondary">
+                          Racing since {formatDate(license.racingStartDate)}
+                        </Text>
+                      </Space>
+
+                      <Space wrap style={{ marginTop: "auto", paddingTop: 14 }}>
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<EyeOutlined />}
+                          disabled={!license.licenseUrl}
+                          onClick={() => setPreviewingLicense(license)}
+                        >
+                          Preview
+                        </Button>
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => openEditModal(license)}
+                        >
+                          Edit
+                        </Button>
+                        <Popconfirm
+                          title="Delete license?"
+                          description="Are you sure you want to delete this license?"
+                          okText="Delete"
+                          cancelText="Cancel"
+                          okButtonProps={{
+                            danger: true,
+                            loading: deletingId === (license.id || license._id),
+                          }}
+                          onConfirm={() => handleDeleteLicense(license)}
+                        >
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            loading={deletingId === (license.id || license._id)}
+                          >
+                            Delete
+                          </Button>
+                        </Popconfirm>
+                      </Space>
+                    </div>
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
         )}
       </Card>
+
+      <Modal
+        title={`License ${previewingLicense?.licenseCode || ""}`}
+        open={Boolean(previewingLicense)}
+        footer={null}
+        width={760}
+        onCancel={() => setPreviewingLicense(null)}
+        destroyOnHidden
+      >
+        {previewingLicense?.licenseUrl && (
+          <Image
+            src={previewingLicense.licenseUrl}
+            alt={`License ${previewingLicense.licenseCode || ""}`}
+            preview={false}
+            width="100%"
+            style={{
+              display: "block",
+              maxHeight: "70dvh",
+              borderRadius: 10,
+              objectFit: "contain",
+              background: "#f4f8f7",
+            }}
+          />
+        )}
+      </Modal>
 
       <Modal
         title={`Edit ${editingLicense?.licenseCode || "license"}`}
@@ -382,11 +548,11 @@ export default function JockeyLicenseSubmit() {
           </Form.Item>
 
           <Form.Item
-            label="License image"
             name="licenseUrl"
+            hidden
             rules={[{ required: true, message: "Upload license image" }]}
           >
-            <Input placeholder="License image URL" disabled />
+            <Input />
           </Form.Item>
 
           <Upload

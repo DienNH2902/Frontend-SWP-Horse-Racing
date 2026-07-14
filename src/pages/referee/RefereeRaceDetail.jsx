@@ -321,11 +321,12 @@ export default function RefereeRaceDetail() {
             setBroadcastStatus(broadcastData);
 
             const endReport =
-                reportsData.find(
-                    (item) => item.type === "end"
+                (reportsData || []).find(
+                    item => item.type === "End"
                 );
 
-            setReport(endReport || null);
+            setReport(endReport);
+
 
             if (endReport?.rawResultId) {
 
@@ -404,10 +405,12 @@ export default function RefereeRaceDetail() {
     const hasFinalResult = finalResults.length > 0;
 
     const renderHorse = (_, record) =>
+        record.horseName ||
         participantMap[record.horseId]?.horse?.name ||
         record.horseId;
 
     const renderJockey = (_, record) =>
+        record.jockeyName ||
         participantMap[record.horseId]?.jockey?.fullName ||
         record.jockeyId;
 
@@ -453,6 +456,12 @@ export default function RefereeRaceDetail() {
                                     prev.includes(record._id)
                                         ? prev
                                         : [...prev, record._id]
+                                );
+
+                                setDisqualifiedHorseIds(prev =>
+                                    prev.includes(record.horseId)
+                                        ? prev
+                                        : [...prev, record.horseId]
                                 );
 
                             } else {
@@ -691,62 +700,42 @@ export default function RefereeRaceDetail() {
             }
         };
 
-    const handleSubmitFinalReview =
-        async (values) => {
-            try {
-                setReportLoading(true);
+    const handleSubmitReport = async () => {
 
-                console.log(rawResults);
-                console.log(disqualifiedHorseIds);
+        try {
 
-                const payload = {};
+            setReportLoading(true);
 
-                if (selectedRawResultIds.length) {
+            const payload = {};
 
-                    payload.rawResultId =
-                        selectedRawResultIds;
-
-                }
-
-                if (reportReason.trim()) {
-
-                    payload.reason =
-                        reportReason.trim();
-
-                }
-
-                console.log("Payload:", payload);
-
-                await createEndReport(id, payload);
-
-                const reports = await getReports(id);
-
-                const endReport = reports.find(
-                    item =>
-                        item.type?.toLowerCase() === "end"
-                );
-
-                setReport(endReport || null);
-
-                await loadData();
-
-                message.success(
-                    "Report submitted."
-                );
-            } catch (error) {
-                console.log(error);
-
-                console.log("Status:", error.response?.status);
-                console.log("Data:", error.response?.data);
-
-                message.error(
-                    error.response?.data?.message ??
-                    "Cannot submit report"
-                );
-            } finally {
-                setReportLoading(false);
+            if (selectedRawResultIds.length) {
+                payload.rawResultId = selectedRawResultIds;
             }
-        };
+
+            if (reportReason.trim()) {
+                payload.reason = reportReason.trim();
+            }
+
+            await createEndReport(id, payload);
+
+            message.success("Report submitted.");
+
+            await loadData();
+
+        } catch (error) {
+
+            message.error(
+                error.message ??
+                "Cannot submit report."
+            );
+
+        } finally {
+
+            setReportLoading(false);
+
+        }
+
+    };
 
     const handleConfirmFinalResult = async () => {
 
@@ -754,36 +743,22 @@ export default function RefereeRaceDetail() {
 
             setConfirmLoading(true);
 
-            console.log("Race:", id);
-
-            console.log(disqualifiedHorseIds);
-
-            const horseIds = rawResults
-                .filter(item =>
-                    selectedRawResultIds.includes(item._id)
-                )
-                .map(item => item.horseId);
-
-            const result = await confirmRawResults(
+            await confirmRawResults(
                 id,
-                horseIds
+                disqualifiedHorseIds
             );
 
-            console.log(result);
-
-            message.success(result.message);
-
-            setFinalResults(result.finalRankings);
+            message.success(
+                "Final result confirmed."
+            );
 
             await loadData();
 
         } catch (error) {
 
-            console.log(error.response?.data);
-
             message.error(
-                error.response?.data?.message ??
-                "Cannot confirm result."
+                error.message ??
+                "Cannot confirm final result."
             );
 
         } finally {
@@ -793,6 +768,8 @@ export default function RefereeRaceDetail() {
         }
 
     };
+
+
 
     if (loading) {
         return (
@@ -1438,8 +1415,6 @@ export default function RefereeRaceDetail() {
                     open={reviewOpen}
                     onClose={() => setReviewOpen(false)}
 
-                    participants={participants}
-
                     rawResults={rawResults}
                     rawColumns={rawColumns}
 
@@ -1447,12 +1422,12 @@ export default function RefereeRaceDetail() {
                     finalColumns={finalColumns}
 
                     report={report}
+                    confirmLoading={confirmLoading}
 
                     reportLoading={reportLoading}
-                    confirmLoading={confirmLoading}
                     hasFinalResult={hasFinalResult}
 
-                    handleSubmitFinalReview={handleSubmitFinalReview}
+                    handleSubmitReport={handleSubmitReport}
                     handleConfirmFinalResult={handleConfirmFinalResult}
 
                     selectedRawResultIds={selectedRawResultIds}

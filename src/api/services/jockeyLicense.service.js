@@ -29,9 +29,13 @@ export async function getMyJockeyLicenses() {
 }
 
 export async function createJockeyLicense(payload) {
-  const response = await apiClient.post(JOCKEY_LICENSE_ENDPOINTS.ROOT, payload, {
-    includeAuth: true,
-  });
+  const response = await apiClient.post(
+    JOCKEY_LICENSE_ENDPOINTS.ROOT,
+    payload,
+    {
+      includeAuth: true,
+    },
+  );
 
   return unwrapData(response);
 }
@@ -73,4 +77,15 @@ export async function updateJockeyStatus(profileId, jockeyStatus) {
     { includeAuth: true },
   );
   return response.data;
+}
+
+export async function deleteJockeyLicense(id) {
+  const response = await apiClient.delete(
+    JOCKEY_LICENSE_ENDPOINTS.DETAIL(id),
+    {
+      includeAuth: true,
+    },
+  );
+
+  return unwrapData(response);
 }

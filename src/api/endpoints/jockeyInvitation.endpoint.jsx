@@ -5,4 +5,5 @@ export const JOCKEY_INVITATION_ENDPOINTS = {
   DETAIL: (id) => `/jockey-invitations/${id}`,
   RESPOND: (id) => `/jockey-invitations/${id}/respond`,
   CONTRACT: (id) => `/jockey-invitations/${id}/contract`,
+  REPORT_BREACH: "/jockey-invitations/contracts/report-breach",
 };

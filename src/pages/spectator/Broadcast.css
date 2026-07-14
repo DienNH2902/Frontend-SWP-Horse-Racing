@@ -176,6 +176,14 @@
   background: #42d99a;
 }
 
+.channel-back-link {
+  border-color: #42d99a;
+  color: black;
+  background: #6ee9b6;
+  padding: 10px;
+  border-radius: 7px;
+}
+
 .broadcast-page button.accent {
   border-color: #bc7d28;
   color: #1f1304;

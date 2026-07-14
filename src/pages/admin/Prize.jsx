@@ -21,6 +21,7 @@ import {
   ReloadOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
+import { useSearchParams } from "react-router-dom";
 import { distributeRacePrize } from "../../api/services/prize-distribution.service";
 import {
   createPrize,
@@ -83,6 +84,7 @@ function statusColor(status) {
 }
 
 function Prize() {
+  const [searchParams] = useSearchParams();
   const [prizeForm] = Form.useForm();
   const [tournaments, setTournaments] = useState([]);
   const [selectedTournamentId, setSelectedTournamentId] = useState();
@@ -170,10 +172,17 @@ function Prize() {
       setTournaments(options);
 
       if (options.length > 0) {
-        setSelectedTournamentId(options[0].value);
+        const requestedTournamentId = searchParams.get("tournamentId");
+        const initialTournamentId = options.some(
+          (option) => option.value === requestedTournamentId,
+        )
+          ? requestedTournamentId
+          : options[0].value;
+
+        setSelectedTournamentId(initialTournamentId);
         await Promise.all([
-          loadFinalRaces(options[0].value),
-          loadPrizes(options[0].value),
+          loadFinalRaces(initialTournamentId),
+          loadPrizes(initialTournamentId),
         ]);
       }
     } catch (error) {

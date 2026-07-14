@@ -30,6 +30,7 @@ import { clearAuthSession, getAuthSession } from "../utils/storage";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat"; // Hỗ trợ parse định dạng chuỗi VN
 import { getMyStreakStatus } from "../api/services/streak.service";
+import { getMyAssets } from "../api/services/reward.service";
 
 dayjs.extend(customParseFormat);
 
@@ -86,18 +87,33 @@ function Profile() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [streakData, setStreakData] = useState(null);
   const [passwordForm] = Form.useForm();
+  const [backgrounds, setBackgrounds] = useState([]);
+  const [activeBackground, setActiveBackground] = useState(
+    "/goldenhoof-hero.png",
+  );
 
   const userRole = profile?.role?.toUpperCase() || "";
 
   useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
 
-    // Chỉ gọi API streak nếu là SPECTATOR để tối ưu hóa request hệ thống
-    const profilePromise = getProfile();
+    // Gọi đồng thời thông tin Profile và Kho đồ
+    Promise.all([getProfile(), getMyAssets().catch(() => null)])
+      .then(([data, assets]) => {
+        if (!isMounted) return [null, null, null];
 
-    profilePromise
-      .then((data) => {
-        if (!isMounted) return [null, null];
+        if (assets && Array.isArray(assets.backgrounds)) {
+          setBackgrounds(assets.backgrounds);
+
+          // Ưu tiên lấy hình nền đang sử dụng từ DB trước, nếu không có mới lấy cái đầu tiên trong kho làm fallback
+          const activeBg =
+            data?.activeBackground ||
+            (assets.backgrounds.length > 0 ? assets.backgrounds[0] : null);
+          if (activeBg) {
+            setActiveBackground(activeBg);
+          }
+        }
 
         const currentRole = data?.role?.toUpperCase() || "";
         if (currentRole === "SPECTATOR") {
@@ -291,8 +307,42 @@ function Profile() {
           min-height: 100dvh;
           padding: 34px;
           background:
-            linear-gradient(180deg, rgba(237, 255, 251, 0.96), rgba(255, 255, 255, 0.98)),
-            url("/goldenhoof-hero.png") center / cover fixed;
+            url("${activeBackground}") center / cover fixed;
+        }
+
+        // Profile background
+
+        .bg-inventory-section {
+          margin-top: 26px;
+          padding: 20px;
+          border: 1px solid #ccefe7;
+          border-radius: 8px;
+          background: #fff;
+        }
+        .bg-grid {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 12px;
+        }
+        .bg-item {
+          width: 120px;
+          height: 75px;
+          border-radius: 6px;
+          cursor: pointer;
+          border: 2px solid #bdeee5;
+          overflow: hidden;
+          transition: all 0.2s ease;
+          background-size: cover;
+          background-position: center;
+        }
+        .bg-item:hover {
+          border-color: #00a98c;
+          transform: scale(1.03);
+        }
+        .bg-item.active {
+          border-color: #06332e;
+          box-shadow: 0 0 8px rgba(6, 51, 46, 0.4);
         }
 
         .profile-shell {
@@ -639,6 +689,14 @@ function Profile() {
             <span>GoldenHoof</span>
           </Link>
           <Space>
+            {userRole === "SPECTATOR" && (
+              <Button
+                className="profile-primary"
+                onClick={() => navigate("/spectator/bets")}
+              >
+                Bet Points
+              </Button>
+            )}
             {/* <Button
               className="profile-primary"
               onClick={() => navigate("/spectator/broadcast")}
@@ -937,6 +995,49 @@ function Profile() {
                       placeholder="123 Duong so 123"
                     />
                   </Form.Item>
+
+                  {/* --- CHÈN KHỐI CHỌN HÌNH NỀN VÀO ĐÂY --- */}
+                  {backgrounds.length > 0 && (
+                    <div
+                      className="bg-inventory-section"
+                      style={{ marginBottom: 24, marginTop: 24 }}
+                    >
+                      <Title level={5} className="profile-section-title">
+                        Your background assets
+                      </Title>
+                      <Text type="secondary">
+                        Choose a picture to change your profile background:
+                      </Text>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                          marginTop: "12px",
+                        }}
+                      >
+                        {backgrounds.map((bgUrl, index) => (
+                          <div
+                            key={index}
+                            className={`bg-item ${activeBackground === bgUrl ? "active" : ""}`}
+                            style={{ backgroundImage: `url(${bgUrl})` }}
+                            onClick={async () => {
+                              setActiveBackground(bgUrl);
+
+                              // Gửi trực tiếp thuộc tính activeBackground lên hàm handleSave ban đầu
+                              const currentFormValues = form.getFieldsValue();
+                              await handleSave({
+                                ...currentFormValues,
+                                activeBackground: bgUrl,
+                              });
+
+                              message.success("Đã thay đổi hình nền giao diện");
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="profile-actions">
                     <Button

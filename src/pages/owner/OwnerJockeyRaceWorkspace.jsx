@@ -6,7 +6,9 @@ import {
   Card,
   Col,
   Descriptions,
+  Empty,
   Form,
+  Image,
   Input,
   InputNumber,
   Modal,
@@ -18,22 +20,40 @@ import {
   Typography,
   message,
 } from "antd";
+import { EyeOutlined } from "@ant-design/icons";
 import {
   confirmHorseRaceEntry,
   confirmJockeyForRace,
+  getJockeyInvitationContract,
   getOwnerJockeyWorkspace,
   getSentJockeyInvitations,
   registerContractToTournament,
   sendJockeyInvitation,
 } from "../../api/services/owner.service";
 import { createRegistration } from "../../api/services/registration.service";
-import { getTournamentById, getTournaments } from "../../api/services/tournament.service";
-import { searchUsersByName } from "../../api/services/user.service";
+import {
+  getTournamentById,
+  getTournaments,
+} from "../../api/services/tournament.service";
+import {
+  getUserById,
+  searchUsersByName,
+} from "../../api/services/user.service";
+import { cancelContract } from "../../api/services/contract.service";
+import JockeyContractModal from "../../components/contracts/JockeyContractModal";
 
 const contractColor = {
-  Active: "green",
+  ACTIVE: "green",
+  COMPLETED: "gold",
+  CANCELLED: "darkred",
+  BREACHED: "red",
+};
+
+const statusColor = {
+  Accepted: "green",
   Pending: "gold",
   Rejected: "red",
+  Expired: "darkred",
 };
 
 function pickFirstValue(source, keys, fallback = "") {
@@ -104,7 +124,11 @@ function normalizeInvitation(invitation) {
     ...invitation,
     id: pickFirstValue(invitation, ["id", "_id", "invitationId"]),
     tournamentId,
-    horse: pickFirstValue(invitation, ["horseName"], pickFirstValue(horse, ["name", "horseName"], "N/A")),
+    horse: pickFirstValue(
+      invitation,
+      ["horseName"],
+      pickFirstValue(horse, ["name", "horseName"], "N/A"),
+    ),
     jockey: pickFirstValue(
       invitation,
       ["jockeyName", "jockeyFullName"],
@@ -115,8 +139,16 @@ function normalizeInvitation(invitation) {
       ["tournamentTitle", "tournamentName"],
       pickFirstValue(tournament, ["title", "name"], "N/A"),
     ),
-    status: pickFirstValue(invitation, ["status", "invitationStatus"], "Pending"),
-    sentAt: pickFirstValue(invitation, ["sentAt", "createdAt", "createdDate"], ""),
+    status: pickFirstValue(
+      invitation,
+      ["status", "invitationStatus"],
+      "Pending",
+    ),
+    sentAt: pickFirstValue(
+      invitation,
+      ["sentAt", "createdAt", "createdDate"],
+      "",
+    ),
   };
 }
 
@@ -137,10 +169,15 @@ async function resolveInvitationTournamentTitles(invitations) {
 
       try {
         if (!tournamentCache.has(invitation.tournamentId)) {
-          tournamentCache.set(invitation.tournamentId, getTournamentById(invitation.tournamentId));
+          tournamentCache.set(
+            invitation.tournamentId,
+            getTournamentById(invitation.tournamentId),
+          );
         }
 
-        const tournament = normalizeTournament(await tournamentCache.get(invitation.tournamentId));
+        const tournament = normalizeTournament(
+          await tournamentCache.get(invitation.tournamentId),
+        );
 
         return {
           ...invitation,
@@ -162,16 +199,32 @@ function normalizeJockey(jockey) {
 
   return {
     ...jockey,
-    id: pickFirstValue(jockey, ["id", "_id", "userId"], pickFirstValue(profile, ["id", "_id"])),
+    id: pickFirstValue(
+      jockey,
+      ["id", "_id", "userId"],
+      pickFirstValue(profile, ["id", "_id"]),
+    ),
     fullName: pickFirstValue(jockey, ["fullName", "name"], "Unnamed jockey"),
     email: pickFirstValue(jockey, ["email"], "N/A"),
     phoneNumber: pickFirstValue(jockey, ["phoneNumber", "phone"], "N/A"),
     avatar: normalizeImageSource(
       pickFirstValue(jockey, ["avatar", "avatarUrl", "imageUrl"], undefined),
     ),
-    weight: pickFirstValue(jockey, ["weight"], pickFirstValue(profile, ["weight"], "N/A")),
-    height: pickFirstValue(jockey, ["height"], pickFirstValue(profile, ["height"], "N/A")),
-    winRate: pickFirstValue(jockey, ["winRate"], pickFirstValue(profile, ["winRate"], 0)),
+    weight: pickFirstValue(
+      jockey,
+      ["weight"],
+      pickFirstValue(profile, ["weight"], "N/A"),
+    ),
+    height: pickFirstValue(
+      jockey,
+      ["height"],
+      pickFirstValue(profile, ["height"], "N/A"),
+    ),
+    winRate: pickFirstValue(
+      jockey,
+      ["winRate"],
+      pickFirstValue(profile, ["winRate"], 0),
+    ),
     jockeyStatus: pickFirstValue(jockey, ["jockeyStatus"], "Available"),
     licenses,
   };
@@ -182,10 +235,33 @@ function formatRate(value) {
   return String(value).includes("%") ? value : `${value}%`;
 }
 
-function toSortableNumber(value) {
-  const number = Number(value);
+function formatMeasurement(value, unit) {
+  if (
+    value === undefined ||
+    value === null ||
+    value === "" ||
+    value === "N/A"
+  ) {
+    return "N/A";
+  }
 
-  return Number.isFinite(number) ? number : 0;
+  return /[a-z]/i.test(String(value)) ? value : `${value} ${unit}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "N/A";
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return String(value);
+
+  return parsed.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function OwnerJockeyRaceWorkspace() {
@@ -210,7 +286,10 @@ export default function OwnerJockeyRaceWorkspace() {
   const [errorMessage, setErrorMessage] = useState("");
   const [invitationErrorMessage, setInvitationErrorMessage] = useState("");
   const [tournamentErrorMessage, setTournamentErrorMessage] = useState("");
-  const [licenseJockey, setLicenseJockey] = useState(null);
+  const [detailJockey, setDetailJockey] = useState(null);
+  const [previewingLicense, setPreviewingLicense] = useState(null);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [contractLoadingId, setContractLoadingId] = useState(null);
 
   async function loadWorkspace() {
     setLoading(true);
@@ -279,7 +358,9 @@ export default function OwnerJockeyRaceWorkspace() {
       }));
     } catch (error) {
       setWorkspace((current) => ({ ...current, invitations: [] }));
-      setInvitationErrorMessage(error.message || "Could not load sent invitations.");
+      setInvitationErrorMessage(
+        error.message || "Could not load sent invitations.",
+      );
     } finally {
       setInvitationLoading(false);
     }
@@ -310,7 +391,8 @@ export default function OwnerJockeyRaceWorkspace() {
   }, []);
 
   const horseOptions = useMemo(
-    () => workspace.horses.map((horse) => ({ value: horse.id, label: horse.name })),
+    () =>
+      workspace.horses.map((horse) => ({ value: horse.id, label: horse.name })),
     [workspace.horses],
   );
 
@@ -374,6 +456,63 @@ export default function OwnerJockeyRaceWorkspace() {
     }
   }
 
+  async function openInvitationContract(invitation) {
+    setContractLoadingId(invitation.id);
+
+    try {
+      const contract = await getJockeyInvitationContract(invitation.id);
+      let ownerName = "Horse Owner";
+      let jockeyName = invitation.jockey || "Jockey";
+
+      const userLookups = [];
+
+      if (contract?.ownerId) {
+        userLookups.push(
+          getUserById(contract.ownerId)
+            .then((owner) => {
+              ownerName = pickFirstValue(
+                owner,
+                ["fullName", "name", "displayName", "email"],
+                ownerName,
+              );
+            })
+            .catch(() => undefined),
+        );
+      }
+
+      if (
+        contract?.jockeyId &&
+        (!jockeyName || jockeyName === "N/A" || jockeyName === "Jockey")
+      ) {
+        userLookups.push(
+          getUserById(contract.jockeyId)
+            .then((jockey) => {
+              jockeyName = pickFirstValue(
+                jockey,
+                ["fullName", "name", "displayName", "email"],
+                jockeyName,
+              );
+            })
+            .catch(() => undefined),
+        );
+      }
+
+      await Promise.all(userLookups);
+
+      setSelectedContract({
+        ...contract,
+        ownerName,
+        jockeyName,
+        horseName: invitation.horse,
+        tournamentName: invitation.tournament,
+      });
+    } catch (error) {
+      messageApi.error(error.message || "Could not load invitation contract.");
+    } finally {
+      setContractLoadingId(null);
+    }
+  }
+
   const jockeyColumns = [
     {
       title: "Jockey",
@@ -384,64 +523,29 @@ export default function OwnerJockeyRaceWorkspace() {
           <Avatar size={44} src={record.avatar || undefined}>
             {String(value || "?").charAt(0)}
           </Avatar>
-          <Space direction="vertical" size={0} style={{ minWidth: 0 }}>
-            <Typography.Text strong ellipsis style={{ maxWidth: 170 }}>
-              {value}
-            </Typography.Text>
-            <Typography.Text type="secondary" ellipsis style={{ maxWidth: 170 }}>
-              {record.email}
-            </Typography.Text>
-          </Space>
+          <Typography.Text strong ellipsis style={{ maxWidth: 220 }}>
+            {value}
+          </Typography.Text>
         </Space>
       ),
     },
-    { title: "Phone", dataIndex: "phoneNumber", width: 130 },
     {
-      title: "Weight",
-      dataIndex: "weight",
-      width: 90,
-      sorter: (first, second) =>
-        toSortableNumber(first.weight) - toSortableNumber(second.weight),
-      sortDirections: ["ascend", "descend"],
-    },
-    {
-      title: "Height",
-      dataIndex: "height",
-      width: 90,
-      sorter: (first, second) =>
-        toSortableNumber(first.height) - toSortableNumber(second.height),
-      sortDirections: ["ascend", "descend"],
-    },
-    {
-      title: "Win rate",
-      dataIndex: "winRate",
-      render: formatRate,
-      width: 90,
-    },
-    {
-      title: "License",
-      dataIndex: "licenses",
-      render: (licenses, record) => (
-        <Button
-          size="small"
-          disabled={!licenses?.length}
-          onClick={() => setLicenseJockey(record)}
-        >
+      title: "Details",
+      width: 130,
+      render: (_, record) => (
+        <Button size="small" onClick={() => setDetailJockey(record)}>
           View more
         </Button>
       ),
-      width: 130,
-    },
-    {
-      title: "Status",
-      dataIndex: "jockeyStatus",
-      render: (value) => <Tag color={value === "Available" ? "green" : "default"}>{value}</Tag>,
-      width: 110,
     },
     {
       title: "Action",
       render: (_, record) => (
-        <Button size="small" type="primary" onClick={() => form.setFieldValue("jockeyId", record.id)}>
+        <Button
+          size="small"
+          type="primary"
+          onClick={() => form.setFieldValue("jockeyId", record.id)}
+        >
           Invite
         </Button>
       ),
@@ -453,11 +557,32 @@ export default function OwnerJockeyRaceWorkspace() {
     { title: "Horse", dataIndex: "horse" },
     { title: "Jockey", dataIndex: "jockey" },
     { title: "Tournament", dataIndex: "tournament", responsive: ["md"] },
-    { title: "Sent at", dataIndex: "sentAt", responsive: ["lg"] },
+    {
+      title: "Sent at",
+      dataIndex: "sentAt",
+      responsive: ["lg"],
+      render: (value) => formatDateTime(value),
+    },
     {
       title: "Status",
       dataIndex: "status",
-      render: (value) => <Tag color={contractColor[value] || "blue"}>{value}</Tag>,
+      render: (value) => (
+        <Tag color={statusColor[value] || "blue"}>{value}</Tag>
+      ),
+    },
+    {
+      title: "Action",
+      width: 110,
+      render: (_, record) => (
+        <Button
+          size="small"
+          disabled={!isAcceptedInvitation(record)}
+          loading={contractLoadingId === record.id}
+          onClick={() => openInvitationContract(record)}
+        >
+          Contract
+        </Button>
+      ),
     },
   ];
 
@@ -468,12 +593,20 @@ export default function OwnerJockeyRaceWorkspace() {
     {
       title: "Owner confirm",
       dataIndex: "ownerConfirmed",
-      render: (value) => <Tag color={value ? "green" : "gold"}>{value ? "Confirmed" : "Waiting"}</Tag>,
+      render: (value) => (
+        <Tag color={value ? "green" : "gold"}>
+          {value ? "Confirmed" : "Waiting"}
+        </Tag>
+      ),
     },
     {
       title: "Tournament",
       dataIndex: "tournamentRegistered",
-      render: (value) => <Tag color={value ? "green" : "default"}>{value ? "Registered" : "Not yet"}</Tag>,
+      render: (value) => (
+        <Tag color={value ? "green" : "default"}>
+          {value ? "Registered" : "Not yet"}
+        </Tag>
+      ),
       responsive: ["lg"],
     },
     {
@@ -484,7 +617,10 @@ export default function OwnerJockeyRaceWorkspace() {
             size="small"
             disabled={record.ownerConfirmed}
             onClick={() =>
-              runAction(() => confirmJockeyForRace(record.id), "Jockey confirmed for race")
+              runAction(
+                () => confirmJockeyForRace(record.id),
+                "Jockey confirmed for race",
+              )
             }
           >
             Confirm jockey
@@ -514,7 +650,9 @@ export default function OwnerJockeyRaceWorkspace() {
       render: (value, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.tournament}</Typography.Text>
+          <Typography.Text type="secondary">
+            {record.tournament}
+          </Typography.Text>
         </Space>
       ),
     },
@@ -528,7 +666,11 @@ export default function OwnerJockeyRaceWorkspace() {
     {
       title: "Horse entry",
       dataIndex: "horseConfirmed",
-      render: (value) => <Tag color={value ? "green" : "gold"}>{value ? "Confirmed" : "Waiting"}</Tag>,
+      render: (value) => (
+        <Tag color={value ? "green" : "gold"}>
+          {value ? "Confirmed" : "Waiting"}
+        </Tag>
+      ),
     },
     {
       title: "Action",
@@ -537,7 +679,10 @@ export default function OwnerJockeyRaceWorkspace() {
           size="small"
           disabled={record.horseConfirmed}
           onClick={() =>
-            runAction(() => confirmHorseRaceEntry(record.id), "Horse race entry confirmed")
+            runAction(
+              () => confirmHorseRaceEntry(record.id),
+              "Horse race entry confirmed",
+            )
           }
         >
           Confirm horse
@@ -585,7 +730,9 @@ export default function OwnerJockeyRaceWorkspace() {
                   showSearch
                   optionFilterProp="label"
                   notFoundContent={
-                    tournamentLoading ? "Loading tournaments..." : "No tournaments found"
+                    tournamentLoading
+                      ? "Loading tournaments..."
+                      : "No tournaments found"
                   }
                 />
               </Form.Item>
@@ -623,7 +770,12 @@ export default function OwnerJockeyRaceWorkspace() {
                     name="proposeOwnerShareRate"
                     rules={[{ required: true, message: "Enter owner share" }]}
                   >
-                    <InputNumber min={0} max={100} addonAfter="%" style={{ width: "100%" }} />
+                    <InputNumber
+                      min={0}
+                      max={100}
+                      addonAfter="%"
+                      style={{ width: "100%" }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={12}>
@@ -632,7 +784,12 @@ export default function OwnerJockeyRaceWorkspace() {
                     name="proposeJockeyShareRate"
                     rules={[{ required: true, message: "Enter jockey share" }]}
                   >
-                    <InputNumber min={0} max={100} addonAfter="%" style={{ width: "100%" }} />
+                    <InputNumber
+                      min={0}
+                      max={100}
+                      addonAfter="%"
+                      style={{ width: "100%" }}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
@@ -641,23 +798,40 @@ export default function OwnerJockeyRaceWorkspace() {
                   <Form.Item
                     label="Owner compensation"
                     name="ownerCompensationRate"
-                    rules={[{ required: true, message: "Enter owner compensation" }]}
+                    rules={[
+                      { required: true, message: "Enter owner compensation" },
+                    ]}
                   >
-                    <InputNumber min={0} max={100} addonAfter="%" style={{ width: "100%" }} />
+                    <InputNumber
+                      min={0}
+                      max={100}
+                      addonAfter="%"
+                      style={{ width: "100%" }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} sm={12}>
                   <Form.Item
                     label="Jockey compensation"
                     name="jockeyCompensationRate"
-                    rules={[{ required: true, message: "Enter jockey compensation" }]}
+                    rules={[
+                      { required: true, message: "Enter jockey compensation" },
+                    ]}
                   >
-                    <InputNumber min={0} max={100} addonAfter="%" style={{ width: "100%" }} />
+                    <InputNumber
+                      min={0}
+                      max={100}
+                      addonAfter="%"
+                      style={{ width: "100%" }}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
               <Form.Item label="Message" name="message">
-                <Input.TextArea rows={3} placeholder="Mời bạn tham gia giải đua tháng 6" />
+                <Input.TextArea
+                  rows={3}
+                  placeholder="Mời bạn tham gia giải đua tháng 6"
+                />
               </Form.Item>
               <Button type="primary" htmlType="submit" loading={saving}>
                 Send invitation
@@ -701,7 +875,6 @@ export default function OwnerJockeyRaceWorkspace() {
               columns={jockeyColumns}
               dataSource={workspace.jockeys}
               pagination={{ pageSize: 5, showSizeChanger: false }}
-              scroll={{ x: 1000 }}
             />
           </Card>
         </Col>
@@ -718,11 +891,17 @@ export default function OwnerJockeyRaceWorkspace() {
       </Card>
 
       <Card title="Register tournament entry">
-        <Form layout="vertical" form={registrationForm} onFinish={handleRegisterTournament}>
+        <Form
+          layout="vertical"
+          form={registrationForm}
+          onFinish={handleRegisterTournament}
+        >
           <Form.Item
             label="Accepted jockey invitation"
             name="jockeyInvitationId"
-            rules={[{ required: true, message: "Choose an accepted invitation" }]}
+            rules={[
+              { required: true, message: "Choose an accepted invitation" },
+            ]}
           >
             <Select
               loading={invitationLoading}
@@ -731,12 +910,18 @@ export default function OwnerJockeyRaceWorkspace() {
               showSearch
               optionFilterProp="label"
               notFoundContent={
-                invitationLoading ? "Loading invitations..." : "No accepted invitations found"
+                invitationLoading
+                  ? "Loading invitations..."
+                  : "No accepted invitations found"
               }
             />
           </Form.Item>
           <Space wrap>
-            <Button type="primary" htmlType="submit" loading={registrationSaving}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={registrationSaving}
+            >
               Register
             </Button>
             <Button onClick={loadSentInvitations} loading={invitationLoading}>
@@ -767,42 +952,203 @@ export default function OwnerJockeyRaceWorkspace() {
       </Card> */}
 
       <Modal
-        open={Boolean(licenseJockey)}
-        title={`Licenses - ${licenseJockey?.fullName || ""}`}
+        open={Boolean(detailJockey)}
+        title="Jockey details"
         footer={null}
-        onCancel={() => setLicenseJockey(null)}
+        onCancel={() => {
+          setDetailJockey(null);
+          setPreviewingLicense(null);
+        }}
+        width={680}
       >
-        <Space direction="vertical" size={12} style={{ width: "100%" }}>
-          {(licenseJockey?.licenses || []).map((license, index) => (
-            <Descriptions
-              key={pickFirstValue(license, ["_id", "id", "licenseCode"], index)}
-              bordered
-              size="small"
-              column={1}
-            >
-              <Descriptions.Item label="Code">
-                {pickFirstValue(license, ["licenseCode"], "N/A")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Racing start date">
-                {pickFirstValue(license, ["racingStartDate"], "N/A")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Certificate">
-                {pickFirstValue(license, ["licenseUrl"], "") ? (
-                  <Typography.Link
-                    href={pickFirstValue(license, ["licenseUrl"], "")}
-                    target="_blank"
-                    rel="noreferrer"
+        {detailJockey && (
+          <Space direction="vertical" size={20} style={{ width: "100%" }}>
+            <Space align="center" size={14}>
+              <Avatar size={64} src={detailJockey.avatar || undefined}>
+                {String(detailJockey.fullName || "?").charAt(0)}
+              </Avatar>
+              <Space direction="vertical" size={0}>
+                <Typography.Title level={4} style={{ margin: 0 }}>
+                  {detailJockey.fullName}
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  {detailJockey.email}
+                </Typography.Text>
+              </Space>
+            </Space>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 7fr) minmax(0, 3fr)",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Phone</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
                   >
-                    Open file
-                  </Typography.Link>
-                ) : (
-                  "N/A"
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-          ))}
-        </Space>
+                    {detailJockey.phoneNumber}
+                  </Typography.Text>
+                </div>
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Win rate</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
+                  >
+                    {formatRate(detailJockey.winRate)}
+                  </Typography.Text>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Height</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
+                  >
+                    {formatMeasurement(detailJockey.height, "cm")}
+                  </Typography.Text>
+                </div>
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Weight</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
+                  >
+                    {formatMeasurement(detailJockey.weight, "kg")}
+                  </Typography.Text>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Typography.Title level={5}>Licenses</Typography.Title>
+              {detailJockey.licenses?.length ? (
+                <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                  {detailJockey.licenses.map((license, index) => (
+                    <Descriptions
+                      key={pickFirstValue(
+                        license,
+                        ["_id", "id", "licenseCode"],
+                        index,
+                      )}
+                      bordered
+                      size="small"
+                      column={1}
+                    >
+                      <Descriptions.Item label="Code">
+                        {pickFirstValue(license, ["licenseCode"], "N/A")}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Racing start date">
+                        {pickFirstValue(license, ["racingStartDate"], "N/A")}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Certificate">
+                        {pickFirstValue(license, ["licenseUrl"], "") ? (
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<EyeOutlined />}
+                            style={{ padding: 0 }}
+                            onClick={() => setPreviewingLicense(license)}
+                          >
+                            Preview
+                          </Button>
+                        ) : (
+                          "N/A"
+                        )}
+                      </Descriptions.Item>
+                    </Descriptions>
+                  ))}
+                </Space>
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="No licenses"
+                />
+              )}
+            </div>
+          </Space>
+        )}
       </Modal>
+
+      <Modal
+        title={`License ${pickFirstValue(
+          previewingLicense,
+          ["licenseCode"],
+          "",
+        )}`}
+        open={Boolean(previewingLicense)}
+        footer={null}
+        width={760}
+        onCancel={() => setPreviewingLicense(null)}
+        destroyOnHidden
+      >
+        {previewingLicense && (
+          <Image
+            src={pickFirstValue(previewingLicense, ["licenseUrl"], "")}
+            alt={`License ${pickFirstValue(
+              previewingLicense,
+              ["licenseCode"],
+              "",
+            )}`}
+            preview={false}
+            width="100%"
+            style={{
+              display: "block",
+              maxHeight: "70dvh",
+              borderRadius: 10,
+              objectFit: "contain",
+              background: "#f4f8f7",
+            }}
+          />
+        )}
+      </Modal>
+
+      <JockeyContractModal
+        contract={selectedContract}
+        onCancel={() => setSelectedContract(null)}
+        cancellingParty="HORSE_OWNER"
+        onCancelContract={async (payload) => {
+          await cancelContract(payload);
+          await loadSentInvitations();
+        }}
+      />
     </Space>
   );
 }

@@ -1,14 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import { Alert, Card, Col, Descriptions, Empty, Row, Space, Statistic, Table, Tag, Typography } from "antd";
+import { useEffect, useState } from "react";
+import { Alert, Card, Col, Row, Space, Statistic, Table, Tag, Typography } from "antd";
 import { getOwnerRaceCenter } from "../../api/services/owner.service";
+import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 
-function formatMoney(value) {
-  return `$${Number(value || 0).toLocaleString()}`;
+function formatDateTime(value) {
+  if (!value) return "N/A";
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return String(value);
+
+  return parsed.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function OwnerRaceResults() {
-  const [data, setData] = useState({ races: [], standings: [] });
-  const [selectedRaceId, setSelectedRaceId] = useState(null);
+  const [data, setData] = useState({ races: [], standings: [], historyRaceOwner: [] });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -19,7 +31,6 @@ export default function OwnerRaceResults() {
       .then((result) => {
         if (!mounted) return;
         setData(result);
-        setSelectedRaceId(result.races[0]?.id || null);
       })
       .catch((error) => {
         if (mounted) {
@@ -37,64 +48,38 @@ export default function OwnerRaceResults() {
     };
   }, []);
 
-  const selectedRace = useMemo(
-    () => data.races.find((race) => race.id === selectedRaceId),
-    [data.races, selectedRaceId],
-  );
-
-  const finishedRaces = data.races.filter((race) => race.status === "Finished");
-  const totalPrize = finishedRaces.reduce((sum, race) => sum + (race.result?.prize || 0), 0);
-  const bestRank = Math.min(...finishedRaces.map((race) => race.result?.rank || 99));
+  const horseCount = new Set(data.races.map((race) => race.horseId || race.horseName).filter(Boolean)).size;
+  const availableSlots = data.races.reduce((sum, race) => sum + Number(race.availableSlots || 0), 0);
 
   const raceColumns = [
     {
       title: "Race",
-      dataIndex: "name",
+      dataIndex: "raceName",
       render: (value, record) => (
         <Space direction="vertical" size={0}>
-          <Typography.Link onClick={() => setSelectedRaceId(record.id)}>{value}</Typography.Link>
-          <Typography.Text type="secondary">{record.tournament}</Typography.Text>
+          <Typography.Text strong>{value}</Typography.Text>
+          <Typography.Text type="secondary">{record.tournamentName}</Typography.Text>
         </Space>
       ),
     },
-    { title: "Horse", dataIndex: "myHorse" },
+    { title: "Horse", dataIndex: "horseName" },
+    { title: "Jockey", dataIndex: "jockeyName", responsive: ["md"] },
+    {
+      title: "Start time",
+      dataIndex: "startTime",
+      render: (value, record) => formatDateTime(value || record.date),
+      responsive: ["md"],
+    },
+    { title: "Race course", dataIndex: "raceCourseName", responsive: ["lg"] },
+    {
+      title: "Slots",
+      render: (_, record) => `${record.filledSlots || 0}/${record.totalSlots || 0}`,
+      responsive: ["lg"],
+    },
     {
       title: "Status",
       dataIndex: "status",
-      render: (value) => <Tag color={value === "Finished" ? "green" : "blue"}>{value}</Tag>,
-    },
-    {
-      title: "Result",
-      render: (_, record) =>
-        record.result ? `#${record.result.rank} - ${record.result.time}` : "Upcoming",
-      responsive: ["md"],
-    },
-    {
-      title: "Prize",
-      render: (_, record) => formatMoney(record.result?.prize),
-      responsive: ["lg"],
-    },
-  ];
-
-  const standingColumns = [
-    { title: "#", dataIndex: "rank", width: 70 },
-    {
-      title: "Horse",
-      dataIndex: "horse",
-      render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong={record.owner === "Golden Hoof Stable"}>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.owner}</Typography.Text>
-        </Space>
-      ),
-    },
-    { title: "Wins", dataIndex: "wins", responsive: ["md"] },
-    { title: "Points", dataIndex: "points" },
-    {
-      title: "Prize money",
-      dataIndex: "prize",
-      render: formatMoney,
-      responsive: ["lg"],
+      render: (value) => <Tag color={value === "Finished" ? "green" : "blue"}>{value || "Upcoming"}</Tag>,
     },
   ];
 
@@ -105,73 +90,36 @@ export default function OwnerRaceResults() {
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
           <Card>
-            <Statistic title="Races tracked" value={data.races.length} />
+            <Statistic title="Upcoming races" value={data.races.length} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
           <Card>
-            <Statistic title="Best finish" value={Number.isFinite(bestRank) ? `#${bestRank}` : "-"} />
+            <Statistic title="Horses scheduled" value={horseCount} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
           <Card>
-            <Statistic title="Prize earned" value={totalPrize} prefix="$" />
+            <Statistic title="Available slots" value={availableSlots} />
           </Card>
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={14}>
-          <Card title="Race information and results">
-            <Table
-              rowKey="id"
-              loading={loading}
-              columns={raceColumns}
-              dataSource={data.races}
-              pagination={false}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} xl={10}>
-          <Card title="Selected race">
-            {selectedRace ? (
-              <Descriptions bordered column={1} size="small">
-                <Descriptions.Item label="Race">{selectedRace.name}</Descriptions.Item>
-                <Descriptions.Item label="Tournament">{selectedRace.tournament}</Descriptions.Item>
-                <Descriptions.Item label="Venue">{selectedRace.venue}</Descriptions.Item>
-                <Descriptions.Item label="Time">
-                  {selectedRace.date} {selectedRace.time}
-                </Descriptions.Item>
-                <Descriptions.Item label="Distance">{selectedRace.distance}</Descriptions.Item>
-                <Descriptions.Item label="Surface">{selectedRace.surface}</Descriptions.Item>
-                <Descriptions.Item label="Horse">{selectedRace.myHorse}</Descriptions.Item>
-                <Descriptions.Item label="Jockey">{selectedRace.jockey}</Descriptions.Item>
-                <Descriptions.Item label="Purse">{formatMoney(selectedRace.purse)}</Descriptions.Item>
-                <Descriptions.Item label="Result">
-                  {selectedRace.result
-                    ? `Rank #${selectedRace.result.rank}, ${selectedRace.result.points} points, ${formatMoney(
-                        selectedRace.result.prize,
-                      )}`
-                    : "Waiting for race day"}
-                </Descriptions.Item>
-              </Descriptions>
-            ) : (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Select a race" />
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      <Card title="Leaderboard and prize money">
+      <Card title="Upcoming races">
         <Table
-          rowKey={(record) => `${record.rank}-${record.horse}`}
+          rowKey={(record) => record.id || `${record.raceId}-${record.horseId}`}
           loading={loading}
-          columns={standingColumns}
-          dataSource={data.standings}
-          pagination={false}
-          rowClassName={(record) => (record.owner === "Golden Hoof Stable" ? "owner-highlight-row" : "")}
+          columns={raceColumns}
+          dataSource={data.races}
+          pagination={{ pageSize: 6, showSizeChanger: false }}
         />
       </Card>
+
+      <RaceHistoryCard
+        history={data.historyRaceOwner}
+        loading={loading}
+        participantLabel="Jockey"
+      />
     </Space>
   );
 }

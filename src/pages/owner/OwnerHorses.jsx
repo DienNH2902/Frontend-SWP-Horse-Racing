@@ -4,6 +4,8 @@ import {
   Avatar,
   Button,
   Card,
+  Descriptions,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -12,16 +14,26 @@ import {
   Select,
   Space,
   Table,
+  Tabs,
   Tag,
+  Tooltip,
   Typography,
   Upload,
   message,
 } from "antd";
-import { CameraOutlined } from "@ant-design/icons";
+import {
+  CameraOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../../api/client";
 import {
   deleteHorse,
+  getHorseById,
   getMyHorses,
   updateHorse,
   uploadHorseAvatar,
@@ -45,10 +57,15 @@ export default function OwnerHorses() {
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHorse, setEditingHorse] = useState(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailHorse, setDetailHorse] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [uploadingHorseId, setUploadingHorseId] = useState("");
+  const [uploadingEditImage, setUploadingEditImage] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [errorMessage, setErrorMessage] = useState("");
+  const editImageUrl = Form.useWatch("imageUrl", form);
 
   const loadHorses = useCallback(async () => {
     setLoading(true);
@@ -91,7 +108,8 @@ export default function OwnerHorses() {
           .includes(query);
       const matchesStatus =
         statusFilter === "all" ||
-        String(horse.status).toLowerCase() === String(statusFilter).toLowerCase();
+        String(horse.status).toLowerCase() ===
+          String(statusFilter).toLowerCase();
 
       return matchesKeyword && matchesStatus;
     });
@@ -101,6 +119,40 @@ export default function OwnerHorses() {
     setEditingHorse(horse);
     form.setFieldsValue(toHorseFormValues(horse));
     setModalOpen(true);
+  }
+
+  async function openDetailModal(horse) {
+    if (!horse?.id) {
+      messageApi.error("Missing horse id.");
+      return;
+    }
+
+    setDetailModalOpen(true);
+    setDetailLoading(true);
+    setDetailHorse(normalizeHorse(horse));
+
+    try {
+      const data = await getHorseById(horse.id);
+      setDetailHorse(normalizeHorse(data));
+    } catch (error) {
+      console.error(error);
+      messageApi.error(error.message || "Could not load horse detail.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  function closeDetailModal() {
+    setDetailModalOpen(false);
+    setDetailHorse(null);
+  }
+
+  function getHorseInitial(name) {
+    const cleanName = String(name || "")
+      .replace(/^\([^)]*\)\s*/, "")
+      .trim();
+
+    return cleanName.charAt(0).toUpperCase() || "?";
   }
 
   function getImageUrl(path) {
@@ -115,7 +167,14 @@ export default function OwnerHorses() {
   }
 
   function getUploadedImagePath(data) {
-    return data?.imageUrl || data?.avatar || data?.avatarUrl || data?.url || data?.path || data;
+    return (
+      data?.imageUrl ||
+      data?.avatar ||
+      data?.avatarUrl ||
+      data?.url ||
+      data?.path ||
+      data
+    );
   }
 
   function buildHorsePayloadWithImage(horse, imageUrl) {
@@ -142,6 +201,7 @@ export default function OwnerHorses() {
     }
 
     setUploadingHorseId(horse.id);
+    setIsUploading(true);
 
     try {
       const uploaded = await uploadHorseAvatar(file);
@@ -159,6 +219,8 @@ export default function OwnerHorses() {
             : item,
         ),
       );
+      form.setFieldsValue({ imageUrl });
+      setImagePreview(getImageUrl(imageUrl));
       messageApi.success("Horse photo uploaded");
       onSuccess(uploaded);
     } catch (error) {
@@ -167,6 +229,37 @@ export default function OwnerHorses() {
       onError(error);
     } finally {
       setUploadingHorseId("");
+      setIsUploading(false);
+    }
+  }
+
+  async function handleEditImageUpload({ file, onSuccess, onError }) {
+    if (file.size > 5 * 1024 * 1024) {
+      const error = new Error("Image must be smaller than 5MB");
+      messageApi.error(error.message);
+      onError(error);
+      return;
+    }
+
+    setUploadingEditImage(true);
+
+    try {
+      const uploaded = await uploadHorseAvatar(file);
+      const imageUrl = getUploadedImagePath(uploaded);
+
+      if (!imageUrl) {
+        throw new Error("Invalid response from server");
+      }
+
+      form.setFieldValue("imageUrl", imageUrl);
+      messageApi.success("Horse photo uploaded");
+      onSuccess(uploaded);
+    } catch (error) {
+      console.error(error);
+      messageApi.error(error.message || "Could not upload horse photo.");
+      onError(error);
+    } finally {
+      setUploadingEditImage(false);
     }
   }
 
@@ -214,12 +307,14 @@ export default function OwnerHorses() {
       title: "Horse",
       dataIndex: "name",
       render: (value, record) => (
-        <Space>
+        <Space className="owner-horse-cell" size={14}>
           <Upload
             name="file"
             accept="image/*"
             showUploadList={false}
-            customRequest={(options) => handleHorseAvatarUpload(record, options)}
+            customRequest={(options) =>
+              handleHorseAvatarUpload(record, options)
+            }
             disabled={uploadingHorseId === record.id}
           >
             <button
@@ -233,7 +328,7 @@ export default function OwnerHorses() {
                 {uploadingHorseId === record.id ? (
                   <CameraOutlined />
                 ) : (
-                  String(value || "?").charAt(0)
+                  getHorseInitial(value)
                 )}
               </Avatar>
               <span className="horse-avatar-upload-icon">
@@ -241,48 +336,46 @@ export default function OwnerHorses() {
               </span>
             </button>
           </Upload>
-          <Space direction="vertical" size={0}>
-            <Typography.Text strong>{value}</Typography.Text>
-            <Typography.Text type="secondary">{record.breed}</Typography.Text>
+          <Space direction="vertical" size={2} className="owner-horse-copy">
+            <Typography.Text strong className="owner-horse-name">
+              {value || "Unnamed horse"}
+            </Typography.Text>
+            <Typography.Text type="secondary" className="owner-horse-meta">
+              {record.color || "No color"}
+            </Typography.Text>
           </Space>
         </Space>
       ),
     },
-    { title: "Color", dataIndex: "color", responsive: ["lg"] },
-    {
-      title: "Height",
-      dataIndex: "height",
-      render: (value) => `${value || 0} m`,
-      responsive: ["md"],
-    },
-    {
-      title: "Weight",
-      dataIndex: "weight",
-      render: (value) => `${value || 0} kg`,
-      responsive: ["md"],
-    },
     {
       title: "Status",
       dataIndex: "status",
+      width: 150,
       render: (value) => <Tag color={getHorseStatusColor(value)}>{value}</Tag>,
     },
     {
-      title: "Win rate",
-      dataIndex: "winRate",
-      render: (value) => `${value || 0}%`,
-      responsive: ["md"],
-    },
-    { title: "Starts", dataIndex: "starts", responsive: ["lg"] },
-    { title: "Rating", dataIndex: "rating", responsive: ["lg"] },
-    {
       title: "Action",
       key: "action",
-      width: 150,
+      width: 210,
+      align: "right",
       render: (_, record) => (
-        <Space wrap>
-          <Button size="small" onClick={() => openEditModal(record)}>
-            Edit
+        <Space className="owner-horse-actions" size={8}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={() => openDetailModal(record)}
+          >
+            Detail
           </Button>
+          <Tooltip title="Edit horse">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              aria-label={`Edit ${record.name || "horse"}`}
+              onClick={() => openEditModal(record)}
+            />
+          </Tooltip>
           <Popconfirm
             title="Delete horse?"
             description="This action cannot be undone."
@@ -290,11 +383,107 @@ export default function OwnerHorses() {
             okButtonProps={{ danger: true }}
             onConfirm={() => handleDelete(record)}
           >
-            <Button size="small" danger>
-              Delete
-            </Button>
+            <Tooltip title="Delete horse">
+              <Button
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                aria-label={`Delete ${record.name || "horse"}`}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
+      ),
+    },
+  ];
+
+  const detailHistory = detailHorse?.historyRace || [];
+  const detailTabs = [
+    {
+      key: "info",
+      label: "Horse info",
+      children: detailHorse ? (
+        <Space direction="vertical" size={16} className="owner-detail-stack">
+          <div className="owner-detail-hero">
+            <Avatar size={84} src={getImageUrl(detailHorse.imageUrl)}>
+              {getHorseInitial(detailHorse.name)}
+            </Avatar>
+            <Space direction="vertical" size={6} className="owner-detail-heading">
+              <Typography.Title level={4} className="owner-detail-title">
+                {detailHorse.name || "Unnamed horse"}
+              </Typography.Title>
+              <Space size={8} wrap>
+                <Tag color={getHorseStatusColor(detailHorse.status)}>{detailHorse.status}</Tag>
+                <Typography.Text type="secondary">
+                  {detailHorse.color || "No color"}
+                </Typography.Text>
+              </Space>
+            </Space>
+          </div>
+
+          <div className="owner-detail-stats">
+            <div>
+              <span>Win rate</span>
+              <strong>{Number(detailHorse.winRate || 0).toFixed(2)}%</strong>
+            </div>
+            <div>
+              <span>Total wins</span>
+              <strong>{detailHorse.totalWin || 0}</strong>
+            </div>
+            <div>
+              <span>Total races</span>
+              <strong>{detailHorse.totalRace || 0}</strong>
+            </div>
+          </div>
+
+          <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
+            <Descriptions.Item label="Color">{detailHorse.color || "N/A"}</Descriptions.Item>
+            <Descriptions.Item label="Height">
+              {detailHorse.height ? `${detailHorse.height} m` : "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Weight">
+              {detailHorse.weight ? `${detailHorse.weight} kg` : "N/A"}
+            </Descriptions.Item>
+          </Descriptions>
+        </Space>
+      ) : null,
+    },
+    {
+      key: "history",
+      label: "Race history",
+      children: detailHistory.length ? (
+        <Table
+          className="owner-history-table"
+          rowKey={(record) => record.raceId}
+          size="small"
+          dataSource={detailHistory}
+          pagination={{ pageSize: 5, showSizeChanger: false }}
+          columns={[
+            {
+              title: "Race",
+              dataIndex: "raceName",
+              render: (value, record) => (
+                <Space direction="vertical" size={0}>
+                  <Typography.Text strong>{value || "N/A"}</Typography.Text>
+                  <Typography.Text type="secondary">
+                    {record.tournamentName || "N/A"}
+                  </Typography.Text>
+                </Space>
+              ),
+            },
+            {
+              title: "Race date",
+              dataIndex: "raceDate",
+              render: (value) =>
+                value ? new Date(value).toLocaleDateString("vi-VN") : "N/A",
+              responsive: ["md"],
+            },
+            { title: "Raw rank", dataIndex: "rawRank", width: 100 },
+            { title: "Final rank", dataIndex: "finalRank", width: 110 },
+          ]}
+        />
+      ) : (
+        <Empty description="No race history" />
       ),
     },
   ];
@@ -326,22 +515,42 @@ export default function OwnerHorses() {
                 ...HORSE_STATUS_OPTIONS,
               ]}
             />
-            <Button onClick={loadHorses}>Refresh</Button>
+            <Button icon={<ReloadOutlined />} onClick={loadHorses}>
+              Refresh
+            </Button>
             <Link to="/owner/horses/register">
-              <Button type="primary">Register horse</Button>
+              <Button type="primary" icon={<PlusOutlined />}>
+                Register horse
+              </Button>
             </Link>
           </Space>
         }
       >
         <Table
+          className="owner-horses-table"
           rowKey="id"
           loading={loading}
           columns={columns}
           dataSource={filteredRows}
-          pagination={{ pageSize: 8, showSizeChanger: false }}
+          size="middle"
+          pagination={{ pageSize: 5, showSizeChanger: false }}
           locale={{ emptyText: "No horses match the current filters" }}
         />
       </Card>
+
+      <Modal
+        title={`Horse detail${detailHorse?.name ? ` - ${detailHorse.name}` : ""}`}
+        open={detailModalOpen}
+        onCancel={closeDetailModal}
+        footer={null}
+        width={820}
+        destroyOnHidden
+      >
+        <Tabs items={detailTabs} defaultActiveKey="info" />
+        {detailLoading && (
+          <Typography.Text type="secondary">Loading latest horse detail...</Typography.Text>
+        )}
+      </Modal>
 
       <Modal
         title={`Edit ${editingHorse?.name || "horse"}`}
@@ -393,18 +602,200 @@ export default function OwnerHorses() {
             </Form.Item>
           </Space>
 
-          <Form.Item label="Image URL" name="imageUrl">
-            <Input placeholder="https://example.com/horse.png" />
+          <Form.Item name="imageUrl" hidden>
+            <Input />
+          </Form.Item>
+
+          <Form.Item label="Horse image">
+            <div className="owner-edit-image-field">
+              <Avatar size={72} src={getImageUrl(editImageUrl)}>
+                {getHorseInitial(form.getFieldValue("name") || editingHorse?.name)}
+              </Avatar>
+              <Space direction="vertical" size={6}>
+                <Upload
+                  name="file"
+                  accept="image/*"
+                  showUploadList={false}
+                  customRequest={handleEditImageUpload}
+                  disabled={uploadingEditImage}
+                >
+                  <Button icon={<CameraOutlined />} loading={uploadingEditImage}>
+                    Upload image
+                  </Button>
+                </Upload>
+                <Typography.Text type="secondary" className="owner-edit-image-note">
+                  JPG, PNG, WEBP up to 5MB
+                </Typography.Text>
+              </Space>
+            </div>
           </Form.Item>
 
           <Form.Item label="Status" name="horseStatus">
             <Select options={HORSE_STATUS_OPTIONS} />
           </Form.Item>
-
         </Form>
       </Modal>
 
       <style>{`
+        .owner-horses-table .ant-table {
+          border: 1px solid #e8f1ef;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .owner-horses-table .ant-table-container {
+          min-height: 408px;
+        }
+
+        .owner-horses-table .ant-pagination {
+          margin: 16px 0 0 !important;
+        }
+
+        .owner-horses-table .ant-table-thead > tr > th {
+          background: #f7fbfa !important;
+          color: #173f3a;
+          font-weight: 900;
+          border-bottom-color: #e1ece9 !important;
+        }
+
+        .owner-horses-table .ant-table-tbody > tr > td {
+          padding-block: 18px !important;
+          border-bottom-color: #edf3f1 !important;
+        }
+
+        .owner-horses-table .ant-table-tbody > tr:hover > td {
+          background: #f3fffc !important;
+        }
+
+        .owner-horse-cell {
+          min-width: 0;
+        }
+
+        .owner-horse-copy {
+          min-width: 0;
+        }
+
+        .owner-horse-name {
+          display: block;
+          color: #173f3a;
+          font-size: 15px;
+          line-height: 1.3;
+        }
+
+        .owner-horse-meta {
+          display: block;
+          font-size: 12px;
+          line-height: 1.2;
+        }
+
+        .owner-horse-actions {
+          flex-wrap: nowrap;
+          justify-content: flex-end;
+        }
+
+        .owner-horse-actions .ant-btn {
+          height: 32px;
+        }
+
+        .owner-horse-actions .ant-btn-icon-only {
+          width: 32px;
+        }
+
+        .owner-detail-stack {
+          width: 100%;
+        }
+
+        .owner-detail-hero {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          border: 1px solid #e0f2ef;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #f3fffc 0%, #ffffff 76%);
+        }
+
+        .owner-detail-hero .ant-avatar {
+          flex: 0 0 auto;
+          border: 1px solid #c9eee7;
+          background: #e8fffa;
+          color: #006755;
+          font-size: 28px;
+          font-weight: 900;
+        }
+
+        .owner-detail-heading {
+          min-width: 0;
+        }
+
+        .owner-detail-title {
+          margin: 0 !important;
+          color: #143d38;
+        }
+
+        .owner-detail-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .owner-detail-stats > div {
+          display: grid;
+          gap: 4px;
+          padding: 12px;
+          border: 1px solid #e2eeeb;
+          border-radius: 10px;
+          background: #ffffff;
+        }
+
+        .owner-detail-stats span {
+          color: #6b7f7b;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .owner-detail-stats strong {
+          color: #06332e;
+          font-size: 20px;
+          line-height: 1.1;
+        }
+
+        .owner-history-table .ant-table {
+          border: 1px solid #e8f1ef;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+
+        .owner-history-table .ant-table-thead > tr > th {
+          background: #f7fbfa !important;
+          color: #173f3a;
+          font-weight: 800;
+        }
+
+        .owner-edit-image-field {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 14px;
+          border: 1px solid #e2eeeb;
+          border-radius: 12px;
+          background: #f8fcfb;
+        }
+
+        .owner-edit-image-field .ant-avatar {
+          flex: 0 0 auto;
+          border: 1px solid #c9eee7;
+          background: #e8fffa;
+          color: #006755;
+          font-size: 24px;
+          font-weight: 900;
+        }
+
+        .owner-edit-image-note {
+          font-size: 12px;
+          line-height: 1.2;
+        }
+
         .horse-avatar-upload {
           position: relative;
           display: inline-flex;
@@ -452,6 +843,20 @@ export default function OwnerHorses() {
         .horse-avatar-upload:disabled {
           cursor: wait;
           opacity: 0.7;
+        }
+
+        @media (max-width: 640px) {
+          .owner-horse-actions {
+            justify-content: flex-start;
+          }
+
+          .owner-detail-stats {
+            grid-template-columns: 1fr;
+          }
+
+          .owner-detail-hero {
+            align-items: flex-start;
+          }
         }
       `}</style>
     </Space>
