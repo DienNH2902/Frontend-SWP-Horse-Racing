@@ -3,6 +3,11 @@
   background: #f6fbfa;
 }
 
+.role-mobile-menu-btn,
+.role-mobile-backdrop {
+  display: none;
+}
+
 .role-sider {
   position: sticky !important;
   top: 0;
@@ -268,6 +273,127 @@
 
 .owner-status-select {
   width: 150px;
+}
+
+@media (max-width: 900px) {
+  .role-sider.ant-layout-sider {
+    position: fixed !important;
+    z-index: 40;
+    top: 0;
+    left: 0;
+    width: min(280px, 82vw) !important;
+    min-width: 0 !important;
+    max-width: min(280px, 82vw) !important;
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+  }
+
+  .role-layout-menu-open .role-sider.ant-layout-sider {
+    transform: translateX(0);
+  }
+
+  .role-mobile-backdrop {
+    position: fixed;
+    z-index: 35;
+    inset: 0;
+    display: block;
+    border: 0;
+    padding: 0;
+    background: rgba(0, 24, 22, 0.42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+
+  .role-layout-menu-open .role-mobile-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .role-mobile-menu-btn.ant-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    margin-right: 4px;
+    border: 1px solid #ccefe7;
+    color: #06332e;
+    background: #ffffff;
+  }
+
+  .role-sider .ant-layout-sider-children,
+  .role-sider-inner {
+    height: 100%;
+  }
+
+  .role-brand {
+    height: 64px;
+    flex-basis: 64px;
+    padding: 0 18px;
+  }
+
+  .role-menu-scroll {
+    flex: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .role-menu.ant-menu {
+    display: block;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .role-menu .ant-menu-item {
+    margin: 8px 12px !important;
+    padding-inline: 16px !important;
+  }
+
+  .role-sider-footer {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .role-sider-footer > .ant-btn {
+    width: 100%;
+  }
+
+  .role-header {
+    height: auto;
+    min-height: 68px;
+    padding: 14px 18px;
+  }
+
+  .role-content {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .role-brand span {
+    font-size: 18px;
+  }
+
+  .role-menu .ant-menu-item {
+    height: 40px;
+    line-height: 40px;
+    padding-inline: 14px !important;
+  }
+
+  .role-content {
+    padding: 14px;
+  }
+
+  .owner-filter-search,
+  .owner-status-select {
+    width: 100%;
+  }
 }
 
 .owner-section-title {

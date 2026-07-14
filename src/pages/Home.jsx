@@ -662,6 +662,17 @@ function Home() {
           box-shadow: 0 0 8px #ef4444;
         }
 
+        .home-mobile-action-icon {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+        }
+
+        .home-mobile-action-icon svg {
+          display: block;
+        }
+
         .home-icon-btn {
           width: 42px;
           height: 42px;
@@ -1864,9 +1875,19 @@ function Home() {
         @media (max-width: 720px) {
           .home-container { width: min(100% - 28px, 1230px); }
           .home-nav { height: 74px; }
+          .home-nav-inner { gap: 10px; }
           .home-brand-logo { height: 62px; width: auto; }
-          .account-trigger { min-width: 160px; max-width: 210px; }
-          .home-actions > .home-icon-btn { display: none; }
+          .home-actions { gap: 8px; min-width: 0; }
+          .account-trigger { min-width: 0; max-width: 156px; }
+          .home-icon-btn {
+            width: 38px;
+            height: 38px;
+          }
+          .home-live-btn {
+            min-height: 38px;
+            padding: 0 10px;
+            font-size: 11px;
+          }
           .home-btn { min-height: 42px; padding: 0 14px; font-size: 13px; }
           .home-hero {
             min-height: 660px;
@@ -1901,6 +1922,97 @@ function Home() {
           .horse-profile { grid-template-columns: 1fr; }
           .horse-profile-stats,
           .horse-profile-details { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+          .home-container { width: min(100% - 22px, 1230px); }
+          .home-brand-logo { height: 54px; }
+          .home-nav-inner { gap: 8px; }
+          .home-actions { gap: 6px; }
+          .home-live-btn {
+            width: 42px;
+            min-height: 40px;
+            padding: 0;
+            gap: 0;
+            font-size: 0;
+            justify-content: center;
+          }
+          .home-action-label {
+            display: none;
+          }
+          .home-live-btn i {
+            display: none;
+          }
+          .home-mobile-action-icon {
+            display: inline-flex;
+          }
+          .home-icon-btn {
+            width: 40px;
+            height: 40px;
+          }
+          .notification-dropdown {
+            position: fixed;
+            top: 84px;
+            right: 11px;
+            left: 11px;
+            width: auto;
+          }
+          .notification-dropdown-head {
+            padding: 10px 12px;
+          }
+          .notification-dropdown-head strong {
+            font-size: 13px;
+          }
+          .notification-dropdown-head span {
+            font-size: 11px;
+          }
+          .notification-list {
+            max-height: 250px;
+          }
+          .notification-item {
+            gap: 4px;
+            padding: 10px 12px;
+          }
+          .notification-title {
+            font-size: 12px;
+          }
+          .notification-content {
+            font-size: 11px;
+            line-height: 1.35;
+            -webkit-line-clamp: 1;
+          }
+          .notification-time {
+            font-size: 10px;
+          }
+          .notification-footer {
+            min-height: 38px;
+            font-size: 12px;
+          }
+          .account-trigger {
+            width: 44px;
+            max-width: 44px;
+            min-width: 44px;
+            padding: 0;
+            justify-content: center;
+          }
+          .account-trigger-name,
+          .account-trigger svg:last-child { display: none; }
+          .home-hero {
+            min-height: 620px;
+          }
+          .home-hero-content {
+            padding-top: 72px;
+          }
+          .home-hero h1 { font-size: clamp(38px, 12vw, 52px); }
+          .home-hero p {
+            font-size: 16px;
+            line-height: 1.65;
+          }
+          .home-hero-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            margin-bottom: 44px;
+          }
         }
       `}</style>
 
@@ -1937,12 +2049,18 @@ function Home() {
                 className="home-live-btn home-bet-btn"
                 to="/spectator/bets"
               >
-                Bet Points
+                <span className="home-mobile-action-icon">
+                  <Icon name="trophy" size={18} />
+                </span>
+                <span className="home-action-label">Bet Points</span>
               </Link>
             )}
             <Link className="home-live-btn" to="/spectator/broadcast">
               <i aria-hidden="true" />
-              Live Broadcast
+              <span className="home-mobile-action-icon">
+                <Icon name="horse" size={18} />
+              </span>
+              <span className="home-action-label">Live Broadcast</span>
             </Link>
             <div className="nav-dropdown-wrap">
               <button
