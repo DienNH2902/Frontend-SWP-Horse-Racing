@@ -17,6 +17,7 @@ import {
   CheckCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
+  FileDoneOutlined,
   FlagOutlined,
   FundOutlined,
   ReloadOutlined,
@@ -27,8 +28,9 @@ import {
 } from "@ant-design/icons";
 import { getHorses } from "../../api/services/horse.service";
 import { getRaceCourses } from "../../api/services/race-course.service";
-import { getRacesByTournament } from "../../api/services/race.service";
-import { getTournaments } from "../../api/services/tournament.service";
+import { getAdminRaceStats } from "../../api/services/race.service";
+import { getAdminRegistrationStats } from "../../api/services/registration.service";
+import { getAdminTournamentStats } from "../../api/services/tournament.service";
 import { getAdminDashboardStats } from "../../api/services/user.service";
 import { getSystemWalletOverview } from "../../api/services/wallet.service";
 
@@ -78,10 +80,6 @@ function resolveList(response) {
   }
 
   return [];
-}
-
-function getId(item) {
-  return item?._id || item?.id || "";
 }
 
 function normalizeRole(value) {
@@ -311,9 +309,19 @@ export default function AdminDashboard() {
       accountStatuses: {},
       jockeyStatuses: {},
     },
+    registrationStats: {
+      totalRegistrations: 0,
+      statuses: {},
+    },
+    tournamentStats: {
+      totalTournaments: 0,
+      statuses: {},
+    },
+    raceStats: {
+      totalRaces: 0,
+      statuses: {},
+    },
     horses: [],
-    tournaments: [],
-    races: [],
     raceCourses: [],
     walletOverview: null,
   });
@@ -329,15 +337,19 @@ export default function AdminDashboard() {
       const [
         adminStatsResult,
         horsesResult,
-        tournamentsResult,
         coursesResult,
+        tournamentStatsResult,
+        raceStatsResult,
+        registrationStatsResult,
         walletResult,
       ] =
         await Promise.allSettled([
           getAdminDashboardStats(),
           getHorses(),
-          getTournaments(),
           getRaceCourses(),
+          getAdminTournamentStats(),
+          getAdminRaceStats(),
+          getAdminRegistrationStats(),
           getSystemWalletOverview(),
         ]);
 
@@ -359,46 +371,61 @@ export default function AdminDashboard() {
         horsesResult.status === "fulfilled"
           ? resolveList(horsesResult.value)
           : [];
-      const tournaments =
-        tournamentsResult.status === "fulfilled"
-          ? resolveList(tournamentsResult.value)
-          : [];
       const raceCourses =
         coursesResult.status === "fulfilled"
           ? resolveList(coursesResult.value)
           : [];
       const walletOverview =
         walletResult.status === "fulfilled" ? walletResult.value : null;
-
-      const raceResults = await Promise.allSettled(
-        tournaments.map((tournament) => {
-          const tournamentId = getId(tournament) || tournament?.tournamentId;
-          return tournamentId
-            ? getRacesByTournament(tournamentId)
-            : Promise.resolve([]);
-        }),
-      );
-      const races = raceResults.flatMap((result) =>
-        result.status === "fulfilled" ? resolveList(result.value) : [],
-      );
+      const registrationStats =
+        registrationStatsResult.status === "fulfilled" &&
+        registrationStatsResult.value
+          ? {
+              totalRegistrations:
+                Number(registrationStatsResult.value?.totalRegistrations) || 0,
+              statuses: registrationStatsResult.value?.statuses || {},
+            }
+          : {
+              totalRegistrations: 0,
+              statuses: {},
+            };
+      const tournamentStats =
+        tournamentStatsResult.status === "fulfilled" &&
+        tournamentStatsResult.value
+          ? {
+              totalTournaments:
+                Number(tournamentStatsResult.value?.totalTournaments) || 0,
+              statuses: tournamentStatsResult.value?.statuses || {},
+            }
+          : {
+              totalTournaments: 0,
+              statuses: {},
+            };
+      const raceStats =
+        raceStatsResult.status === "fulfilled" && raceStatsResult.value
+          ? {
+              totalRaces: Number(raceStatsResult.value?.totalRaces) || 0,
+              statuses: raceStatsResult.value?.statuses || {},
+            }
+          : {
+              totalRaces: 0,
+              statuses: {},
+            };
       const failedMainRequests = [
         adminStatsResult,
         horsesResult,
-        tournamentsResult,
         coursesResult,
+        tournamentStatsResult,
+        raceStatsResult,
+        registrationStatsResult,
       ].filter((result) => result.status === "rejected").length;
 
       setDashboard({
         adminStats,
+        registrationStats,
+        tournamentStats,
+        raceStats,
         horses,
-        tournaments,
-        races: Array.from(
-          new Map(
-            races
-              .filter((race) => getId(race))
-              .map((race) => [getId(race), race]),
-          ).values(),
-        ),
         raceCourses,
         walletOverview,
       });
@@ -470,28 +497,29 @@ export default function AdminDashboard() {
   const jockeyStatusEntries = Object.entries(
     dashboard.adminStats.jockeyStatuses || {},
   );
-
-  const raceStats = useMemo(() => {
-    const stats = { scheduled: 0, ongoing: 0, finished: 0 };
-
-    dashboard.races.forEach((race) => {
-      const status = String(race?.status || "").toLowerCase();
-      if (status === "scheduled" || status === "ready") stats.scheduled += 1;
-      else if (
-        status === "ongoing" ||
-        status === "live" ||
-        status === "inprogress" ||
-        status === "in progress" ||
-        status === "in_progress"
-      ) {
-        stats.ongoing += 1;
-      } else if (status === "finished" || status === "completed") {
-        stats.finished += 1;
-      }
-    });
-
-    return stats;
-  }, [dashboard.races]);
+  const competitionCards = [
+    {
+      title: "Tournaments",
+      value: dashboard.tournamentStats.totalTournaments,
+      icon: <TrophyOutlined />,
+      color: "#7c3aed",
+      background: "#f4efff",
+    },
+    {
+      title: "Races",
+      value: dashboard.raceStats.totalRaces,
+      icon: <FlagOutlined />,
+      color: "#2563eb",
+      background: "#edf4ff",
+    },
+    {
+      title: "Registrations",
+      value: dashboard.registrationStats.totalRegistrations,
+      icon: <FileDoneOutlined />,
+      color: "#087a6d",
+      background: "#e8fff9",
+    },
+  ];
 
   const walletMonthlyData = useMemo(
     () => getMonthlyRevenueData(dashboard.walletOverview, selectedYear),
@@ -521,20 +549,6 @@ export default function AdminDashboard() {
       icon: <TrophyOutlined />,
       color: "#b45309",
       background: "#fff8e6",
-    },
-    {
-      title: "Tournaments",
-      value: dashboard.tournaments.length,
-      icon: <TrophyOutlined />,
-      color: "#7c3aed",
-      background: "#f4efff",
-    },
-    {
-      title: "Races",
-      value: dashboard.races.length,
-      icon: <FlagOutlined />,
-      color: "#2563eb",
-      background: "#edf4ff",
     },
     {
       title: "Race Courses",
@@ -727,6 +741,51 @@ export default function AdminDashboard() {
           text-align: center;
         }
 
+        .competition-overview-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .competition-overview-item {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          min-height: 94px;
+          padding: 16px;
+          border: 1px solid #ccefe7;
+          border-radius: 10px;
+          background: #fbfffe;
+        }
+
+        .competition-overview-icon {
+          width: 42px;
+          height: 42px;
+          display: grid;
+          flex: 0 0 auto;
+          place-items: center;
+          border-radius: 10px;
+          color: var(--competition-color);
+          background: var(--competition-bg);
+          font-size: 20px;
+        }
+
+        .competition-overview-item strong {
+          display: block;
+          color: #06332e;
+          font-size: 28px;
+          font-weight: 950;
+          line-height: 1;
+        }
+
+        .competition-overview-item span {
+          display: block;
+          margin-top: 5px;
+          color: #456560;
+          font-size: 13px;
+          font-weight: 850;
+        }
+
         .wallet-overview-header {
           display: flex;
           align-items: center;
@@ -802,6 +861,9 @@ export default function AdminDashboard() {
             grid-template-columns: 1fr;
           }
           .user-status-row {
+            grid-template-columns: 1fr;
+          }
+          .competition-overview-grid {
             grid-template-columns: 1fr;
           }
           .wallet-overview-header {
@@ -1030,7 +1092,6 @@ export default function AdminDashboard() {
                   <div>
                     <div className="status-section-title">
                       <strong>Jockey Status</strong>
-                      <Tag color="orange">Jockeys</Tag>
                     </div>
                     <div className="account-health-grid">
                       {jockeyStatusEntries.length ? (
@@ -1076,24 +1137,27 @@ export default function AdminDashboard() {
             <Col xs={24}>
               <Card
                 className="admin-dashboard-panel"
-                title="Race Status"
-                extra={<Tag color="blue">{dashboard.races.length} races</Tag>}
+                title="Competition Overview"
               >
-                <div className="race-status-grid">
-                  <div className="race-status-item">
-                    <strong>{raceStats.scheduled}</strong>
-                    <Typography.Text type="secondary">
-                      Scheduled
-                    </Typography.Text>
-                  </div>
-                  <div className="race-status-item">
-                    <strong>{raceStats.ongoing}</strong>
-                    <Typography.Text type="secondary">Ongoing</Typography.Text>
-                  </div>
-                  <div className="race-status-item">
-                    <strong>{raceStats.finished}</strong>
-                    <Typography.Text type="secondary">Finished</Typography.Text>
-                  </div>
+                <div className="competition-overview-grid">
+                  {competitionCards.map((item) => (
+                    <div
+                      className="competition-overview-item"
+                      key={item.title}
+                      style={{
+                        "--competition-bg": item.background,
+                        "--competition-color": item.color,
+                      }}
+                    >
+                      <span className="competition-overview-icon">
+                        {item.icon}
+                      </span>
+                      <div>
+                        <strong>{item.value}</strong>
+                        <span>{item.title}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
             </Col>

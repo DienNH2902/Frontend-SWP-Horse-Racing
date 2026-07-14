@@ -35,6 +35,17 @@ export async function getTournaments(status) {
     });
 }
 
+export async function getAdminTournamentStats() {
+    const response = await apiClient.get(
+        TOURNAMENT_ENDPOINTS.ADMIN_DASHBOARD_STATS,
+        {
+            includeAuth: true,
+        }
+    );
+
+    return unwrapData(response);
+}
+
 
 
 export async function createTournament(payload) {
