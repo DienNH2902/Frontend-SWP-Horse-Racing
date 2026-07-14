@@ -40,6 +40,7 @@ import {
   getUserById,
   getUsersByRole,
 } from "../../api/services/user.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 const { Title, Text } = Typography;
 
@@ -289,6 +290,7 @@ function RaceManagement() {
   const [isRound2ModalOpen, setIsRound2ModalOpen] = useState(false);
   const [assigningRefereeRace, setAssigningRefereeRace] = useState(null);
   const [assigningCourseRace, setAssigningCourseRace] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadReferees() {
     try {
@@ -590,7 +592,7 @@ function RaceManagement() {
       {
         title: "Race",
         dataIndex: "name",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 220,
         render: (value) => <Text strong>{value}</Text>,
       },
@@ -652,7 +654,7 @@ function RaceManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 260,
         render: (_, record) => (
           <Space>
@@ -678,7 +680,7 @@ function RaceManagement() {
         ),
       },
     ],
-    [raceCoursesById, referees],
+    [raceCoursesById, referees, shouldFixColumns],
   );
 
   return (

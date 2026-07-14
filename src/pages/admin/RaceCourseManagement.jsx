@@ -28,6 +28,7 @@ import {
   getRaceCourses,
   updateRaceCourse,
 } from "../../api/services/race-course.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 const { Text, Title } = Typography;
 
@@ -99,6 +100,7 @@ function RaceCourseManagement() {
   const [detailCourse, setDetailCourse] = useState(null);
   const [editingCourse, setEditingCourse] = useState(null);
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadRaceCourses() {
     setIsLoading(true);
@@ -198,7 +200,7 @@ function RaceCourseManagement() {
       {
         title: "Race Course",
         dataIndex: "name",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 260,
         render: (value) => <Text strong>{value}</Text>,
       },
@@ -234,7 +236,7 @@ function RaceCourseManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 180,
         render: (_, record) => (
           <Space>
@@ -264,7 +266,7 @@ function RaceCourseManagement() {
         ),
       },
     ],
-    [isSaving],
+    [isSaving, shouldFixColumns],
   );
 
   return (

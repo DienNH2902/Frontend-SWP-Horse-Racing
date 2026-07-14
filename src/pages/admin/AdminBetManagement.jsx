@@ -14,6 +14,7 @@ import "antd/dist/reset.css";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { getAllBets, getBetDetail } from "../../api/services/bet.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 dayjs.extend(customParseFormat);
 
@@ -119,6 +120,7 @@ export default function AdminBetManagement() {
   const [detailData, setDetailData] = useState(null);
   const [searchKey, setSearchKey] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadBets() {
     setIsLoading(true);
@@ -180,7 +182,7 @@ export default function AdminBetManagement() {
       {
         title: "Spectator Name",
         dataIndex: "spectatorName",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 180,
         ellipsis: true,
         render: (text) => <Text strong>{text}</Text>,
@@ -237,7 +239,7 @@ export default function AdminBetManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 120,
         render: (_, record) => (
           <Button
@@ -252,7 +254,7 @@ export default function AdminBetManagement() {
         ),
       },
     ],
-    [isDetailLoading, activeId],
+    [isDetailLoading, activeId, shouldFixColumns],
   );
 
   return (

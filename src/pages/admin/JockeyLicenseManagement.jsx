@@ -15,6 +15,7 @@ import {
 import "antd/dist/reset.css";
 import { getJockeysWithLicenses } from "../../api/services/user.service";
 import { updateJockeyStatus } from "../../api/services/jockeyLicense.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 const { Text, Title } = Typography;
 
@@ -187,6 +188,7 @@ function JockeyLicenseManagement() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState(null);
   const [statusChangingId, setStatusChangingId] = useState(null);
   const [viewingLicensesJockey, setViewingLicensesJockey] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadJockeys() {
     setIsLoading(true);
@@ -241,7 +243,7 @@ function JockeyLicenseManagement() {
       {
         title: "Avatar",
         dataIndex: "avatar",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 88,
         render: (avatar, record) => {
           const cleanSrc = avatar && avatar.trim() !== "" ? avatar : null;
@@ -262,7 +264,7 @@ function JockeyLicenseManagement() {
       {
         title: "Full Name",
         dataIndex: "fullName",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 190,
       },
       {
@@ -349,7 +351,7 @@ function JockeyLicenseManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 140,
         render: (_, record) => (
           <Button
@@ -362,7 +364,7 @@ function JockeyLicenseManagement() {
         ),
       },
     ],
-    [statusChangingId, jockeys],
+    [statusChangingId, jockeys, shouldFixColumns],
   );
 
   return (

@@ -28,6 +28,7 @@ import {
   rejectRegistration,
 } from "../../api/services/registration.service";
 import { getRacesByTournament } from "../../api/services/race.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 const { Title, Text } = Typography;
 
@@ -161,6 +162,7 @@ function RegistrationManagement() {
   const [detailRegistration, setDetailRegistration] = useState(null);
   const [confirmingRegistration, setConfirmingRegistration] = useState(null);
   const [rejectingRegistration, setRejectingRegistration] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadRegistrations(status = filterStatus) {
     setIsLoading(true);
@@ -329,7 +331,7 @@ function RegistrationManagement() {
       {
         title: "Tournament",
         dataIndex: "tournamentTitle",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 260,
         render: (value) => <Text strong>{value}</Text>,
       },
@@ -374,7 +376,7 @@ function RegistrationManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 210,
         render: (_, record) => (
           <Space>
@@ -406,7 +408,7 @@ function RegistrationManagement() {
         ),
       },
     ],
-    [],
+    [shouldFixColumns],
   );
 
   return (

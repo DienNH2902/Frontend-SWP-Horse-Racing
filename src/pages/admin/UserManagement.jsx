@@ -29,6 +29,7 @@ import {
   adjustHorseOwnerReputation,
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 import customParseFormat from "dayjs/plugin/customParseFormat";
 dayjs.extend(customParseFormat);
@@ -191,6 +192,7 @@ function UserManagement() {
   const [adjustPointsForm] = Form.useForm();
   const [adjustModalUser, setAdjustModalUser] = useState(null);
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadUsers() {
     setIsLoading(true);
@@ -493,7 +495,7 @@ function UserManagement() {
       {
         title: "Avatar",
         dataIndex: "avatar",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 88,
         render: (avatar, record) => {
           const cleanSrc = avatar && avatar.trim() !== "" ? avatar : null;
@@ -520,7 +522,7 @@ function UserManagement() {
       {
         title: "Full Name",
         dataIndex: "fullName",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 190,
       },
       {
@@ -577,7 +579,7 @@ function UserManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 260, // Tăng nhẹ width để đủ khoảng trắng chứa thêm nút mới
         render: (_, record) => {
           const roleLower = String(record.role).toLowerCase();
@@ -636,7 +638,7 @@ function UserManagement() {
         },
       },
     ],
-    [statusChangingId],
+    [statusChangingId, shouldFixColumns],
   );
 
   return (

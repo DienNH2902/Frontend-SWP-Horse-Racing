@@ -21,6 +21,7 @@ import {
   resolveReport,
   deleteReport,
 } from "../../api/services/report.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 dayjs.extend(customParseFormat);
 
@@ -153,6 +154,7 @@ export default function AdminReportManagement() {
   const [searchKey, setSearchKey] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadReports() {
     setIsLoading(true);
@@ -257,7 +259,7 @@ export default function AdminReportManagement() {
       {
         title: "Reporter Name",
         dataIndex: "reporterName",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 180,
         ellipsis: true,
         render: (text) => <Text strong>{text}</Text>,
@@ -299,7 +301,7 @@ export default function AdminReportManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 240,
         render: (_, record) => {
           const resolveMenuItems = [
@@ -387,7 +389,7 @@ export default function AdminReportManagement() {
         },
       },
     ],
-    [isDetailLoading, isActionLoading, activeId, reports],
+    [isDetailLoading, isActionLoading, activeId, reports, shouldFixColumns],
   );
 
   return (

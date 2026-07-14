@@ -19,6 +19,7 @@ import {
   updateReward,
   deleteReward,
 } from "../../api/services/reward.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 const { Text, Title } = Typography;
 
@@ -88,6 +89,7 @@ function RewardManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState(null);
   const [selectedRewardType, setSelectedRewardType] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadRewards() {
     setIsLoading(true);
@@ -181,7 +183,7 @@ function RewardManagement() {
       {
         title: "Reward Title",
         dataIndex: "title",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 220,
         render: (value) => <Text strong>{value}</Text>,
       },
@@ -220,7 +222,7 @@ function RewardManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 160,
         render: (_, record) => (
           <Space>
@@ -246,7 +248,7 @@ function RewardManagement() {
         ),
       },
     ],
-    [rewards],
+    [rewards, shouldFixColumns],
   );
 
   return (

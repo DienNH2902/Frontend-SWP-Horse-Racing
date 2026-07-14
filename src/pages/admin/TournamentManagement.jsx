@@ -42,6 +42,7 @@ import {
   createRaceBatch,
   createRound2Race,
 } from "../../api/services/race.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 dayjs.extend(customParseFormat);
 
@@ -203,6 +204,7 @@ function TournamentManagement() {
   const [advancementTournament, setAdvancementTournament] = useState(null);
   const [advancements, setAdvancements] = useState([]);
   const [isAdvancementsLoading, setIsAdvancementsLoading] = useState(false);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadTournaments(status = filterStatus) {
     setIsLoading(true);
@@ -495,7 +497,7 @@ function TournamentManagement() {
       {
         title: "Title",
         dataIndex: "title",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 260,
         render: (value) => <Text strong>{value}</Text>,
       },
@@ -529,7 +531,7 @@ function TournamentManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 340,
         render: (_, record) => (
           <Space>
@@ -592,7 +594,7 @@ function TournamentManagement() {
         ),
       },
     ],
-    [isSaving],
+    [isSaving, shouldFixColumns],
   );
 
   return (
