@@ -26,10 +26,12 @@ import {
   WarningOutlined,
   WalletOutlined,
 } from "@ant-design/icons";
+import { getAdminBetStats } from "../../api/services/bet.service";
 import { getAdminHorseStats } from "../../api/services/horse.service";
 import { getRaceCourses } from "../../api/services/race-course.service";
 import { getAdminRaceStats } from "../../api/services/race.service";
 import { getAdminRegistrationStats } from "../../api/services/registration.service";
+import { getReportStatsAdmin } from "../../api/services/report.service";
 import { getAdminTournamentStats } from "../../api/services/tournament.service";
 import { getAdminDashboardStats } from "../../api/services/user.service";
 import { getSystemWalletOverview } from "../../api/services/wallet.service";
@@ -148,6 +150,32 @@ function getHorseStatusMeta(status) {
     return { color: "#2563eb", border: "#bfdbfe", background: "#edf4ff" };
   }
   if (normalizedStatus.includes("injured")) {
+    return { color: "#be123c", border: "#fecdd3", background: "#fff1f2" };
+  }
+
+  return { color: "#d97706", border: "#fed7aa", background: "#fff8e6" };
+}
+
+function getBetStatusMeta(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+
+  if (normalizedStatus.includes("win")) {
+    return { color: "#0f9f89", border: "#9be5d9", background: "#e8fff9" };
+  }
+  if (normalizedStatus.includes("lose")) {
+    return { color: "#be123c", border: "#fecdd3", background: "#fff1f2" };
+  }
+
+  return { color: "#d97706", border: "#fed7aa", background: "#fff8e6" };
+}
+
+function getReportStatusMeta(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+
+  if (normalizedStatus.includes("resolved")) {
+    return { color: "#0f9f89", border: "#9be5d9", background: "#e8fff9" };
+  }
+  if (normalizedStatus.includes("rejected")) {
     return { color: "#be123c", border: "#fecdd3", background: "#fff1f2" };
   }
 
@@ -357,6 +385,14 @@ export default function AdminDashboard() {
       totalHorses: 0,
       statuses: {},
     },
+    betStats: {
+      totalBets: 0,
+      statuses: {},
+    },
+    reportStats: {
+      totalReports: 0,
+      statuses: {},
+    },
     raceCourses: [],
     walletOverview: null,
   });
@@ -372,6 +408,8 @@ export default function AdminDashboard() {
       const [
         adminStatsResult,
         horseStatsResult,
+        betStatsResult,
+        reportStatsResult,
         coursesResult,
         tournamentStatsResult,
         raceStatsResult,
@@ -381,6 +419,8 @@ export default function AdminDashboard() {
         await Promise.allSettled([
           getAdminDashboardStats(),
           getAdminHorseStats(),
+          getAdminBetStats(),
+          getReportStatsAdmin(),
           getRaceCourses(),
           getAdminTournamentStats(),
           getAdminRaceStats(),
@@ -412,6 +452,27 @@ export default function AdminDashboard() {
               totalHorses: 0,
               statuses: {},
             };
+      const betStats =
+        betStatsResult.status === "fulfilled" && betStatsResult.value
+          ? {
+              totalBets: Number(betStatsResult.value?.totalBets) || 0,
+              statuses: betStatsResult.value?.statuses || {},
+            }
+          : {
+              totalBets: 0,
+              statuses: {},
+            };
+      const reportStatuses =
+        reportStatsResult.status === "fulfilled" && reportStatsResult.value
+          ? reportStatsResult.value
+          : {};
+      const reportStats = {
+        totalReports: Object.values(reportStatuses).reduce(
+          (sum, count) => sum + (Number(count) || 0),
+          0,
+        ),
+        statuses: reportStatuses,
+      };
       const raceCourses =
         coursesResult.status === "fulfilled"
           ? resolveList(coursesResult.value)
@@ -455,6 +516,8 @@ export default function AdminDashboard() {
       const failedMainRequests = [
         adminStatsResult,
         horseStatsResult,
+        betStatsResult,
+        reportStatsResult,
         coursesResult,
         tournamentStatsResult,
         raceStatsResult,
@@ -467,6 +530,8 @@ export default function AdminDashboard() {
         tournamentStats,
         raceStats,
         horseStats,
+        betStats,
+        reportStats,
         raceCourses,
         walletOverview,
       });
@@ -541,6 +606,14 @@ export default function AdminDashboard() {
   const horseStatusEntries = Object.entries(
     dashboard.horseStats.statuses || {},
   );
+  const betStatusEntries = Object.entries(dashboard.betStats.statuses || {});
+  const reportStatusEntries = Object.entries(
+    dashboard.reportStats.statuses || {},
+  );
+  const maxBetStatusCount = Math.max(
+    1,
+    ...betStatusEntries.map(([, count]) => Number(count) || 0),
+  );
   const competitionCards = [
     {
       title: "Tournaments",
@@ -593,6 +666,20 @@ export default function AdminDashboard() {
       icon: <TrophyOutlined />,
       color: "#b45309",
       background: "#fff8e6",
+    },
+    {
+      title: "Bets",
+      value: dashboard.betStats.totalBets,
+      icon: <DollarOutlined />,
+      color: "#d97706",
+      background: "#fff8e6",
+    },
+    {
+      title: "Reports",
+      value: dashboard.reportStats.totalReports,
+      icon: <WarningOutlined />,
+      color: "#be123c",
+      background: "#fff0f4",
     },
     {
       title: "Race Courses",
@@ -923,6 +1010,155 @@ export default function AdminDashboard() {
           height: 20px;
         }
 
+        .bet-chart {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          min-height: 220px;
+          align-items: end;
+          padding: 16px 0 2px;
+        }
+
+        .bet-bar-item {
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+          min-width: 0;
+        }
+
+        .bet-bar-track {
+          width: min(48px, 100%);
+          height: 140px;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          border-radius: 12px;
+          background: #edf5f3;
+          overflow: hidden;
+        }
+
+        .bet-bar-fill {
+          width: 100%;
+          min-height: 8px;
+          height: var(--bet-bar-height);
+          border-radius: 12px 12px 0 0;
+          background: var(--bet-color);
+        }
+
+        .bet-bar-value {
+          color: #06332e;
+          font-size: 24px;
+          font-weight: 950;
+          line-height: 1;
+        }
+
+        .bet-bar-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          color: #456560;
+          font-size: 12px;
+          font-weight: 850;
+          white-space: nowrap;
+        }
+
+        .bet-bar-dot {
+          width: 8px;
+          height: 8px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: var(--bet-color);
+        }
+
+        .report-stack {
+          display: grid;
+          gap: 18px;
+          min-height: 220px;
+          align-content: center;
+          padding: 18px 8px 6px;
+        }
+
+        .report-stack-total {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .report-stack-total strong {
+          color: #06332e;
+          font-size: 34px;
+          font-weight: 950;
+          line-height: 1;
+        }
+
+        .report-stack-total span {
+          color: #52726e;
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .report-stack-bar {
+          height: 22px;
+          display: flex;
+          overflow: hidden;
+          border-radius: 999px;
+          background: #edf5f3;
+        }
+
+        .report-stack-segment {
+          width: var(--report-segment-width);
+          min-width: var(--report-segment-min-width);
+          background: var(--report-color);
+        }
+
+        .report-stack-legend {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+          gap: 10px;
+        }
+
+        .report-stack-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 11px 12px;
+          border: 1px solid var(--report-border);
+          border-radius: 10px;
+          background: var(--report-bg);
+        }
+
+        .report-stack-name {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          color: #244a46;
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .report-stack-dot {
+          width: 8px;
+          height: 8px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: var(--report-color);
+        }
+
+        .report-stack-count {
+          color: #06332e;
+          font-size: 18px;
+          font-weight: 950;
+        }
+
+        .admin-bet-report-row {
+          display: grid;
+          grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+          gap: 20px;
+        }
+
         .competition-overview-item strong {
           display: block;
           color: #06332e;
@@ -1022,6 +1258,9 @@ export default function AdminDashboard() {
           .competition-overview-grid {
             grid-template-columns: 1fr;
           }
+          .admin-bet-report-row {
+            grid-template-columns: 1fr;
+          }
           .wallet-overview-header {
             align-items: flex-start;
             flex-direction: column;
@@ -1064,26 +1303,6 @@ export default function AdminDashboard() {
         </Card>
       ) : (
         <Space direction="vertical" size={20} style={{ width: "100%" }}>
-          <Row gutter={[16, 16]}>
-            {summaryCards.map((item) => (
-              <Col xs={24} sm={12} xl={8} xxl={4} key={item.title}>
-                <Card className="admin-stat-card">
-                  <Space size={16}>
-                    <span
-                      className="admin-stat-icon"
-                      style={{
-                        color: item.color,
-                        background: item.background,
-                      }}
-                    >
-                      {item.icon}
-                    </span>
-                    <Statistic title={item.title} value={item.value} />
-                  </Space>
-                </Card>
-              </Col>
-            ))}
-          </Row>
 
           <Row gutter={[20, 20]}>
             <Col xs={24}>
@@ -1382,6 +1601,139 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               </Card>
+            </Col>
+
+            <Col xs={24}>
+              <div className="admin-bet-report-row">
+                <Card
+                  className="admin-dashboard-panel"
+                  title="Bets"
+                  extra={
+                    <Tag color="gold">{dashboard.betStats.totalBets} total</Tag>
+                  }
+                >
+                  <div className="bet-chart">
+                    {betStatusEntries.length ? (
+                      betStatusEntries.map(([status, count]) => {
+                        const numericCount = Number(count) || 0;
+                        const meta = getBetStatusMeta(status);
+                        const barHeight = Math.max(
+                          8,
+                          Math.round((numericCount / maxBetStatusCount) * 100),
+                        );
+
+                        return (
+                          <div
+                            className="bet-bar-item"
+                            key={status}
+                            style={{
+                              "--bet-color": meta.color,
+                              "--bet-bar-height": `${barHeight}%`,
+                            }}
+                          >
+                            <div className="bet-bar-value">{numericCount}</div>
+                            <div className="bet-bar-track">
+                              <div className="bet-bar-fill" />
+                            </div>
+                            <div className="bet-bar-label">
+                              <span className="bet-bar-dot" />
+                              {formatStatusLabel(status)}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <Typography.Text type="secondary">
+                        No bet status data
+                      </Typography.Text>
+                    )}
+                  </div>
+                </Card>
+
+                <Card
+                  className="admin-dashboard-panel"
+                  title="Reports"
+                  extra={
+                    <Tag color="red">
+                      {dashboard.reportStats.totalReports} total
+                    </Tag>
+                  }
+                >
+                  <div className="report-stack">
+                    {reportStatusEntries.length ? (
+                      <>
+                        <div className="report-stack-total">
+                          <div>
+                            <strong>
+                              {dashboard.reportStats.totalReports}
+                            </strong>
+                            <span>Reports</span>
+                          </div>
+                          <Tag color="orange">Status mix</Tag>
+                        </div>
+                        <div className="report-stack-bar">
+                          {reportStatusEntries.map(([status, count]) => {
+                            const numericCount = Number(count) || 0;
+                            const meta = getReportStatusMeta(status);
+                            const percent = dashboard.reportStats.totalReports
+                              ? (numericCount /
+                                  dashboard.reportStats.totalReports) *
+                                100
+                              : 0;
+
+                            return (
+                              <span
+                                className="report-stack-segment"
+                                key={status}
+                                style={{
+                                  "--report-color": meta.color,
+                                  "--report-segment-width": `${percent}%`,
+                                  "--report-segment-min-width": numericCount
+                                    ? "8px"
+                                    : "0",
+                                }}
+                                title={`${formatStatusLabel(
+                                  status,
+                                )}: ${numericCount}`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <div className="report-stack-legend">
+                          {reportStatusEntries.map(([status, count]) => {
+                            const numericCount = Number(count) || 0;
+                            const meta = getReportStatusMeta(status);
+
+                            return (
+                              <div
+                                className="report-stack-item"
+                                key={status}
+                                style={{
+                                  "--report-bg": meta.background,
+                                  "--report-border": meta.border,
+                                  "--report-color": meta.color,
+                                }}
+                              >
+                                <span className="report-stack-name">
+                                  <span className="report-stack-dot" />
+                                  {formatStatusLabel(status)}
+                                </span>
+                                <span className="report-stack-count">
+                                  {numericCount}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <Typography.Text type="secondary">
+                        No report status data
+                      </Typography.Text>
+                    )}
+                  </div>
+                </Card>
+              </div>
             </Col>
           </Row>
         </Space>

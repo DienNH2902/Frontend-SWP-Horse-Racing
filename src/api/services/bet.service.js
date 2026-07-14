@@ -28,6 +28,14 @@ export async function getAllBets() {
   return unwrapData(response);
 }
 
+export async function getAdminBetStats() {
+  const response = await apiClient.get(BET_ENDPOINTS.ADMIN_DASHBOARD_STATS, {
+    includeAuth: true,
+  });
+
+  return unwrapData(response);
+}
+
 // 3. API Lấy toàn bộ các bet đặt cược của tài khoản hiện tại
 export async function getMyBets() {
   const response = await apiClient.get(BET_ENDPOINTS.MY_BET, {
