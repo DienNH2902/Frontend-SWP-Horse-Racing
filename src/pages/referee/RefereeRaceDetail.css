@@ -36,9 +36,10 @@
     border-radius: 28px !important;
 
     background:
+
         linear-gradient(145deg,
-            rgba(11, 61, 55, .98),
-            rgba(15, 80, 72, .95)) !important;
+            #0b3d37,
+            #0f766e) !important;
 
     border:
         1px solid rgba(46, 196, 182, .14);
@@ -177,7 +178,7 @@
 
 .race-section-title {
 
-    color: white;
+    color: #dffcf7;
 
     font-size: 24px;
 
@@ -275,7 +276,7 @@
     background:
         linear-gradient(145deg,
             #0b3d37,
-            #104941) !important;
+            #0f766e);
 
     border:
         1px solid rgba(46, 196, 182, .12);
@@ -326,45 +327,6 @@
 }
 
 .race-description .ant-descriptions-row {
-    background: transparent;
-}
-
-.race-description .ant-descriptions-item-label {
-
-    background:
-        rgba(46, 196, 182, .08) !important;
-
-    color: #67f7df !important;
-    font-weight: 700;
-}
-
-.race-description .ant-descriptions-item-content {
-
-    background: transparent !important;
-
-    color: #fff !important;
-}
-
-.race-description .ant-descriptions-bordered .ant-descriptions-item {
-
-    border-color:
-        rgba(255, 255, 255, .06);
-}
-
-/* ======================================================
-   DESCRIPTIONS
-====================================================== */
-
-.race-description .ant-descriptions-view {
-
-    border-radius: 18px;
-
-    overflow: hidden;
-
-    border: 1px solid rgba(46, 196, 182, .08);
-}
-
-.race-description .ant-descriptions-row {
 
     background: transparent;
 }
@@ -372,9 +334,9 @@
 .race-description .ant-descriptions-item-label {
 
     background:
-        rgba(46, 196, 182, .08) !important;
+        rgba(15, 118, 110, .25);
 
-    color: #7BE8DC !important;
+    color: #99f6e4 !important;
 
     font-weight: 700;
 }
@@ -440,7 +402,7 @@
         0 0 0 2px rgba(46, 196, 182, .18);
 }
 
-.ant-select-selector {
+.race-select .ant-select-selector {
 
     background: #08352f !important;
 
@@ -461,57 +423,43 @@
    INPUT NUMBER
 ====================================================== */
 
-.ant-input-number {
-
-    width: 100%;
-
-    background: #08352f !important;
-
-    border-radius: 12px;
-
-    border:
-        1px solid rgba(46, 196, 182, .15);
+.race-input-number {
+    background: #0b3d37 !important;
+    border: 1px solid rgba(46, 196, 182, .18) !important;
 }
 
-.ant-input-number-input {
-
+.race-input-number input {
     color: white !important;
 }
 
-.ant-input-number-group-addon {
+.race-input-number .ant-input-number-group-addon {
+    background: #0b3d37 !important;
+    color: white;
+}
 
-    background: #08352f !important;
+.race-input-number:hover,
+.race-input-number:focus-within {
+    border-color: #14b8a6 !important;
 
-    color: white !important;
-
-    border:
-        1px solid rgba(46, 196, 182, .15);
+    box-shadow:
+        0 0 0 2px rgba(20, 184, 166, .18);
 }
 
 /* ======================================================
    SELECT
 ====================================================== */
 
-.dark-select {
-
-    background: #08352f;
-}
-
 .dark-select .ant-select-item {
-
+    background: #0b3d37;
     color: white;
 }
 
 .dark-select .ant-select-item-option-active {
-
-    background: #0f5048;
+    background: #0f766e !important;
 }
 
 .dark-select .ant-select-item-option-selected {
-
-    background: #0B6E4F;
-
-    color: white;
+    background: #15803d !important;
 }
 
 /* ======================================================
@@ -697,7 +645,10 @@
 }
 
 .btn-ready {
-    background: linear-gradient(135deg, #16c784, #13b672) !important;
+    background:
+        linear-gradient(135deg,
+            #f59e0b,
+            #d97706);
 }
 
 .btn-simulation {
@@ -749,25 +700,30 @@
 
 .race-link-btn {
     padding: 0 !important;
-    color: #5ef8d8 !important;
+    color: #2dd4bf !important;
     font-weight: 600;
 }
 
 .race-link-btn:hover {
-    color: #89ffe8 !important;
+    color: #99f6e4 !important;
 }
 
 .race-status-tag {
+    background: #15803d;
+    color: white;
+    border: none;
     border-radius: 999px;
     font-weight: 600;
-    padding: 2px 10px;
 }
 
 .race-gate {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #10b981, #06b6d4);
+    background:
+        linear-gradient(135deg,
+            #14b8a6,
+            #0f766e);
     color: white;
     display: flex;
     justify-content: center;
@@ -812,4 +768,186 @@
 
 .race-review-description {
     color: rgba(255, 255, 255, .72) !important;
+}
+
+/* =========================
+   Dark Select
+========================= */
+
+.race-select.ant-select .ant-select-selector {
+    background: #0b3d37 !important;
+    border: 1px solid rgba(46, 196, 182, .18) !important;
+    color: white !important;
+}
+
+.race-select.ant-select .ant-select-selection-item {
+    color: white !important;
+}
+
+.race-select.ant-select .ant-select-selection-placeholder {
+    color: #b7d8d3 !important;
+}
+
+.race-select.ant-select .ant-select-selection-search-input {
+    color: white !important;
+    background: transparent !important;
+}
+
+.race-select .ant-select-selection-item {
+    color: white !important;
+}
+
+.race-select .ant-select-selection-placeholder {
+    color: #9ca3af !important;
+}
+
+.race-select .ant-select-arrow {
+    color: #9ca3af;
+}
+
+.race-select.ant-select-focused .ant-select-selector,
+.race-select:hover .ant-select-selector {
+    border-color: #14b8a6 !important;
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, .18);
+}
+
+.dark-select {
+    background: #111827 !important;
+}
+
+.dark-select .ant-select-item {
+    color: white;
+}
+
+.dark-select .ant-select-item-option-selected {
+    background: #0f766e !important;
+    color: white;
+}
+
+.dark-select .ant-select-item-option-active {
+    background: rgba(20, 184, 166, .18) !important;
+}
+
+.reject-btn {
+    background: #b91c1c;
+    border: none;
+    color: white;
+}
+
+.reject-btn:hover {
+    background: #dc2626 !important;
+}
+
+.reject-btn:active {
+    transform: scale(.97);
+}
+
+.reject-modal .ant-modal-content {
+    background: #111827;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.reject-modal .ant-modal-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.reject-modal .ant-modal-title {
+    color: white;
+}
+
+.reject-modal .ant-modal-close {
+    color: white;
+}
+
+.reject-modal .ant-modal-body {
+    color: white;
+}
+
+.reject-modal textarea {
+    background: #0b3d37 !important;
+    color: white !important;
+    border: 1px solid rgba(46, 196, 182, .18);
+}
+
+.reject-modal textarea::placeholder {
+    color: #9ca3af;
+}
+
+.reject-modal textarea:focus {
+    border-color: #14b8a6 !important;
+
+    box-shadow:
+        0 0 0 2px rgba(20, 184, 166, .18);
+}
+
+.review-select .ant-select-selector {
+    background: #1f2937 !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, .08) !important;
+}
+
+.review-select .ant-select-selection-item {
+    color: white !important;
+}
+
+.review-select .ant-select-arrow {
+    color: white;
+}
+
+.review-table .ant-table-tbody>.ant-table-row-selected>td {
+    background: #111827 !important;
+}
+
+.review-table .ant-table-tbody>.ant-table-row-selected:hover>td {
+    background: #1f2937 !important;
+}
+
+.review-table .ant-table-row-selected td {
+    background: #111827 !important;
+}
+
+.race-track-tag {
+    background: #0f766e;
+    color: white;
+    border: none;
+    box-shadow:
+        0 0 10px rgba(20, 184, 166, .25);
+}
+
+.race-status-main-tag {
+    background: #0f766e;
+    color: white;
+    border: none;
+}
+
+.race-tag-cyan {
+    background: #14b8a6;
+    color: white;
+    border: none;
+}
+
+.race-tag-green {
+    background: #0f766e;
+    color: white;
+    border: none;
+}
+
+.race-tag-gold {
+    background: #d4a017;
+    color: white;
+    border: none;
+}
+
+.race-review-btn {
+
+    background:
+        linear-gradient(135deg,
+            #0f766e,
+            #14b8a6);
+
+    box-shadow:
+        0 10px 25px rgba(20, 184, 166, .3);
+
 }

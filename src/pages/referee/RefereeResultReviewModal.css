@@ -1,13 +1,27 @@
 .review-modal .ant-modal-content {
-    background: #111827;
-    border: 1px solid rgba(255, 255, 255, .08);
+    background:
+        linear-gradient(145deg,
+            #0b3d37,
+            #0f5048);
+
+    border: 1px solid rgba(46, 196, 182, .12);
+
     border-radius: 22px;
+
     overflow: hidden;
+
+    box-shadow:
+        0 24px 60px rgba(0, 0, 0, .45);
 }
 
 .review-modal .ant-modal-header {
-    background: transparent;
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
+
+    background:
+        rgba(11, 61, 55, .35);
+
+    border-bottom:
+        1px solid rgba(46, 196, 182, .10);
+
 }
 
 .review-modal .ant-modal-title {
@@ -23,14 +37,20 @@
 }
 
 .review-modal .ant-tabs-tab {
-    background: #1f2937 !important;
+    background: #08352f !important;
     color: #d1d5db !important;
     border: none !important;
     border-radius: 12px 12px 0 0;
 }
 
 .review-modal .ant-tabs-tab-active {
-    background: #2563eb !important;
+    background:
+        linear-gradient(135deg,
+            #0f766e,
+            #14b8a6) !important;
+
+    box-shadow:
+        0 8px 20px rgba(20, 184, 166, .25);
 }
 
 .review-modal .ant-tabs-tab-active .ant-tabs-tab-btn {
@@ -38,13 +58,22 @@
 }
 
 .review-section-card {
-    background: #1f2937;
-    border: none;
-    border-radius: 18px;
+
+    background:
+        rgba(11, 61, 55, .88);
+
+    backdrop-filter: blur(12px);
+
+    border:
+        1px solid rgba(46, 196, 182, .10);
+
+    border-radius: 20px;
+
 }
 
 .review-section-card .ant-card-head {
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    border-bottom:
+        1px solid rgba(46, 196, 182, .10);
 }
 
 .review-section-card .ant-card-head-title {
@@ -60,8 +89,8 @@
     border-radius: 18px;
     background:
         linear-gradient(135deg,
-            #2563eb,
-            #1e40af);
+            #0f766e,
+            #0e746a);
 }
 
 .review-stat-card .ant-statistic {
@@ -90,13 +119,13 @@
 }
 
 .review-table .ant-table-tbody>tr>td {
-    background: #1f2937;
+    background: #111827;
     color: white;
     border: none;
 }
 
 .review-table .ant-table-row:hover td {
-    background: #273549 !important;
+    background: #1f2937 !important;
 }
 
 .review-report-box {
@@ -124,6 +153,13 @@
     border-radius: 12px;
     height: 46px;
     font-weight: 600;
+
+    background: #0f766e;
+    border: none;
+}
+
+.review-button:hover {
+    background: #15803d !important;
 }
 
 .review-textarea textarea {
@@ -136,7 +172,8 @@
 }
 
 .review-textarea textarea:focus {
-    border-color: #2563eb;
+    border-color: #14b8a6;
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, .18);
 }
 
 .review-empty {

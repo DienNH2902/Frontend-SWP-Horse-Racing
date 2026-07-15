@@ -8,6 +8,8 @@ import {
     Form,
     InputNumber,
     Row,
+    Modal,
+    Input,
     Space,
     Spin,
     Statistic,
@@ -40,6 +42,10 @@ import {
     startRaceBroadcast,
     getBroadcastStatus,
 } from "../../api/services/race.service";
+
+import {
+    rejectRegistration,
+} from "../../api/services/registration.service";
 
 import {
     createRaceCondition,
@@ -82,46 +88,6 @@ function renderResultStatus(status) {
     );
 }
 
-function statusColor(status) {
-    switch (status) {
-        case "Scheduled":
-            return "blue";
-
-        case "Ready":
-            return "gold";
-
-        case "InProgress":
-            return "processing";
-
-        case "Finished":
-            return "green";
-
-        case "Cancelled":
-            return "red";
-
-        default:
-            return "default";
-    }
-}
-
-function trackConditionColor(condition) {
-    switch (condition) {
-        case "Good":
-            return "green";
-
-        case "Firm":
-            return "blue";
-
-        case "Soft":
-            return "orange";
-
-        case "Heavy":
-            return "red";
-
-        default:
-            return "default";
-    }
-}
 
 export default function RefereeRaceDetail() {
     const { id } = useParams();
@@ -145,6 +111,15 @@ export default function RefereeRaceDetail() {
     const [referee, setReferee] = useState(null);
 
     const [raceCourse, setRaceCourse] = useState(null);
+
+    const [removingHorse, setRemovingHorse] =
+        useState(false);
+
+    const [rejectModalOpen, setRejectModalOpen] = useState(false);
+
+    const [rejectReason, setRejectReason] = useState("");
+
+    const [selectedRegistrationId, setSelectedRegistrationId] = useState(null);
 
     const [report, setReport] =
         useState(null);
@@ -248,6 +223,8 @@ export default function RefereeRaceDetail() {
                 );
 
             setParticipants(raceParticipants);
+            console.log("Tournament participants:", tournamentParticipants);
+            console.log("Race participants:", raceParticipants);
 
             const promises = [];
 
@@ -372,7 +349,45 @@ export default function RefereeRaceDetail() {
         }
     }
 
+    const handleRemoveHorse = async () => {
 
+        if (!rejectReason.trim()) {
+            message.warning("Please enter reject reason.");
+            return;
+        }
+
+        try {
+
+            setRemovingHorse(true);
+
+            await rejectRegistration(
+                selectedRegistrationId,
+                {
+                    reason: rejectReason.trim()
+                }
+            );
+
+            message.success("Horse removed successfully.");
+
+            setRejectModalOpen(false);
+            setRejectReason("");
+            setSelectedRegistrationId(null);
+
+            await loadData();
+
+        } catch (error) {
+
+            message.error(
+                error.response?.data?.message ||
+                "Cannot remove horse."
+            );
+
+        } finally {
+
+            setRemovingHorse(false);
+
+        }
+    };
 
     const horseMap = useMemo(() => {
         return Object.fromEntries(
@@ -439,6 +454,8 @@ export default function RefereeRaceDetail() {
 
                 return (
                     <Select
+                        className="review-select"
+                        popupClassName="dark-select"
                         value={
                             selectedRawResultIds.includes(record._id)
                                 ? "Disqualified"
@@ -584,11 +601,37 @@ export default function RefereeRaceDetail() {
             title: "Status",
             render: () => (
                 <Tag
-                    color="success"
                     className="race-status-tag"
                 >
-                    Assigned
+                    Confirmed
                 </Tag>
+            ),
+        },
+        {
+            title: "Action",
+
+            align: "center",
+
+            render: (_, record) => (
+
+                <Button
+                    danger
+                    className="reject-btn"
+                    size="middle"
+                    loading={removingHorse}
+                    disabled={
+                        race.status !== "Scheduled" ||
+                        removingHorse
+                    }
+                    onClick={() => {
+                        setSelectedRegistrationId(record.registrationId);
+                        setRejectReason("");
+                        setRejectModalOpen(true);
+                    }}
+                >
+                    Reject
+                </Button>
+
             ),
         },
     ];
@@ -820,15 +863,15 @@ export default function RefereeRaceDetail() {
                             </Typography.Text>
 
                             <Space wrap>
-                                <Tag color={statusColor(race.status)}>
+                                <Tag className="race-status-main-tag">
                                     {race.status}
                                 </Tag>
 
-                                <Tag color="blue">
+                                <Tag className="race-tag-gold">
                                     Round {race.roundNumber}
                                 </Tag>
 
-                                <Tag color="purple">
+                                <Tag className="race-tag-cyan">
                                     Race #{race.raceOrder}
                                 </Tag>
                             </Space>
@@ -922,9 +965,7 @@ export default function RefereeRaceDetail() {
                     >
                         <Descriptions.Item label="Status">
                             <Tag
-                                color={statusColor(
-                                    race.status
-                                )}
+                                className="race-status-main-tag"
                             >
                                 {race.status}
                             </Tag>
@@ -953,11 +994,11 @@ export default function RefereeRaceDetail() {
                                         {raceCourse.location}
                                     </Typography.Text>
 
-                                    <Tag color="cyan">
+                                    <Tag className="race-tag-cyan">
                                         {raceCourse.distance}
                                     </Tag>
 
-                                    <Tag color="processing">
+                                    <Tag className="race-track-tag">
                                         {raceCourse.trackType}
                                     </Tag>
                                 </Space>
@@ -972,7 +1013,7 @@ export default function RefereeRaceDetail() {
                                     {referee?.fullName || "-"}
                                 </Typography.Text>
 
-                                <Tag color="green">
+                                <Tag className="race-status-main-tag">
                                     {referee.role}
                                 </Tag>
                             </Space>
@@ -1211,9 +1252,7 @@ export default function RefereeRaceDetail() {
                         <Descriptions.Item label="Track">
                             {condition?.trackCondition ? (
                                 <Tag
-                                    color={trackConditionColor(
-                                        condition.trackCondition
-                                    )}
+                                    className="race-track-tag"
                                 >
                                     {condition.trackCondition}
                                 </Tag>
@@ -1335,7 +1374,7 @@ export default function RefereeRaceDetail() {
                         <Timeline mode="left"
                             items={[
                                 {
-                                    color: "green",
+                                    color: "#14b8a6",
                                     children: `Created: ${race.createdAt
                                         ? new Date(
                                             race.createdAt
@@ -1403,7 +1442,7 @@ export default function RefereeRaceDetail() {
 
                     <Button
                         type="primary"
-                        className="race-detail-btn"
+                        className="race-detail-btn race-review-btn"
                         size="large"
                         onClick={() => setReviewOpen(true)}
                     >
@@ -1436,6 +1475,31 @@ export default function RefereeRaceDetail() {
                     reportReason={reportReason}
                     setReportReason={setReportReason}
                 />
+
+                <Modal
+                    className="reject-modal"
+                    title="Reject Registration"
+                    open={rejectModalOpen}
+                    onCancel={() => {
+                        setRejectModalOpen(false);
+                        setRejectReason("");
+                        setSelectedRegistrationId(null);
+                    }}
+                    onOk={handleRemoveHorse}
+                    okText="Reject"
+                    confirmLoading={removingHorse}
+                >
+                    <Typography.Paragraph>
+                        Please enter the reason for rejecting this registration.
+                    </Typography.Paragraph>
+
+                    <Input.TextArea
+                        rows={4}
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        placeholder="Reason..."
+                    />
+                </Modal>
 
                 <RefereeHorseDetailModal
                     open={horseOpen}
