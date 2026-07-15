@@ -1,4 +1,4 @@
-.dashboard-page {
+.referee-dashboard-page {
     padding: 0;
 }
 
@@ -6,7 +6,7 @@
    HERO SECTION
 =========================== */
 
-.dashboard-hero {
+.referee-dashboard-page .dashboard-hero {
     position: relative;
     overflow: hidden;
 
@@ -24,7 +24,7 @@
         0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
-.dashboard-hero::before {
+.referee-dashboard-page .dashboard-hero::before {
     content: "";
 
     position: absolute;
@@ -44,12 +44,12 @@
     z-index: 0;
 }
 
-.dashboard-hero .ant-card-body {
+.referee-dashboard-page .dashboard-hero .ant-card-body {
     position: relative;
     z-index: 1;
 }
 
-.dashboard-badge {
+.referee-dashboard-page .dashboard-badge {
     display: inline-block;
 
     padding: 6px 14px;
@@ -70,16 +70,16 @@
     margin-bottom: 12px;
 }
 
-.dashboard-title {
+.referee-dashboard-page .dashboard-title {
     color: #ffffff !important;
     margin-bottom: 10px !important;
 }
 
-.dashboard-title-highlight {
+.referee-dashboard-page .dashboard-title-highlight {
     color: #5ef8d8;
 }
 
-.dashboard-subtitle {
+.referee-dashboard-page .dashboard-subtitle {
     color: rgba(244, 255, 251, 0.75) !important;
     font-size: 16px;
     line-height: 1.8;
@@ -89,7 +89,7 @@
    STATISTIC CARDS
 =========================== */
 
-.dashboard-stat-card {
+.referee-dashboard-page .dashboard-stat-card {
     position: relative;
     overflow: hidden;
 
@@ -106,7 +106,7 @@
     transition: all 0.3s ease;
 }
 
-.dashboard-stat-card::before {
+.referee-dashboard-page .dashboard-stat-card::before {
     content: "";
 
     position: absolute;
@@ -124,18 +124,18 @@
     pointer-events: none;
 }
 
-.dashboard-stat-card:hover {
+.referee-dashboard-page .dashboard-stat-card:hover {
     transform: translateY(-6px);
 
     box-shadow:
         0 16px 40px rgba(0, 0, 0, 0.15);
 }
 
-.dashboard-stat-card:hover::before {
+.referee-dashboard-page .dashboard-stat-card:hover::before {
     opacity: 1;
 }
 
-.dashboard-icon {
+.referee-dashboard-page .dashboard-icon {
     width: 52px;
     height: 52px;
 
@@ -160,11 +160,11 @@
    TABLE
 =========================== */
 
-.dashboard-table .ant-table {
+.referee-dashboard-page .dashboard-table .ant-table {
     background: transparent;
 }
 
-.dashboard-table .ant-table-container {
+.referee-dashboard-page .dashboard-table .ant-table-container {
     background: transparent;
 
     border-radius: 14px;
@@ -172,11 +172,11 @@
     overflow: hidden;
 }
 
-.dashboard-table .ant-table-cell {
+.referee-dashboard-page .dashboard-table .ant-table-cell {
     background: transparent !important;
 }
 
-.dashboard-table .ant-table-thead>tr>th {
+.referee-dashboard-page .dashboard-table .ant-table-thead>tr>th {
     background:
         rgba(94, 248, 216, 0.08) !important;
 
@@ -192,7 +192,7 @@
     border-bottom: none !important;
 }
 
-.dashboard-table .ant-table-tbody>tr>td {
+.referee-dashboard-page .dashboard-table .ant-table-tbody>tr>td {
     background: transparent !important;
 
     color: #ffffff;
@@ -201,33 +201,33 @@
         1px solid rgba(255, 255, 255, 0.08);
 }
 
-.dashboard-table .ant-table-tbody>tr:hover>td {
+.referee-dashboard-page .dashboard-table .ant-table-tbody>tr:hover>td {
     background:
         rgba(94, 248, 216, 0.08) !important;
 }
 
-.dashboard-table .ant-pagination-item {
+.referee-dashboard-page .dashboard-table .ant-pagination-item {
     background: transparent;
 
     border-color:
         rgba(94, 248, 216, 0.2);
 }
 
-.dashboard-table .ant-pagination-item a {
+.referee-dashboard-page .dashboard-table .ant-pagination-item a {
     color: #ffffff;
 }
 
-.dashboard-table .ant-pagination-item-active {
+.referee-dashboard-page .dashboard-table .ant-pagination-item-active {
     background:
         rgba(94, 248, 216, 0.15);
 }
 
-.dashboard-table .ant-pagination-item-active a {
+.referee-dashboard-page .dashboard-table .ant-pagination-item-active a {
     color: #5ef8d8 !important;
 }
 
-.dashboard-table .ant-pagination-prev,
-.dashboard-table .ant-pagination-next {
+.referee-dashboard-page .dashboard-table .ant-pagination-prev,
+.referee-dashboard-page .dashboard-table .ant-pagination-next {
     color: #ffffff;
 }
 
@@ -235,7 +235,7 @@
    BUTTONS
 =========================== */
 
-.dashboard-btn {
+.referee-dashboard-page .dashboard-btn {
     background:
         linear-gradient(135deg,
             #5ef8d8,
@@ -255,7 +255,7 @@
     transition: all 0.25s ease;
 }
 
-.dashboard-btn:hover {
+.referee-dashboard-page .dashboard-btn:hover {
     transform: translateY(-2px);
 
     box-shadow:
@@ -266,7 +266,7 @@
    CONTENT CARDS
 =========================== */
 
-.dashboard-content-card {
+.referee-dashboard-page .dashboard-content-card {
     border-radius: 24px !important;
 
     overflow: hidden;
@@ -283,16 +283,16 @@
         0 15px 50px rgba(0, 0, 0, 0.12);
 }
 
-.dashboard-content-card .ant-card-head {
+.referee-dashboard-page .dashboard-content-card .ant-card-head {
     border-bottom:
         1px solid rgba(255, 255, 255, 0.08);
 }
 
-.dashboard-content-card .ant-card-head-title {
+.referee-dashboard-page .dashboard-content-card .ant-card-head-title {
     color: #ffffff;
 }
 
-.dashboard-content-card .ant-card-body {
+.referee-dashboard-page .dashboard-content-card .ant-card-body {
     color: #ffffff;
 }
 
@@ -300,7 +300,7 @@
    EMPTY STATE
 =========================== */
 
-.dashboard-content-card .ant-empty-description {
+.referee-dashboard-page .dashboard-content-card .ant-empty-description {
     color:
         rgba(244, 255, 251, 0.75);
 }
@@ -310,15 +310,15 @@
 =========================== */
 
 @media (max-width: 768px) {
-    .dashboard-title {
+    .referee-dashboard-page .dashboard-title {
         font-size: 32px !important;
     }
 
-    .dashboard-subtitle {
+    .referee-dashboard-page .dashboard-subtitle {
         font-size: 14px;
     }
 
-    .dashboard-icon {
+    .referee-dashboard-page .dashboard-icon {
         width: 46px;
         height: 46px;
         font-size: 18px;
