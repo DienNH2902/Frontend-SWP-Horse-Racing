@@ -51,6 +51,7 @@ import AdminBetManagement from "../pages/admin/AdminBetManagement";
 import BettingHistory from "../pages/spectator/BettingHistory";
 import AdminReportManagement from "../pages/admin/AdminReportManagement";
 import ReportPage from "../pages/ReportPage";
+import ContractManagement from "../pages/admin/ContractManagement";
 
 const OWNER_NAV = [
   { key: "owner-dashboard", to: "/owner", label: "Dashboard" },
@@ -236,6 +237,15 @@ export default function AppRoutes() {
         />
 
         <Route
+          path="/admin/contract"
+          element={
+            <AdminLayout>
+              <ContractManagement />
+            </AdminLayout>
+          }
+        />
+
+        <Route
           path="/admin/reward"
           element={
             <AdminLayout>
@@ -334,8 +344,8 @@ export default function AppRoutes() {
           />
 
           <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
-        </Route >
-      </Route >
+        </Route>
+      </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
         <Route
@@ -358,6 +368,6 @@ export default function AppRoutes() {
       </Route>
 
       <Route path="*" element={<Navigate to="/home" replace />} />
-    </Routes >
+    </Routes>
   );
 }
