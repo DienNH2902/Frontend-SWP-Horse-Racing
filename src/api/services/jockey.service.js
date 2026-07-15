@@ -473,8 +473,9 @@ export async function getAllContracts(params = {}) {
 }
 
 export async function getContractDetailByInvitationId(invitationId) {
-  const response = await axiosInstance.get(
+  const response = await apiClient.get(
     JOCKEY_INVITATION_ENDPOINTS.CONTRACT_DETAIL(invitationId),
+    { includeAuth: true },
   );
   return response.data;
 }
