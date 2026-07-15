@@ -27,11 +27,7 @@ import OwnerRaceResults from "../pages/owner/OwnerRaceResults";
 import OwnerTournaments from "../pages/owner/OwnerTournaments";
 import RefereeDashboard from "../pages/referee/RefereeDashboard";
 import RefereeRaceDetail from "../pages/referee/RefereeRaceDetail";
-import RefereeTournamentDetail from "../pages/referee/RefereeTournamentDetail";
 import RefereeTournamentList from "../pages/referee/RefereeTournamentList";
-import RefereeHorseDetail from "../pages/referee/RefereeHorseDetail";
-import RefereeResultReview from "../pages/referee/RefereeResultReview";
-import RefereeFinalResults from "../pages/referee/RefereeFinalResults";
 import RoleHome from "../pages/RoleHome";
 import OAuthSuccess from "../pages/auth/OAuthSuccess";
 import ForgotPassword from "../pages/auth/ForgotPassword";
@@ -337,26 +333,9 @@ export default function AppRoutes() {
             element={<RefereeTournamentList />}
           />
 
-          <Route
-            path="referee/tournaments/:id"
-            element={<RefereeTournamentDetail />}
-          />
-
           <Route path="referee/races/:id" element={<RefereeRaceDetail />} />
-
-          <Route
-            path="referee/races/:id/results"
-            element={<RefereeResultReview />}
-          />
-
-          <Route
-            path="referee/races/:id/final"
-            element={<RefereeFinalResults />}
-          />
-
-          <Route path="referee/horses/:id" element={<RefereeHorseDetail />} />
-        </Route>
-      </Route>
+        </Route >
+      </Route >
 
       <Route element={<ProtectedRoute allowedRoles={["Jockey"]} />}>
         <Route
@@ -379,6 +358,6 @@ export default function AppRoutes() {
       </Route>
 
       <Route path="*" element={<Navigate to="/home" replace />} />
-    </Routes>
+    </Routes >
   );
 }
