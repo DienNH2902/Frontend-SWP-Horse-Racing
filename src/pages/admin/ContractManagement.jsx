@@ -323,7 +323,7 @@ function ContractManagement() {
 
       setContracts((current) =>
         current.map((item) =>
-          item.id === contractId ? { ...item, status: "Completed" } : item,
+          item.id === contractId ? { ...item, status: "COMPLETED" } : item,
         ),
       );
     } catch (error) {
