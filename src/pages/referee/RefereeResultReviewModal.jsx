@@ -76,7 +76,9 @@ export default function RefereeResultReviewModal({
             centered
             title={
                 <div>
+
                     <Title
+                        className="review-title"
                         level={3}
                         style={{
                             color: "#fff",
@@ -87,9 +89,8 @@ export default function RefereeResultReviewModal({
                     </Title>
 
                     <Text
-                        style={{
-                            color: "#9ca3af"
-                        }}>
+                        className="review-subtitle"
+                    >
                         Review race rankings, referee reports and
                         confirm the official race results.
                     </Text>
@@ -118,6 +119,7 @@ export default function RefereeResultReviewModal({
                                 }}
                             >
                                 <Alert
+                                    className="review-alert"
                                     showIcon
                                     type="warning"
                                     style={{
@@ -150,7 +152,13 @@ export default function RefereeResultReviewModal({
                                         style={{ marginTop: 24 }}
                                     >
 
-                                        <Text strong>
+                                        <Text
+                                            strong
+                                            style={{
+                                                color: "#ffffff",
+                                                fontSize: 15,
+                                            }}
+                                        >
                                             Reason
                                         </Text>
 
@@ -235,6 +243,7 @@ export default function RefereeResultReviewModal({
                                 }}
                             >
                                 <Alert
+                                    className="review-alert"
                                     showIcon
                                     type={hasFinalResult ? "success" : "info"}
                                     message={
@@ -342,6 +351,7 @@ export default function RefereeResultReviewModal({
                                         </Title>
 
                                         <Descriptions
+                                            className="review-description"
                                             bordered
                                             column={1}
                                             size="middle"

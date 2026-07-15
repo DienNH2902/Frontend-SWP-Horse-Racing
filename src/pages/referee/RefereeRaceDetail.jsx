@@ -223,8 +223,6 @@ export default function RefereeRaceDetail() {
                 );
 
             setParticipants(raceParticipants);
-            console.log("Tournament participants:", tournamentParticipants);
-            console.log("Race participants:", raceParticipants);
 
             const promises = [];
 
@@ -701,17 +699,11 @@ export default function RefereeRaceDetail() {
 
             const result = await runSimulation(id);
 
-            console.log(result);
 
             message.success("Simulation completed successfully.");
 
             await loadData();
         } catch (error) {
-            console.log(error);
-            console.log(error.response);
-            console.log(error.response?.status);
-            console.log(error.response?.data);
-
             message.error(
                 error.response?.data?.message ||
                 "Cannot run simulation."
@@ -1312,13 +1304,15 @@ export default function RefereeRaceDetail() {
                             }
                             name="windSpeed"
                         >
-                            <InputNumber
-                                className="race-input-number"
-                                min={0}
-                                max={100}
-                                addonAfter="km/h"
-                                style={{ width: "100%" }}
-                            />
+                            <Space.Compact style={{ width: "100%" }}>
+                                <InputNumber
+                                    className="race-input-number"
+                                    min={0}
+                                    max={100}
+                                    style={{ width: "100%" }}
+                                />
+                                <Button disabled>km/h</Button>
+                            </Space.Compact>
                         </Form.Item>
 
                         <Form.Item

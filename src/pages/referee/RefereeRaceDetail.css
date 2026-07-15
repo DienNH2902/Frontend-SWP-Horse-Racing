@@ -434,7 +434,13 @@
 
 .race-input-number .ant-input-number-group-addon {
     background: #0b3d37 !important;
-    color: white;
+    color: #ffffff !important;
+    border: 1px solid rgba(46, 196, 182, .18) !important;
+}
+
+.race-input-number .ant-input-number-group-addon,
+.race-input-number .ant-input-number-group-addon * {
+    color: #ffffff !important;
 }
 
 .race-input-number:hover,
@@ -449,17 +455,61 @@
    SELECT
 ====================================================== */
 
+/* ===== Select ===== */
+
+.race-select.ant-select {
+    width: 100%;
+}
+
+.race-select.ant-select .ant-select-selector {
+    background: #0b3d37 !important;
+    border: 1px solid rgba(46, 196, 182, .18) !important;
+    color: #fff !important;
+}
+
+.race-select.ant-select .ant-select-selection-item {
+    color: #fff !important;
+}
+
+.race-select.ant-select .ant-select-selection-placeholder {
+    color: rgba(255, 255, 255, .55) !important;
+}
+
+.race-select.ant-select .ant-select-arrow {
+    color: #fff !important;
+}
+
+.race-select.ant-select.ant-select-focused .ant-select-selector,
+.race-select.ant-select:hover .ant-select-selector {
+    border-color: #14b8a6 !important;
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, .18) !important;
+}
+
+.race-select.ant-select-outlined .ant-select-selector {
+    background: #0b3d37 !important;
+}
+
+.race-select.ant-select-single .ant-select-selector {
+    background: #0b3d37 !important;
+}
+
+/* Dropdown */
+
+.dark-select.ant-select-dropdown {
+    background: #0b3d37 !important;
+}
+
 .dark-select .ant-select-item {
-    background: #0b3d37;
-    color: white;
+    color: #fff !important;
+    background: transparent !important;
 }
 
 .dark-select .ant-select-item-option-active {
-    background: #0f766e !important;
+    background: rgba(20, 184, 166, .18) !important;
 }
 
 .dark-select .ant-select-item-option-selected {
-    background: #15803d !important;
+    background: #0f766e !important;
 }
 
 /* ======================================================
@@ -950,4 +1000,27 @@
     box-shadow:
         0 10px 25px rgba(20, 184, 166, .3);
 
+}
+
+/* Wrapper */
+.race-input-number.ant-input-number-group-wrapper {
+    width: 100%;
+    display: block;
+}
+
+/* Group */
+.race-input-number .ant-input-number-group {
+    width: 100%;
+    display: flex;
+}
+
+/* Input */
+.race-input-number.ant-input-number {
+    width: 100%;
+}
+
+/* Input element */
+.race-input-number input {
+    width: 100%;
+    color: white !important;
 }
