@@ -1186,13 +1186,13 @@ export default function RefereeRaceDetail() {
                             }
                         />
                     ) : (
-                        <div className="rounded-2xl overflow-hidden">
+                        <div className="race-table-frame">
                             <Table
                                 className="race-table"
                                 bordered={false}
                                 pagination={false}
                                 size="large"
-                                rowClassName={() => "bg-transparent"}
+                                rowClassName={() => "race-transparent-row"}
                                 bordered={false}
                                 size="middle"
                                 rowKey={(record) => record.registrationId}
