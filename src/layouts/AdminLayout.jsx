@@ -43,6 +43,11 @@ const NAV_GROUPS = [
         label: "Jockey Licenses",
         icon: <IdcardOutlined />,
       },
+      {
+        path: "/admin/contract",
+        label: "Contracts",
+        icon: <IdcardOutlined />,
+      },
     ],
   },
   {

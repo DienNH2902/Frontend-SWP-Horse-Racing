@@ -460,6 +460,35 @@ export async function getJockeyInvitationContract(invitationId) {
   return unwrapData(response);
 }
 
+export async function getAllContracts(params = {}) {
+  const response = await apiClient.get(
+    JOCKEY_INVITATION_ENDPOINTS.ALL_CONTRACTS,
+    {
+      params,
+      includeAuth: true,
+    },
+  );
+
+  return unwrapCollection(response);
+}
+
+export async function getContractDetailByInvitationId(invitationId) {
+  const response = await axiosInstance.get(
+    JOCKEY_INVITATION_ENDPOINTS.CONTRACT_DETAIL(invitationId),
+  );
+  return response.data;
+}
+
+export async function completeContract(contractId) {
+  const response = await apiClient.patch(
+    JOCKEY_INVITATION_ENDPOINTS.COMPLETE_CONTRACT(contractId),
+    {},
+    { includeAuth: true },
+  );
+
+  return unwrapData(response);
+}
+
 export async function getJockeyRaceSchedule() {
   const response = await apiClient.get(SCHEDULE_ENDPOINTS.UPCOMING_JOCKEY, {
     includeAuth: true,

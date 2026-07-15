@@ -1,0 +1,643 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  Descriptions,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  message,
+} from "antd";
+import "antd/dist/reset.css";
+import {
+  getAllContracts,
+  completeContract,
+  getJockeyInvitationById,
+  getContractDetailByInvitationId,
+} from "../../api/services/jockey.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
+import { getTournaments } from "../../api/services/tournament.service";
+import { getUsers } from "../../api/services/user.service";
+
+const { Text, Title } = Typography;
+
+function pick(source, keys, fallback = "") {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null) {
+      return source[key];
+    }
+  }
+  return fallback;
+}
+
+function resolveList(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.items)) return response.items;
+  return [];
+}
+
+function formatDate(value) {
+  if (!value) return "N/A";
+  if (typeof value === "string" && value.includes("/")) {
+    return value;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatMoney(value) {
+  if (value === undefined || value === null) return "N/A";
+  return Number(value).toLocaleString("vi-VN") + " VND";
+}
+
+function normalizeUser(user, index) {
+  const id = pick(user, ["id", "_id", "userId"], `user-${index}`);
+  const status = pick(user, ["status", "accountStatus", "isActive"], "Active");
+  const rawRole = pick(user, ["role", "roleName", "type"], "Spectator");
+
+  // Chuẩn hóa tên role theo đúng định dạng chuỗi route của Swagger API
+  let normalizedRole = "Spectator";
+  const lowerRole = rawRole.toLowerCase();
+  if (lowerRole.includes("jockey")) normalizedRole = "Jockey";
+  else if (lowerRole.includes("referee")) normalizedRole = "Referee";
+  else if (lowerRole.includes("owner") || lowerRole.includes("horse"))
+    normalizedRole = "Horse-Owner";
+
+  return {
+    key: id,
+    id,
+    avatar: pick(user, ["avatar", "avatarUrl", "imageUrl", "photoUrl"], ""),
+    email: pick(user, ["email", "mail"], "N/A"),
+    fullName: pick(
+      user,
+      ["fullName", "name", "displayName", "username"],
+      "Unnamed User",
+    ),
+    dateOfBirth: pick(user, ["dateOfBirth", "dob", "birthDate"], ""),
+    phoneNumber: pick(user, ["phoneNumber", "phone", "mobile"], "N/A"),
+    address: pick(user, ["address", "location"], "N/A"),
+    gender:
+      user?.gender !== undefined && user?.gender !== null
+        ? Number(user.gender)
+        : 1,
+    role: normalizedRole,
+    status:
+      typeof status === "boolean" ? (status ? "Active" : "Disabled") : status,
+    weight: user?.weight,
+    height: user?.height,
+    experienceYears: user?.experienceYears,
+    certification: user?.certification,
+    stableName: user?.stableName,
+    stableAddress: user?.stableAddress,
+    createdAt: pick(user, ["createdAt", "createdDate", "registeredAt"], ""),
+    updatedAt: pick(user, ["updatedAt", "modifiedAt"], ""),
+  };
+}
+
+function normalizeContract(
+  contract,
+  index,
+  usersMap = new Map(),
+  tournamentsMap = new Map(),
+) {
+  const id = pick(contract, ["id", "_id", "contractId"], `contract-${index}`);
+  const invitationId = pick(
+    contract,
+    ["invitationId", "invitation", "jockeyInvitationId"],
+    id,
+  );
+
+  const jockeyId = pick(
+    contract,
+    ["jockeyId", "jockey._id", "jockey.id", "jockey"],
+    "",
+  );
+  const ownerId = pick(
+    contract,
+    ["horseOwnerId", "ownerId", "owner._id", "owner.id", "owner"],
+    "",
+  );
+  const tournamentId = pick(
+    contract,
+    ["tournamentId", "tournament._id", "tournament.id", "tournament"],
+    "",
+  );
+
+  const jockeyFromMap = usersMap.get(jockeyId);
+  const ownerFromMap = usersMap.get(ownerId);
+  const tournamentFromMap = tournamentsMap.get(tournamentId);
+
+  return {
+    key: id,
+    id,
+    invitationId,
+    contractNumber: pick(
+      contract,
+      ["contractNumber", "code", "contractCode"],
+      id,
+    ),
+    tournamentTitle:
+      pick(
+        contract,
+        ["tournamentTitle", "tournamentName", "tournament.title"],
+        "",
+      ) ||
+      tournamentFromMap?.title ||
+      "N/A",
+    tournamentId,
+    jockeyName:
+      pick(
+        contract,
+        ["jockeyName", "jockeyFullName", "jockey.fullName", "jockey.name"],
+        "",
+      ) ||
+      jockeyFromMap?.fullName ||
+      "N/A",
+    ownerName:
+      pick(
+        contract,
+        ["ownerName", "horseOwnerName", "owner.fullName", "owner.name"],
+        "",
+      ) ||
+      ownerFromMap?.fullName ||
+      "N/A",
+    status: pick(contract, ["status", "contractStatus"], "Pending"),
+    salary: pick(
+      contract,
+      ["contractAmount", "salary", "amount", "agreedAmount"],
+      null,
+    ),
+    ownerShareRate: contract?.ownerShareRate ?? "N/A",
+    jockeyShareRate: contract?.jockeyShareRate ?? "N/A",
+    ownerCompensationRate: contract?.ownerCompensationRate ?? "N/A",
+    jockeyCompensationRate: contract?.jockeyCompensationRate ?? "N/A",
+    signedAt: pick(contract, ["signedAt", "createdAt", "startDate"], ""),
+    completedAt: pick(contract, ["completedAt", "endedAt", "updatedAt"], ""),
+    raw: contract,
+  };
+}
+
+function normalizeTournament(item, index) {
+  const id = item?._id || item?.id || `tournament-${index}`;
+
+  return {
+    key: id,
+    id,
+    title: item?.title || "Untitled",
+    startDate: item?.startDate || "",
+    endDate: item?.endDate || "",
+    location: item?.location || "",
+    status: item?.status || "Preparing",
+    availableSlot: item?.availableSlot ?? "N/A",
+  };
+}
+
+function getContractStatusColor(status) {
+  switch (status) {
+    case "ACTIVE":
+      return "blue";
+    case "COMPLETED":
+      return "green";
+    case "CANCELLED":
+      return "red";
+    case "BREACHED":
+      return "volcano";
+    default:
+      return "default";
+  }
+}
+
+function ContractManagement() {
+  const [contracts, setContracts] = useState([]);
+  const [tournaments, setTournaments] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Filters
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState(null);
+  const [selectedTournamentFilter, setSelectedTournamentFilter] =
+    useState(null);
+
+  // Actions state
+  const [completingId, setCompletingId] = useState(null);
+  const [selectedContractDetail, setSelectedContractDetail] = useState(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+
+  const shouldFixColumns = useAdminTableFixedColumns();
+
+  async function loadTournaments() {
+    try {
+      const response = await getTournaments();
+      setTournaments(resolveList(response).map(normalizeTournament));
+    } catch (error) {
+      message.error(error?.message || "Unable to load tournaments");
+    }
+  }
+
+  async function loadContracts() {
+    setIsLoading(true);
+    try {
+      const params = {};
+      if (selectedStatusFilter) params.status = selectedStatusFilter;
+      if (selectedTournamentFilter)
+        params.tournamentId = selectedTournamentFilter;
+
+      const response = await getAllContracts(params);
+      const data = resolveList(response);
+      setContracts(data.map(normalizeContract));
+    } catch (error) {
+      message.error(error?.message || "Unable to load contracts");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchData() {
+      setIsLoading(true);
+      try {
+        const [tournamentsRes, usersRes, contractsRes] = await Promise.all([
+          getTournaments(),
+          getUsers(),
+          getAllContracts({
+            ...(selectedStatusFilter && { status: selectedStatusFilter }),
+            ...(selectedTournamentFilter && {
+              tournamentId: selectedTournamentFilter,
+            }),
+          }),
+        ]);
+
+        if (isMounted) {
+          const tournamentList =
+            resolveList(tournamentsRes).map(normalizeTournament);
+          const userList = resolveList(usersRes).map(normalizeUser);
+          const rawContracts = resolveList(contractsRes);
+
+          // Map dùng để tra cứu nhanh thông tin theo ID
+          const usersMap = new Map(userList.map((u) => [u.id, u]));
+          const tournamentsMap = new Map(tournamentList.map((t) => [t.id, t]));
+
+          setTournaments(tournamentList);
+          setUsers(userList);
+          setContracts(
+            rawContracts.map((c, i) =>
+              normalizeContract(c, i, usersMap, tournamentsMap),
+            ),
+          );
+        }
+      } catch (error) {
+        if (isMounted) {
+          message.error(error?.message || "Unable to load page data");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedStatusFilter, selectedTournamentFilter]);
+
+  async function handleCompleteContract(contractId) {
+    setCompletingId(contractId);
+    try {
+      await completeContract(contractId);
+      message.success("Contract marked as completed successfully");
+
+      setContracts((current) =>
+        current.map((item) =>
+          item.id === contractId ? { ...item, status: "Completed" } : item,
+        ),
+      );
+    } catch (error) {
+      message.error(error?.message || "Failed to complete contract");
+    } finally {
+      setCompletingId(null);
+    }
+  }
+
+  async function handleViewDetail(record) {
+    setIsDetailLoading(true);
+    setSelectedContractDetail(record);
+    try {
+      const detailData = await getContractDetailByInvitationId(
+        record.invitationId || record.id,
+      );
+
+      if (detailData) {
+        const usersMap = new Map(users.map((u) => [u.id, u]));
+        const tournamentsMap = new Map(tournaments.map((t) => [t.id, t]));
+
+        setSelectedContractDetail((prev) => ({
+          ...prev,
+          ...normalizeContract(detailData, 0, usersMap, tournamentsMap),
+        }));
+      }
+    } catch (error) {
+      // Fallback giữ nguyên record cũ nếu API detail phát sinh lỗi
+    } finally {
+      setIsDetailLoading(false);
+    }
+  }
+
+  const columns = useMemo(
+    () => [
+      {
+        title: "Contract Code",
+        dataIndex: "contractNumber",
+        fixed: shouldFixColumns ? "left" : undefined,
+        width: 160,
+        render: (text) => <Text strong>{text}</Text>,
+      },
+      {
+        title: "Tournament Title",
+        dataIndex: "tournamentTitle",
+        width: 220,
+      },
+      {
+        title: "Jockey",
+        dataIndex: "jockeyName",
+        width: 180,
+      },
+      {
+        title: "Horse Owner",
+        dataIndex: "ownerName",
+        width: 180,
+      },
+      {
+        title: "Amount",
+        dataIndex: "salary",
+        width: 150,
+        render: formatMoney,
+      },
+      {
+        title: "Signed Date",
+        dataIndex: "signedAt",
+        width: 140,
+        render: (value) => formatDate(value),
+      },
+      {
+        title: "Status",
+        dataIndex: "status",
+        width: 140,
+        render: (status) => (
+          <Tag
+            color={getContractStatusColor(status)}
+            style={{ fontWeight: 600 }}
+          >
+            {status}
+          </Tag>
+        ),
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        fixed: shouldFixColumns ? "right" : undefined,
+        width: 200,
+        render: (_, record) => {
+          const isCompleted = record.status === "COMPLETED";
+
+          return (
+            <Space size="small">
+              <Button
+                className="user-management-link-btn"
+                size="small"
+                onClick={() => handleViewDetail(record)}
+              >
+                View Detail
+              </Button>
+
+              {!isCompleted && (
+                <Popconfirm
+                  title="Complete Contract"
+                  description="Are you sure you want to mark this contract as completed?"
+                  onConfirm={() => handleCompleteContract(record.id)}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <Button
+                    type="primary"
+                    size="small"
+                    loading={completingId === record.id}
+                    style={{
+                      backgroundColor: "#007a68",
+                      borderColor: "#007a68",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Complete
+                  </Button>
+                </Popconfirm>
+              )}
+            </Space>
+          );
+        },
+      },
+    ],
+    [completingId, shouldFixColumns],
+  );
+
+  return (
+    <section className="user-management">
+      <style>{`
+        .user-management-header {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 22px;
+        }
+        .user-management-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: auto;
+          flex-wrap: wrap;
+        }
+        .user-management-kicker {
+          color: #007a68;
+          font-size: 13px;
+          font-weight: 950;
+          letter-spacing: 0;
+          text-transform: uppercase;
+        }
+        .user-management-header h1.ant-typography {
+          margin: 6px 0 0;
+          color: #06332e;
+          font-size: clamp(30px, 4vw, 44px);
+          line-height: 1.08;
+          font-weight: 950;
+          letter-spacing: 0;
+        }
+        .user-management-card {
+          border: 1px solid #ccefe7;
+          border-radius: 8px;
+          background: #fff;
+          box-shadow: 0 22px 70px rgba(13, 70, 63, 0.08);
+          overflow: hidden;
+        }
+        .user-management-table.ant-table-wrapper .ant-table-thead > tr > th {
+          color: #52726e;
+          background: #f3fffc;
+          font-weight: 950;
+        }
+        .user-management-table.ant-table-wrapper .ant-table-tbody > tr > td {
+          color: #0d2321;
+          background: #fff;
+        }
+        .user-management-link-btn.ant-btn {
+          border-color: #bdeee5;
+          color: #006755;
+          font-weight: 850;
+          background: #fff;
+        }
+        .user-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
+        }
+        .user-management-refresh.ant-btn {
+          border-color: transparent;
+          color: #06332e;
+          background: #69f8dd;
+          font-weight: 900;
+        }
+        .user-management-refresh.ant-btn:hover {
+          border-color: transparent !important;
+          color: #06332e !important;
+          background: #75ffe6 !important;
+        }
+        @media (max-width: 920px) {
+          .user-management-header {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+        }
+      `}</style>
+
+      <div className="user-management-header">
+        <div>
+          <div className="user-management-kicker">Admin dashboard</div>
+          <Title level={1}>Contract Management</Title>
+        </div>
+        <div className="user-management-actions">
+          <Select
+            placeholder="Filter by Tournament"
+            allowClear
+            style={{ width: 230 }}
+            onChange={(val) => setSelectedTournamentFilter(val)}
+            options={tournaments.map((t) => ({
+              value: t.id,
+              label: t.title,
+            }))}
+          />
+
+          <Select
+            placeholder="Filter by Status"
+            allowClear
+            style={{ width: 170 }}
+            onChange={(val) => setSelectedStatusFilter(val)}
+          >
+            <Select.Option value="ACTIVE">Active</Select.Option>
+            <Select.Option value="COMPLETED">Completed</Select.Option>
+            <Select.Option value="CANCELLED">Cancelled</Select.Option>
+            <Select.Option value="BREACHED">Breached</Select.Option>
+          </Select>
+
+          {/* <Button className="user-management-refresh" onClick={loadContracts}>
+            Refresh
+          </Button> */}
+        </div>
+      </div>
+
+      <div className="user-management-card">
+        <Table
+          className="user-management-table"
+          columns={columns}
+          dataSource={contracts}
+          loading={isLoading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: false,
+            showTotal: (total) => `${total} contracts`,
+          }}
+          scroll={{ x: 1200 }}
+        />
+      </div>
+
+      <Modal
+        title={`Contract Detail - ${selectedContractDetail?.contractNumber || ""}`}
+        open={Boolean(selectedContractDetail)}
+        width={700}
+        footer={[
+          <Button key="close" onClick={() => setSelectedContractDetail(null)}>
+            Close
+          </Button>,
+        ]}
+        onCancel={() => setSelectedContractDetail(null)}
+      >
+        <Descriptions
+          bordered
+          column={2}
+          size="small"
+          loading={isDetailLoading}
+          style={{ marginTop: 16 }}
+        >
+          <Descriptions.Item label="Contract Code" span={2}>
+            <Text strong>{selectedContractDetail?.contractNumber}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Tournament Title" span={2}>
+            {selectedContractDetail?.tournamentTitle}
+          </Descriptions.Item>
+          <Descriptions.Item label="Jockey">
+            {selectedContractDetail?.jockeyName}
+          </Descriptions.Item>
+          <Descriptions.Item label="Horse Owner">
+            {selectedContractDetail?.ownerName}
+          </Descriptions.Item>
+          <Descriptions.Item label="Salary Value">
+            {formatMoney(selectedContractDetail?.salary)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Status">
+            <Tag color={getContractStatusColor(selectedContractDetail?.status)}>
+              {selectedContractDetail?.status}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label="Signed Date">
+            {formatDate(selectedContractDetail?.signedAt)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Owner Share Rate">
+            {selectedContractDetail?.ownerShareRate}%
+          </Descriptions.Item>
+          <Descriptions.Item label="Jockey Share Rate">
+            {selectedContractDetail?.jockeyShareRate}%
+          </Descriptions.Item>
+          <Descriptions.Item label="Owner Compensation">
+            {selectedContractDetail?.ownerCompensationRate}%
+          </Descriptions.Item>
+          <Descriptions.Item label="Jockey Compensation">
+            {selectedContractDetail?.jockeyCompensationRate}%
+          </Descriptions.Item>
+        </Descriptions>
+      </Modal>
+    </section>
+  );
+}
+
+export default ContractManagement;
