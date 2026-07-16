@@ -591,6 +591,14 @@ export default function AdminWithdrawalManagement() {
             <Descriptions.Item label="Requested By">
               {detailData.userId?.fullName}
             </Descriptions.Item>
+            <Descriptions.Item label="User ID">
+              <Text code>
+                {detailData.userId?._id ||
+                  detailData.userId?.id ||
+                  detailData.userId ||
+                  "N/A"}
+              </Text>
+            </Descriptions.Item>
             <Descriptions.Item label="Contact Email">
               {detailData.userId?.email}
             </Descriptions.Item>

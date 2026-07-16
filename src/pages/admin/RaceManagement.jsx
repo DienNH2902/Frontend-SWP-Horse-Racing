@@ -246,7 +246,9 @@ async function resolveParticipant(participant, index) {
   return {
     key: `${participant?.gateNumber ?? index}-${horseId}-${jockeyId}`,
     gateNumber: participant?.gateNumber ?? "N/A",
+    horseId: horseId || "N/A",
     horseName: horse?.name || "N/A",
+    jockeyId: jockeyId || "N/A",
     jockeyName: getPersonName(jockey) || "N/A",
   };
 }
@@ -1336,6 +1338,9 @@ function RaceManagement() {
               <Descriptions.Item label="Tournament">
                 {detailRace.tournamentTitle}
               </Descriptions.Item>
+              <Descriptions.Item label="Tournament ID">
+                <Text code>{detailRace.tournamentId || "N/A"}</Text>
+              </Descriptions.Item>
               <Descriptions.Item label="Round">
                 {detailRace.roundNumber}
               </Descriptions.Item>
@@ -1356,8 +1361,14 @@ function RaceManagement() {
               <Descriptions.Item label="Referee">
                 {getRefereeDisplayName(detailRace)}
               </Descriptions.Item>
+              <Descriptions.Item label="Referee ID">
+                <Text code>{detailRace.refereeId || "N/A"}</Text>
+              </Descriptions.Item>
               <Descriptions.Item label="Race Course">
                 {getRaceCourseDisplayName(detailRace)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Race Course ID">
+                <Text code>{detailRace.raceCourseId || "N/A"}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Total Bettors">
                 {detailRace.totalBettors}
@@ -1403,8 +1414,20 @@ function RaceManagement() {
                   render: (value) => <Text strong>{value}</Text>,
                 },
                 {
+                  title: "Horse ID",
+                  dataIndex: "horseId",
+                  width: 190,
+                  render: (value) => <Text code>{value}</Text>,
+                },
+                {
                   title: "Jockey",
                   dataIndex: "jockeyName",
+                },
+                {
+                  title: "Jockey ID",
+                  dataIndex: "jockeyId",
+                  width: 190,
+                  render: (value) => <Text code>{value}</Text>,
                 },
               ]}
             />

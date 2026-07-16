@@ -625,14 +625,48 @@ function ContractManagement() {
           loading={isDetailLoading}
           style={{ marginTop: 16 }}
         >
+          <Descriptions.Item label="Contract ID" span={2}>
+            <Text code>{selectedContractDetail?.id || "N/A"}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Invitation ID" span={2}>
+            <Text code>{selectedContractDetail?.invitationId || "N/A"}</Text>
+          </Descriptions.Item>
           <Descriptions.Item label="Contract Code" span={2}>
             <Text strong>{selectedContractDetail?.contractNumber}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Tournament ID" span={2}>
+            <Text code>{selectedContractDetail?.tournamentId || "N/A"}</Text>
           </Descriptions.Item>
           <Descriptions.Item label="Tournament Title" span={2}>
             {selectedContractDetail?.tournamentTitle}
           </Descriptions.Item>
+          <Descriptions.Item label="Jockey ID">
+            <Text code>
+              {selectedContractDetail?.raw?.jockeyId?._id ||
+                selectedContractDetail?.raw?.jockeyId?.id ||
+                selectedContractDetail?.raw?.jockey?._id ||
+                selectedContractDetail?.raw?.jockey?.id ||
+                selectedContractDetail?.raw?.jockeyId ||
+                selectedContractDetail?.raw?.jockey ||
+                "N/A"}
+            </Text>
+          </Descriptions.Item>
           <Descriptions.Item label="Jockey">
             {selectedContractDetail?.jockeyName}
+          </Descriptions.Item>
+          <Descriptions.Item label="Horse Owner ID">
+            <Text code>
+              {selectedContractDetail?.raw?.horseOwnerId?._id ||
+                selectedContractDetail?.raw?.horseOwnerId?.id ||
+                selectedContractDetail?.raw?.ownerId?._id ||
+                selectedContractDetail?.raw?.ownerId?.id ||
+                selectedContractDetail?.raw?.owner?._id ||
+                selectedContractDetail?.raw?.owner?.id ||
+                selectedContractDetail?.raw?.horseOwnerId ||
+                selectedContractDetail?.raw?.ownerId ||
+                selectedContractDetail?.raw?.owner ||
+                "N/A"}
+            </Text>
           </Descriptions.Item>
           <Descriptions.Item label="Horse Owner">
             {selectedContractDetail?.ownerName}
