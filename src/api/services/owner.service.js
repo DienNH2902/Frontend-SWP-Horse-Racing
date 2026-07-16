@@ -1,6 +1,7 @@
 import { apiClient } from "../client";
 import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpoint";
 import { HORSE_ENDPOINTS } from "../endpoints/horse.endpoint";
+import { SCHEDULE_ENDPOINTS } from "../endpoints/schedule.endpoint";
 import { getProfile } from "./auth.service";
 import { getAvailableJockeys, getUserById } from "./user.service";
 
@@ -23,6 +24,9 @@ function unwrapCollection(response) {
   if (Array.isArray(data?.horses)) return data.horses;
   if (Array.isArray(data?.invitations)) return data.invitations;
   if (Array.isArray(data?.jockeyInvitations)) return data.jockeyInvitations;
+  if (Array.isArray(data?.schedules)) return data.schedules;
+  if (Array.isArray(data?.upcomingSchedules)) return data.upcomingSchedules;
+  if (Array.isArray(data?.races)) return data.races;
   if (Array.isArray(data?.content)) return data.content;
   if (Array.isArray(data?.records)) return data.records;
 
@@ -318,6 +322,80 @@ function buildOwnerStandings(races = []) {
     }));
 }
 
+function normalizeOwnerUpcomingRace(item = {}, index = 0) {
+  const race = item.race || item.raceInfo || {};
+  const tournament =
+    item.tournament ||
+    item.tournamentInfo ||
+    race.tournament ||
+    race.tournamentInfo ||
+    {};
+  const horse = item.horse || item.horseInfo || race.horse || race.horseInfo || {};
+  const jockey = item.jockey || item.jockeyInfo || race.jockey || race.jockeyInfo || {};
+  const raceCourse =
+    item.raceCourse ||
+    item.raceCourseInfo ||
+    race.raceCourse ||
+    race.raceCourseInfo ||
+    {};
+  const startTime = pickFirstValue(
+    item,
+    ["startTime", "scheduledAt"],
+    pickFirstValue(race, ["startTime", "scheduledAt"], ""),
+  );
+  const parsedStartTime = startTime ? new Date(startTime) : null;
+  const hasValidStartTime = parsedStartTime && !Number.isNaN(parsedStartTime.getTime());
+  const raceId =
+    pickFirstValue(item, ["raceId", "race_id"]) ||
+    getReferenceId(race, ["id", "_id", "raceId"]);
+  const horseId =
+    pickFirstValue(item, ["horseId", "horse_id"]) ||
+    getReferenceId(horse, ["id", "_id", "horseId"]);
+  const jockeyId =
+    pickFirstValue(item, ["jockeyId", "jockey_id"]) ||
+    getReferenceId(jockey, ["id", "_id", "jockeyId"]);
+
+  return {
+    ...item,
+    id: pickFirstValue(item, ["id", "_id", "scheduleId"]) || `${raceId || "race"}-${horseId || index}`,
+    raceId,
+    raceName:
+      pickFirstValue(item, ["raceName", "name", "title"]) ||
+      pickFirstValue(race, ["raceName", "name", "title"], "Unnamed race"),
+    date:
+      pickFirstValue(item, ["date", "raceDate"]) ||
+      pickFirstValue(
+        race,
+        ["date", "raceDate"],
+        hasValidStartTime ? parsedStartTime.toISOString() : "",
+      ),
+    startTime,
+    status: pickFirstValue(item, ["status", "raceStatus"], pickFirstValue(race, ["status"], "Upcoming")),
+    tournamentId:
+      pickFirstValue(item, ["tournamentId", "tournament_id"]) ||
+      getReferenceId(tournament, ["id", "_id", "tournamentId"]) ||
+      pickFirstValue(race, ["tournamentId"], ""),
+    tournamentName:
+      pickFirstValue(item, ["tournamentName", "tournamentTitle"]) ||
+      pickFirstValue(tournament, ["name", "title"], "N/A"),
+    raceCourseName:
+      pickFirstValue(item, ["raceCourseName", "venue", "location"]) ||
+      pickFirstValue(race, ["raceCourseName", "venue", "location"]) ||
+      pickFirstValue(raceCourse, ["name", "location"], "N/A"),
+    totalSlots: Number(pickFirstValue(item, ["totalSlots"], pickFirstValue(race, ["totalSlots"], 0))),
+    filledSlots: Number(pickFirstValue(item, ["filledSlots"], pickFirstValue(race, ["filledSlots"], 0))),
+    availableSlots: Number(pickFirstValue(item, ["availableSlots"], pickFirstValue(race, ["availableSlots"], 0))),
+    jockeyId,
+    jockeyName:
+      pickFirstValue(item, ["jockeyName", "jockeyFullName"]) ||
+      pickFirstValue(jockey, ["fullName", "name", "jockeyName"], "N/A"),
+    horseId,
+    horseName:
+      pickFirstValue(item, ["horseName"]) ||
+      pickFirstValue(horse, ["name", "horseName"], "N/A"),
+  };
+}
+
 export async function getOwnerJockeyWorkspace() {
   const [horsesResponse, jockeys] = await Promise.all([
     apiClient.get(HORSE_ENDPOINTS.MY_HORSES, { includeAuth: true }),
@@ -410,14 +488,25 @@ export async function registerContractToTournament(contractId) {
 }
 
 export async function getOwnerRaceCenter() {
-  const profile = await getOwnerProfile();
+  const [profile, upcomingRaces] = await Promise.all([
+    getOwnerProfile(),
+    getOwnerUpcomingRaces(),
+  ]);
   const normalizedRaces = historyRaceOwnerToRaces(profile?.historyRaceOwner || [], profile || {});
 
   return {
-    races: normalizedRaces,
+    races: upcomingRaces,
     standings: buildOwnerStandings(normalizedRaces),
     historyRaceOwner: profile?.historyRaceOwner || [],
   };
+}
+
+export async function getOwnerUpcomingRaces() {
+  const response = await apiClient.get(SCHEDULE_ENDPOINTS.UPCOMING_OWNER, {
+    includeAuth: true,
+  });
+
+  return unwrapCollection(response).map(normalizeOwnerUpcomingRace);
 }
 
 export async function getOwnerProfile() {

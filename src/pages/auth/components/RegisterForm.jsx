@@ -121,7 +121,7 @@ export default function RegisterForm() {
     const payload = {
       ...values,
       dateOfBirth: values.dateOfBirth?.format(
-        values.role === "Referee" ? "DD/MM/YYYY" : "YYYY/MM/DD",
+        values.role === "Referee" ? "DD/MM/YYYY" : "DD/MM/YYYY",
       ),
     };
 

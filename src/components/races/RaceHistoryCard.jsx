@@ -1,4 +1,5 @@
-import { Card, Empty, Table, Tag, Typography } from "antd";
+import { Button, Card, Descriptions, Empty, Modal, Space, Table, Tag, Typography } from "antd";
+import { useState } from "react";
 
 function asArray(value) {
   if (!value) return [];
@@ -14,6 +15,27 @@ function formatRaceDate(value) {
   return parsed.toLocaleDateString("vi-VN");
 }
 
+function formatRaceDateTime(value) {
+  if (!value) return "N/A";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function displayValue(value) {
+  if (value === undefined || value === null || value === "") return "N/A";
+
+  return String(value);
+}
+
 function buildHistoryRows(history) {
   return asArray(history)
     .filter((item) => item && typeof item === "object" && (item.raceId || item.raceName))
@@ -23,14 +45,17 @@ function buildHistoryRows(history) {
       tournamentName: item.tournamentName || "",
       raceId: item.raceId || "N/A",
       raceName: item.raceName || "",
-      date: formatRaceDate(item.date),
+      date: formatRaceDate(item.date || item.raceDate),
+      rawDate: item.date || item.raceDate || "",
       ownerId: item.horseOwnerId || "",
       ownerName: item.horseOwnerName || "",
       jockeyId: item.jockeyProfileId || "",
       jockeyName: item.jockeyName || "",
       horseName: item.horseName || "",
-      finalRank: item.finalRank ?? "",
+      rawRank: item.rawRank ?? "",
+      finalRank: item.finalRank ?? item.rank ?? "",
       result: item.result || null,
+      raw: item,
     }));
 }
 
@@ -38,10 +63,16 @@ function RaceLabel({ name }) {
   return name ? <Typography.Text strong>{name}</Typography.Text> : "N/A";
 }
 
-export default function RaceHistoryCard({ history, loading = false, participantLabel = "Participant" }) {
+export default function RaceHistoryCard({
+  history,
+  loading = false,
+  participantLabel = "Participant",
+  compact = false,
+}) {
+  const [selectedRace, setSelectedRace] = useState(null);
   const rows = buildHistoryRows(history);
 
-  const columns = [
+  const fullColumns = [
     {
       title: "Tournament",
       dataIndex: "tournamentName",
@@ -82,23 +113,101 @@ export default function RaceHistoryCard({ history, loading = false, participantL
     },
   ];
 
+  const compactColumns = [
+    {
+      title: "Race",
+      dataIndex: "raceName",
+      render: (value, record) => (
+        <Space direction="vertical" size={0}>
+          <RaceLabel name={value} />
+          <Typography.Text type="secondary">
+            {record.tournamentName || "N/A"}
+          </Typography.Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Rank",
+      dataIndex: "finalRank",
+      width: 96,
+      render: (value) => (value ? <Tag color={Number(value) === 1 ? "gold" : "blue"}>#{value}</Tag> : "N/A"),
+    },
+    {
+      title: "Date",
+      dataIndex: "date",
+      width: 120,
+      responsive: ["md"],
+    },
+    {
+      title: "Action",
+      width: 110,
+      render: (_, record) => (
+        <Button size="small" onClick={() => setSelectedRace(record)}>
+          View detail
+        </Button>
+      ),
+    },
+  ];
+
+  const columns = compact ? compactColumns : fullColumns;
+
   return (
-    <Card title="Race history" extra={<Tag color="gold">{rows.length} races</Tag>}>
-      <Table
-        rowKey="key"
-        loading={loading}
-        columns={columns}
-        dataSource={rows}
-        pagination={{ pageSize: 5, hideOnSinglePage: true }}
-        locale={{
-          emptyText: (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="No race history yet"
-            />
-          ),
-        }}
-      />
-    </Card>
+    <>
+      <Card title="Race history" extra={<Tag color="gold">{rows.length} races</Tag>}>
+        <Table
+          rowKey="key"
+          loading={loading}
+          columns={columns}
+          dataSource={rows}
+          pagination={{ pageSize: 5, hideOnSinglePage: true }}
+          locale={{
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="No race history yet"
+              />
+            ),
+          }}
+        />
+      </Card>
+
+      {compact && (
+        <Modal
+          title={selectedRace?.raceName || "Race detail"}
+          open={Boolean(selectedRace)}
+          onCancel={() => setSelectedRace(null)}
+          footer={<Button onClick={() => setSelectedRace(null)}>Close</Button>}
+          width={720}
+          destroyOnHidden
+        >
+          {selectedRace ? (
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Race">
+                {displayValue(selectedRace.raceName)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tournament">
+                {displayValue(selectedRace.tournamentName)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Date">
+                {formatRaceDateTime(selectedRace.rawDate)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Final rank">
+                {displayValue(selectedRace.finalRank)}
+              </Descriptions.Item>
+              <Descriptions.Item label={participantLabel}>
+                {participantLabel === "Owner"
+                  ? displayValue(selectedRace.ownerName || selectedRace.ownerId)
+                  : displayValue(selectedRace.jockeyName || selectedRace.jockeyId)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Horse">
+                {displayValue(selectedRace.horseName)}
+              </Descriptions.Item>
+            </Descriptions>
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Select a race" />
+          )}
+        </Modal>
+      )}
+    </>
   );
 }

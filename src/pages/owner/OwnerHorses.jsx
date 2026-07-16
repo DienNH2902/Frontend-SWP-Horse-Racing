@@ -12,6 +12,7 @@ import {
   Modal,
   Popconfirm,
   Select,
+  Skeleton,
   Space,
   Table,
   Tabs,
@@ -495,9 +496,10 @@ export default function OwnerHorses() {
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
       <Card
+        className="owner-horses-card"
         title="My horses"
         extra={
-          <Space wrap>
+          <Space className="owner-horses-toolbar" wrap>
             <Input.Search
               allowClear
               placeholder="Search horse"
@@ -526,16 +528,103 @@ export default function OwnerHorses() {
           </Space>
         }
       >
-        <Table
-          className="owner-horses-table"
-          rowKey="id"
-          loading={loading}
-          columns={columns}
-          dataSource={filteredRows}
-          size="middle"
-          pagination={{ pageSize: 5, showSizeChanger: false }}
-          locale={{ emptyText: "No horses match the current filters" }}
-        />
+        <div className="owner-horses-table-wrap">
+          <Table
+            className="owner-horses-table"
+            rowKey="id"
+            loading={loading}
+            columns={columns}
+            dataSource={filteredRows}
+            size="middle"
+            pagination={{ pageSize: 5, showSizeChanger: false }}
+            locale={{ emptyText: "No horses match the current filters" }}
+          />
+        </div>
+
+        <div className="owner-horse-mobile-list">
+          {loading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : filteredRows.length === 0 ? (
+            <Empty description="No horses match the current filters" />
+          ) : (
+            filteredRows.map((horse) => (
+              <article className="owner-horse-mobile-card" key={horse.id}>
+                <div className="owner-horse-mobile-main">
+                  <Upload
+                    name="file"
+                    accept="image/*"
+                    showUploadList={false}
+                    customRequest={(options) =>
+                      handleHorseAvatarUpload(horse, options)
+                    }
+                    disabled={uploadingHorseId === horse.id}
+                  >
+                    <button
+                      type="button"
+                      className="horse-avatar-upload"
+                      title="Upload horse photo"
+                      aria-label={`Upload photo for ${horse.name || "horse"}`}
+                      disabled={uploadingHorseId === horse.id}
+                    >
+                      <Avatar size={48} src={getImageUrl(horse.imageUrl)}>
+                        {uploadingHorseId === horse.id ? (
+                          <CameraOutlined />
+                        ) : (
+                          getHorseInitial(horse.name)
+                        )}
+                      </Avatar>
+                      <span className="horse-avatar-upload-icon">
+                        <CameraOutlined />
+                      </span>
+                    </button>
+                  </Upload>
+
+                  <div className="owner-horse-mobile-copy">
+                    <Typography.Text strong>
+                      {horse.name || "Unnamed horse"}
+                    </Typography.Text>
+                    <Typography.Text type="secondary">
+                      {horse.color || "No color"}
+                    </Typography.Text>
+                  </div>
+
+                  <Tag color={getHorseStatusColor(horse.status)}>
+                    {horse.status}
+                  </Tag>
+                </div>
+
+                <div className="owner-horse-mobile-actions">
+                  <Button
+                    size="small"
+                    type="primary"
+                    icon={<EyeOutlined />}
+                    onClick={() => openDetailModal(horse)}
+                  >
+                    Detail
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => openEditModal(horse)}
+                  >
+                    Edit
+                  </Button>
+                  <Popconfirm
+                    title="Delete horse?"
+                    description="This action cannot be undone."
+                    okText="Delete"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => handleDelete(horse)}
+                  >
+                    <Button size="small" danger icon={<DeleteOutlined />}>
+                      Delete
+                    </Button>
+                  </Popconfirm>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
       </Card>
 
       <Modal
@@ -637,6 +726,20 @@ export default function OwnerHorses() {
       </Modal>
 
       <style>{`
+        .owner-horses-card .ant-card-head {
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .owner-horses-toolbar {
+          justify-content: flex-end;
+        }
+
+        .owner-horses-table-wrap {
+          width: 100%;
+          overflow-x: auto;
+        }
+
         .owner-horses-table .ant-table {
           border: 1px solid #e8f1ef;
           border-radius: 12px;
@@ -699,6 +802,48 @@ export default function OwnerHorses() {
 
         .owner-horse-actions .ant-btn-icon-only {
           width: 32px;
+        }
+
+        .owner-horse-mobile-list {
+          display: none;
+        }
+
+        .owner-horse-mobile-card {
+          display: grid;
+          gap: 14px;
+          padding: 14px;
+          border: 1px solid #e2eeeb;
+          border-radius: 12px;
+          background: #ffffff;
+        }
+
+        .owner-horse-mobile-main {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .owner-horse-mobile-copy {
+          min-width: 0;
+          display: grid;
+          gap: 2px;
+        }
+
+        .owner-horse-mobile-copy .ant-typography {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .owner-horse-mobile-actions {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .owner-horse-mobile-actions .ant-btn {
+          width: 100%;
         }
 
         .owner-detail-stack {
@@ -846,6 +991,38 @@ export default function OwnerHorses() {
         }
 
         @media (max-width: 640px) {
+          .owner-horses-card .ant-card-head {
+            flex-direction: column;
+          }
+
+          .owner-horses-card .ant-card-head-title,
+          .owner-horses-card .ant-card-extra {
+            width: 100%;
+          }
+
+          .owner-horses-toolbar {
+            display: grid !important;
+            grid-template-columns: 1fr;
+            width: 100%;
+          }
+
+          .owner-horses-toolbar .ant-space-item,
+          .owner-horses-toolbar .ant-input-search,
+          .owner-horses-toolbar .ant-select,
+          .owner-horses-toolbar .ant-btn,
+          .owner-horses-toolbar a {
+            width: 100%;
+          }
+
+          .owner-horses-table-wrap {
+            display: none;
+          }
+
+          .owner-horse-mobile-list {
+            display: grid;
+            gap: 12px;
+          }
+
           .owner-horse-actions {
             justify-content: flex-start;
           }
@@ -856,6 +1033,21 @@ export default function OwnerHorses() {
 
           .owner-detail-hero {
             align-items: flex-start;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .owner-horse-mobile-main {
+            grid-template-columns: auto minmax(0, 1fr);
+          }
+
+          .owner-horse-mobile-main .ant-tag {
+            grid-column: 2;
+            width: fit-content;
+          }
+
+          .owner-horse-mobile-actions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

@@ -41,6 +41,7 @@ import {
   getUserById,
   getUsersByRole,
 } from "../../api/services/user.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 const { Title, Text } = Typography;
 
@@ -306,6 +307,7 @@ function RaceManagement() {
   const [batchRaceCount, setBatchRaceCount] = useState(1);
   const [assigningRefereeRace, setAssigningRefereeRace] = useState(null);
   const [assigningCourseRace, setAssigningCourseRace] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadReferees() {
     try {
@@ -673,7 +675,7 @@ function RaceManagement() {
       {
         title: "Race",
         dataIndex: "name",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 220,
         render: (value) => <Text strong>{value}</Text>,
       },
@@ -735,7 +737,7 @@ function RaceManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 260,
         render: (_, record) => (
           <Space>
@@ -761,7 +763,7 @@ function RaceManagement() {
         ),
       },
     ],
-    [raceCoursesById, referees],
+    [raceCoursesById, referees, shouldFixColumns],
   );
 
   return (
@@ -1324,85 +1326,88 @@ function RaceManagement() {
       >
         {detailRace && (
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <Descriptions bordered column={1} size="middle">
-            <Descriptions.Item label="Name">
-              {detailRace.name}
-            </Descriptions.Item>
-            <Descriptions.Item label="Tournament">
-              {detailRace.tournamentTitle}
-            </Descriptions.Item>
-            <Descriptions.Item label="Round">
-              {detailRace.roundNumber}
-            </Descriptions.Item>
-            <Descriptions.Item label="Race Order">
-              {detailRace.raceOrder}
-            </Descriptions.Item>
-            <Descriptions.Item label="Date">
-              {formatDate(detailRace.date)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Start Time">
-              {formatDateTime(detailRace.startTime)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Status">
-              <Tag color={statusColor(detailRace.status)}>
-                {detailRace.status}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Referee">
-              {getRefereeDisplayName(detailRace)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Race Course">
-              {getRaceCourseDisplayName(detailRace)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Total Bettors">
-              {detailRace.totalBettors}
-            </Descriptions.Item>
-            <Descriptions.Item label="Slots">
-              {detailRace.filledSlots ?? "N/A"} /{" "}
-              {detailRace.totalSlots ?? "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Available Slots">
-              {detailRace.availableSlots ?? "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Horses">
-              {detailRace.participants.length}
-            </Descriptions.Item>
-            <Descriptions.Item label="Referee Confirmed At">
-              {formatDateTime(detailRace.refereeConfirmedAt)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Simulated At">
-              {formatDateTime(detailRace.simulatedAt)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Created At">
-              {formatDateTime(detailRace.createdAt)}
-            </Descriptions.Item>
-          </Descriptions>
+            <Descriptions bordered column={1} size="middle">
+              <Descriptions.Item label="ID">
+                {detailRace.id}
+              </Descriptions.Item>
+              <Descriptions.Item label="Name">
+                {detailRace.name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tournament">
+                {detailRace.tournamentTitle}
+              </Descriptions.Item>
+              <Descriptions.Item label="Round">
+                {detailRace.roundNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="Race Order">
+                {detailRace.raceOrder}
+              </Descriptions.Item>
+              <Descriptions.Item label="Date">
+                {formatDate(detailRace.date)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Start Time">
+                {formatDateTime(detailRace.startTime)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag color={statusColor(detailRace.status)}>
+                  {detailRace.status}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Referee">
+                {getRefereeDisplayName(detailRace)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Race Course">
+                {getRaceCourseDisplayName(detailRace)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Total Bettors">
+                {detailRace.totalBettors}
+              </Descriptions.Item>
+              <Descriptions.Item label="Slots">
+                {detailRace.filledSlots ?? "N/A"} /{" "}
+                {detailRace.totalSlots ?? "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Available Slots">
+                {detailRace.availableSlots ?? "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Horses">
+                {detailRace.participants.length}
+              </Descriptions.Item>
+              <Descriptions.Item label="Referee Confirmed At">
+                {formatDateTime(detailRace.refereeConfirmedAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Simulated At">
+                {formatDateTime(detailRace.simulatedAt)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Created At">
+                {formatDateTime(detailRace.createdAt)}
+              </Descriptions.Item>
+            </Descriptions>
 
-          <Table
-            rowKey="key"
-            size="small"
-            pagination={false}
-            dataSource={detailRace.participants}
-            locale={{ emptyText: "No participants in this race" }}
-            columns={[
-              {
-                title: "Gate",
-                dataIndex: "gateNumber",
-                width: 100,
-                sorter: (a, b) => Number(a.gateNumber) - Number(b.gateNumber),
-                defaultSortOrder: "ascend",
-              },
-              {
-                title: "Horse",
-                dataIndex: "horseName",
-                render: (value) => <Text strong>{value}</Text>,
-              },
-              {
-                title: "Jockey",
-                dataIndex: "jockeyName",
-              },
-            ]}
-          />
+            <Table
+              rowKey="key"
+              size="small"
+              pagination={false}
+              dataSource={detailRace.participants}
+              locale={{ emptyText: "No participants in this race" }}
+              columns={[
+                {
+                  title: "Gate",
+                  dataIndex: "gateNumber",
+                  width: 100,
+                  sorter: (a, b) => Number(a.gateNumber) - Number(b.gateNumber),
+                  defaultSortOrder: "ascend",
+                },
+                {
+                  title: "Horse",
+                  dataIndex: "horseName",
+                  render: (value) => <Text strong>{value}</Text>,
+                },
+                {
+                  title: "Jockey",
+                  dataIndex: "jockeyName",
+                },
+              ]}
+            />
           </Space>
         )}
       </Modal>

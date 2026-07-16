@@ -31,7 +31,7 @@ function normalizeTournament(tournament = {}) {
     id: pickFirstValue(tournament, ["id", "_id", "tournamentId"]),
     title: pickFirstValue(tournament, ["title", "name"], "Unnamed tournament"),
     description: pickFirstValue(tournament, ["description"], ""),
-    imageUrl: pickFirstValue(tournament, ["imageUrl", "image"], ""),
+    imageUrl: pickFirstValue(tournament, ["imageUrl", "image"], undefined),
     startDate: pickFirstValue(tournament, ["startDate"], "N/A"),
     endDate: pickFirstValue(tournament, ["endDate"], "N/A"),
     location: pickFirstValue(tournament, ["location"], "N/A"),

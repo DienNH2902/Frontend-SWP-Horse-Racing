@@ -576,8 +576,9 @@ export default function OwnerJockeyRaceWorkspace() {
       render: (_, record) => (
         <Button
           size="small"
-          disabled={!isAcceptedInvitation(record)}
-          loading={contractLoadingId === record.id}
+          disabled={
+            !isAcceptedInvitation(record) || contractLoadingId === record.id
+          }
           onClick={() => openInvitationContract(record)}
         >
           Contract

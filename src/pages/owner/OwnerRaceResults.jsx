@@ -3,36 +3,20 @@ import { Alert, Card, Col, Row, Space, Statistic, Table, Tag, Typography } from 
 import { getOwnerRaceCenter } from "../../api/services/owner.service";
 import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 
-function formatMoney(value) {
-  return `$${Number(value || 0).toLocaleString()}`;
-}
+function formatDateTime(value) {
+  if (!value) return "N/A";
 
-function collectFinalRanks(history) {
-  const ranks = [];
+  const parsed = new Date(value);
 
-  function visit(value) {
-    if (!value) return;
+  if (Number.isNaN(parsed.getTime())) return String(value);
 
-    if (Array.isArray(value)) {
-      value.forEach(visit);
-      return;
-    }
-
-    if (typeof value !== "object") return;
-
-    const rank = Number(value.finalRank ?? value.rank ?? value.rawRank);
-    if (Number.isFinite(rank)) {
-      ranks.push(rank);
-    }
-
-    ["historyRace", "rounds", "races"].forEach((key) => {
-      if (Array.isArray(value[key])) visit(value[key]);
-    });
-  }
-
-  visit(history);
-
-  return ranks;
+  return parsed.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function OwnerRaceResults() {
@@ -64,42 +48,38 @@ export default function OwnerRaceResults() {
     };
   }, []);
 
-  const finishedRaces = data.races.filter((race) => race.status === "Finished");
-  const totalPrize = finishedRaces.reduce((sum, race) => sum + (race.result?.prize || 0), 0);
-  const historyRanks = collectFinalRanks(data.historyRaceOwner);
-  const raceRanks = data.races
-    .map((race) => Number(race.result?.rank))
-    .filter((rank) => Number.isFinite(rank));
-  const bestRanks = historyRanks.length ? historyRanks : raceRanks;
-  const bestRank = bestRanks.length ? Math.min(...bestRanks) : null;
+  const horseCount = new Set(data.races.map((race) => race.horseId || race.horseName).filter(Boolean)).size;
+  const availableSlots = data.races.reduce((sum, race) => sum + Number(race.availableSlots || 0), 0);
 
   const raceColumns = [
     {
       title: "Race",
-      dataIndex: "name",
+      dataIndex: "raceName",
       render: (value, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{value}</Typography.Text>
-          <Typography.Text type="secondary">{record.tournament}</Typography.Text>
+          <Typography.Text type="secondary">{record.tournamentName}</Typography.Text>
         </Space>
       ),
     },
-    { title: "Horse", dataIndex: "myHorse" },
+    { title: "Horse", dataIndex: "horseName" },
+    { title: "Jockey", dataIndex: "jockeyName", responsive: ["md"] },
+    {
+      title: "Start time",
+      dataIndex: "startTime",
+      render: (value, record) => formatDateTime(value || record.date),
+      responsive: ["md"],
+    },
+    { title: "Race course", dataIndex: "raceCourseName", responsive: ["lg"] },
+    {
+      title: "Slots",
+      render: (_, record) => `${record.filledSlots || 0}/${record.totalSlots || 0}`,
+      responsive: ["lg"],
+    },
     {
       title: "Status",
       dataIndex: "status",
-      render: (value) => <Tag color={value === "Finished" ? "green" : "blue"}>{value}</Tag>,
-    },
-    {
-      title: "Result",
-      render: (_, record) =>
-        record.result ? `#${record.result.rank} - ${record.result.time}` : "Upcoming",
-      responsive: ["md"],
-    },
-    {
-      title: "Prize",
-      render: (_, record) => formatMoney(record.result?.prize),
-      responsive: ["lg"],
+      render: (value) => <Tag color={value === "Finished" ? "green" : "blue"}>{value || "Upcoming"}</Tag>,
     },
   ];
 
@@ -110,28 +90,28 @@ export default function OwnerRaceResults() {
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
           <Card>
-            <Statistic title="Races tracked" value={data.races.length} />
+            <Statistic title="Upcoming races" value={data.races.length} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
           <Card>
-            <Statistic title="Best finish" value={Number.isFinite(bestRank) ? `#${bestRank}` : "-"} />
+            <Statistic title="Horses scheduled" value={horseCount} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
           <Card>
-            <Statistic title="Prize earned" value={totalPrize} prefix="$" />
+            <Statistic title="Available slots" value={availableSlots} />
           </Card>
         </Col>
       </Row>
 
-      <Card title="Race information and results">
+      <Card title="Upcoming races">
         <Table
-          rowKey="id"
+          rowKey={(record) => record.id || `${record.raceId}-${record.horseId}`}
           loading={loading}
           columns={raceColumns}
           dataSource={data.races}
-          pagination={false}
+          pagination={{ pageSize: 6, showSizeChanger: false }}
         />
       </Card>
 

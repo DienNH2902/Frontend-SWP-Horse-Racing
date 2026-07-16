@@ -21,6 +21,7 @@ import {
   getWithdrawalDetail,
   rejectWithdrawal,
 } from "../../api/services/withdrawal.service";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 dayjs.extend(customParseFormat);
 
@@ -133,6 +134,7 @@ export default function AdminWithdrawalManagement() {
   const [searchKey, setSearchKey] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [loadingDetailId, setLoadingDetailId] = useState(null);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadWithdrawals() {
     setIsLoading(true);
@@ -235,7 +237,7 @@ export default function AdminWithdrawalManagement() {
       {
         title: "Requester",
         dataIndex: "fullName",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 180,
         render: (text, record) => (
           <div>
@@ -288,7 +290,7 @@ export default function AdminWithdrawalManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
+        fixed: shouldFixColumns ? "right" : undefined,
         width: 180,
         render: (_, record) => (
           <Space>
@@ -324,7 +326,7 @@ export default function AdminWithdrawalManagement() {
         ),
       },
     ],
-    [isDetailLoading],
+    [isDetailLoading, shouldFixColumns],
   );
 
   return (

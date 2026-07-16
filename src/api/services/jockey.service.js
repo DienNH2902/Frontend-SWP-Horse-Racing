@@ -85,8 +85,37 @@ function normalizeUpcomingSchedule(schedule = {}, index = 0) {
 
   return {
     ...schedule,
+    raceId:
+      pickFirstValue(schedule, ["raceId"], "") ||
+      pickFirstValue(race, ["id", "_id", "raceId"], ""),
+    raceName: pickFirstValue(
+      schedule,
+      ["raceName", "name", "title"],
+      pickFirstValue(race, ["name", "title", "raceName"], "Unnamed race"),
+    ),
+    tournamentId:
+      pickFirstValue(schedule, ["tournamentId"], "") ||
+      pickFirstValue(race, ["tournamentId"], "") ||
+      pickFirstValue(tournament, ["id", "_id", "tournamentId"], ""),
+    raceCourseName: pickFirstValue(
+      schedule,
+      ["raceCourseName"],
+      pickFirstValue(raceCourse, ["name"], "N/A"),
+    ),
+    totalSlots: pickFirstValue(schedule, ["totalSlots"], pickFirstValue(race, ["totalSlots"], 0)),
+    filledSlots: pickFirstValue(schedule, ["filledSlots"], pickFirstValue(race, ["filledSlots"], 0)),
+    availableSlots: pickFirstValue(
+      schedule,
+      ["availableSlots"],
+      pickFirstValue(race, ["availableSlots"], 0),
+    ),
+    status: pickFirstValue(
+      schedule,
+      ["status", "assignmentStatus"],
+      pickFirstValue(race, ["status"], "Upcoming"),
+    ),
     id:
-      pickFirstValue(schedule, ["id", "_id", "scheduleId"], "") ||
+      pickFirstValue(schedule, ["id", "_id", "scheduleId", "raceId"], "") ||
       getReferenceId(race) ||
       `upcoming-${index}`,
     race: pickFirstValue(
@@ -427,6 +456,36 @@ export async function getJockeyInvitationContract(invitationId) {
   const response = await apiClient.get(JOCKEY_INVITATION_ENDPOINTS.CONTRACT(invitationId), {
     includeAuth: true,
   });
+
+  return unwrapData(response);
+}
+
+export async function getAllContracts(params = {}) {
+  const response = await apiClient.get(
+    JOCKEY_INVITATION_ENDPOINTS.ALL_CONTRACTS,
+    {
+      params,
+      includeAuth: true,
+    },
+  );
+
+  return unwrapCollection(response);
+}
+
+export async function getContractDetailByInvitationId(invitationId) {
+  const response = await apiClient.get(
+    JOCKEY_INVITATION_ENDPOINTS.CONTRACT_DETAIL(invitationId),
+    { includeAuth: true },
+  );
+  return response.data;
+}
+
+export async function completeContract(contractId) {
+  const response = await apiClient.patch(
+    JOCKEY_INVITATION_ENDPOINTS.COMPLETE_CONTRACT(contractId),
+    {},
+    { includeAuth: true },
+  );
 
   return unwrapData(response);
 }

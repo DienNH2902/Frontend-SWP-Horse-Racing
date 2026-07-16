@@ -8,6 +8,7 @@ import {
   HomeOutlined,
   IdcardOutlined,
   LogoutOutlined,
+  MenuOutlined,
   ProfileOutlined,
   ScheduleOutlined,
   TeamOutlined,
@@ -16,6 +17,7 @@ import {
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
 import { getDisplayName, getInitials } from "../utils/roles";
 
@@ -39,6 +41,11 @@ const NAV_GROUPS = [
       {
         path: "/admin/jockey-license",
         label: "Jockey Licenses",
+        icon: <IdcardOutlined />,
+      },
+      {
+        path: "/admin/contract",
+        label: "Contracts",
         icon: <IdcardOutlined />,
       },
     ],
@@ -91,6 +98,7 @@ function AdminLayout({ children }) {
   const displayName = getDisplayName(user) || "Administrator";
   const initials = getInitials(displayName);
   const avatarUrl = user?.avatar || user?.avatarUrl || user?.imageUrl;
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   function isActive(path) {
     if (path === "/admin/dashboard") {
@@ -105,8 +113,14 @@ function AdminLayout({ children }) {
     navigate("/login", { replace: true });
   }
 
+  function closeMobileMenu() {
+    setIsMobileMenuOpen(false);
+  }
+
   return (
-    <Layout className="admin-layout">
+    <Layout
+      className={`admin-layout${isMobileMenuOpen ? " admin-layout-menu-open" : ""}`}
+    >
       <style>{`
         * { box-sizing: border-box; }
         html, body, #root { min-height: 100%; margin: 0; }
@@ -118,7 +132,10 @@ function AdminLayout({ children }) {
         }
 
         .admin-layout { min-height: 100dvh; background: #f6fbfa; }
-        .admin-main-layout { min-width: 0; }
+        .admin-mobile-menu-btn,
+        .admin-mobile-backdrop {
+          display: none;
+        }
         .admin-sidebar.ant-layout-sider {
           position: sticky;
           top: 0;
@@ -243,59 +260,98 @@ function AdminLayout({ children }) {
 
         .admin-content.ant-layout-content {
           min-width: 0;
-          max-width: 100%;
-          overflow-x: hidden;
           padding: 28px;
           background: #f6fbfa;
         }
 
-        .admin-content > * { min-width: 0; max-width: 100%; }
-        .admin-content .ant-table-wrapper,
-        .admin-content .ant-table-container,
-        .admin-content .ant-form,
-        .admin-content .ant-space { max-width: 100%; }
-        .admin-content .ant-form-inline { row-gap: 10px; }
-
-        @media (max-width: 1180px) {
-          .admin-sidebar.ant-layout-sider {
-            flex: 0 0 82px !important;
-            max-width: 82px !important;
-            min-width: 82px !important;
-            width: 82px !important;
-          }
-
-          .admin-sidebar-inner { padding-inline: 9px; }
-          .admin-brand { justify-content: center; padding-inline: 0; }
-          .admin-brand > span,
-          .admin-nav-label,
-          .admin-nav-item > span,
-          .admin-account-copy,
-          .admin-footer-actions .ant-btn > span:not(.anticon) { display: none; }
-          .admin-nav-group + .admin-nav-group { margin-top: 12px; }
-          .admin-nav-item { justify-content: center; padding: 0; }
-          .admin-account { display: flex; justify-content: center; padding-inline: 0; }
-          .admin-footer-actions { grid-template-columns: 1fr; }
-          .admin-footer-actions .ant-btn { width: 100%; padding-inline: 0; }
+        .admin-mobile-header {
+          display: none;
         }
 
         @media (max-width: 920px) {
-          .admin-header.ant-layout-header { padding: 0 18px; }
+          .admin-sidebar.ant-layout-sider {
+            position: fixed;
+            z-index: 40;
+            top: 0;
+            left: 0;
+            max-width: min(280px, 82vw) !important;
+            min-width: 0 !important;
+            width: min(280px, 82vw) !important;
+            height: 100dvh;
+            transform: translateX(-100%);
+            transition: transform 0.22s ease;
+          }
+          .admin-layout-menu-open .admin-sidebar.ant-layout-sider {
+            transform: translateX(0);
+          }
+          .admin-mobile-backdrop {
+            position: fixed;
+            z-index: 35;
+            inset: 0;
+            display: block;
+            border: 0;
+            padding: 0;
+            background: rgba(0, 24, 22, 0.42);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.18s ease;
+          }
+          .admin-layout-menu-open .admin-mobile-backdrop {
+            opacity: 1;
+            pointer-events: auto;
+          }
+          .admin-sidebar-inner {
+            height: 100%;
+            max-height: none;
+          }
+          .admin-nav-scroll {
+            overflow-y: auto;
+          }
+          .admin-mobile-header {
+            min-height: 64px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: -18px -18px 18px;
+            padding: 12px 18px;
+            border-bottom: 1px solid #e7efed;
+            background: #ffffff;
+          }
+          .admin-mobile-menu-btn.ant-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            width: 42px;
+            height: 42px;
+            border: 1px solid #ccefe7;
+            color: #06332e;
+            background: #ffffff;
+          }
+          .admin-mobile-header-copy {
+            min-width: 0;
+            display: grid;
+          }
+          .admin-mobile-header-copy span {
+            color: #6b7f7b;
+            font-size: 12px;
+            font-weight: 800;
+          }
+          .admin-mobile-header-copy strong {
+            color: #06332e;
+            font-size: 18px;
+            line-height: 1.2;
+          }
           .admin-content.ant-layout-content { padding: 18px; }
         }
-
-        @media (max-width: 560px) {
-          .admin-sidebar.ant-layout-sider {
-            flex-basis: 70px !important;
-            max-width: 70px !important;
-            min-width: 70px !important;
-            width: 70px !important;
-          }
-          .admin-brand-logo { width: 32px; height: 32px; }
-          .admin-header.ant-layout-header { height: 64px; padding: 0 14px; }
-          .admin-header-copy .ant-typography-secondary { display: none; }
-          .admin-content.ant-layout-content { padding: 14px; }
-        }
       `}</style>
+
+      <button
+        className="admin-mobile-backdrop"
+        type="button"
+        aria-label="Close navigation"
+        onClick={closeMobileMenu}
+      />
 
       <Sider className="admin-sidebar" width={250}>
         <div className="admin-sidebar-inner">
@@ -318,7 +374,7 @@ function AdminLayout({ children }) {
                       className={`admin-nav-item ${isActive(item.path) ? "active" : ""}`}
                       to={item.path}
                       key={item.path}
-                      title={item.label}
+                      onClick={closeMobileMenu}
                     >
                       {item.icon}
                       <span>{item.label}</span>
@@ -364,8 +420,8 @@ function AdminLayout({ children }) {
         </div>
       </Sider>
 
-      <Layout className="admin-main-layout">
-        <Header className="admin-header">
+      <Layout>
+        {/* <Header className="admin-header">
           <div className="admin-header-copy">
             <Typography.Text type="secondary">
               Operations and management
@@ -374,9 +430,24 @@ function AdminLayout({ children }) {
               Admin workspace
             </Typography.Title>
           </div>
-        </Header>
+        </Header> */}
 
-        <Content className="admin-content">{children}</Content>
+        <Content className="admin-content">
+          <div className="admin-mobile-header">
+            <Button
+              className="admin-mobile-menu-btn"
+              type="text"
+              icon={<MenuOutlined />}
+              aria-label="Open navigation"
+              onClick={() => setIsMobileMenuOpen(true)}
+            />
+            <div className="admin-mobile-header-copy">
+              <span>Operations and management</span>
+              <strong>Admin workspace</strong>
+            </div>
+          </div>
+          {children}
+        </Content>
       </Layout>
     </Layout>
   );

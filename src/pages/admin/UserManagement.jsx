@@ -14,6 +14,7 @@ import {
   message,
   DatePicker,
   Descriptions,
+  InputNumber,
 } from "antd";
 import "antd/dist/reset.css";
 import {
@@ -23,8 +24,12 @@ import {
   updateAccountStatus,
   updateUserAccount,
   getUserById,
+  adjustSpectatorPoints,
+  adjustJockeyReputation,
+  adjustHorseOwnerReputation,
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
+import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 import customParseFormat from "dayjs/plugin/customParseFormat";
 dayjs.extend(customParseFormat);
@@ -183,6 +188,11 @@ function UserManagement() {
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [detailUser, setDetailUser] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  // --- States cho Modal Adjust Points ---
+  const [adjustPointsForm] = Form.useForm();
+  const [adjustModalUser, setAdjustModalUser] = useState(null);
+  const [isAdjusting, setIsAdjusting] = useState(false);
+  const shouldFixColumns = useAdminTableFixedColumns();
 
   async function loadUsers() {
     setIsLoading(true);
@@ -227,6 +237,42 @@ function UserManagement() {
       message.error(error?.message || "Tìm kiếm thất bại");
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  // Mở modal điều chỉnh điểm/điểm uy tín
+  function openAdjustPointsModal(user) {
+    setAdjustModalUser(user);
+    adjustPointsForm.setFieldsValue({ amount: 0 });
+  }
+
+  // Xử lý gửi API điều chỉnh điểm
+  async function handleAdjustPointsSubmit() {
+    try {
+      const values = await adjustPointsForm.validateFields();
+      setIsAdjusting(true);
+
+      const amount = Number(values.amount);
+      const roleLower = String(adjustModalUser.role).toLowerCase();
+
+      if (roleLower.includes("spectator")) {
+        await adjustSpectatorPoints(adjustModalUser.id, amount);
+        message.success("Cập nhật pointBalance thành công");
+      } else if (roleLower.includes("jockey")) {
+        await adjustJockeyReputation(adjustModalUser.id, amount);
+        message.success("Cập nhật điểm uy tín Jockey thành công");
+      } else if (roleLower.includes("owner") || roleLower.includes("horse")) {
+        await adjustHorseOwnerReputation(adjustModalUser.id, amount);
+        message.success("Cập nhật điểm uy tín Horse Owner thành công");
+      }
+
+      setAdjustModalUser(null);
+      adjustPointsForm.resetFields();
+      loadUsers(); // Tải lại danh sách sau khi điều chỉnh điểm
+    } catch (error) {
+      message.error(error?.message || "Cập nhật điểm thất bại");
+    } finally {
+      setIsAdjusting(false);
     }
   }
 
@@ -449,7 +495,7 @@ function UserManagement() {
       {
         title: "Avatar",
         dataIndex: "avatar",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 88,
         render: (avatar, record) => {
           const cleanSrc = avatar && avatar.trim() !== "" ? avatar : null;
@@ -476,7 +522,7 @@ function UserManagement() {
       {
         title: "Full Name",
         dataIndex: "fullName",
-        fixed: "left",
+        fixed: shouldFixColumns ? "left" : undefined,
         width: 190,
       },
       {
@@ -533,42 +579,66 @@ function UserManagement() {
       {
         title: "Actions",
         key: "actions",
-        fixed: "right",
-        width: 180,
-        render: (_, record) => (
-          <Space>
-            <Button
-              size="small"
-              type="primary"
-              ghost
-              loading={isDetailLoading}
-              onClick={() => openDetailModal(record.id)}
-            >
-              Detail
-            </Button>
-            <Button
-              className="user-management-link-btn"
-              size="small"
-              onClick={() => openEditModal(record)}
-            >
-              Edit
-            </Button>
-            <Popconfirm
-              title="Disable tài khoản?"
-              description="Action này sẽ gọi API delete user."
-              okText="Disable"
-              cancelText="Hủy"
-              onConfirm={() => handleDisable(record)}
-            >
-              <Button danger size="small">
-                Disable
+        fixed: shouldFixColumns ? "right" : undefined,
+        width: 260, // Tăng nhẹ width để đủ khoảng trắng chứa thêm nút mới
+        render: (_, record) => {
+          const roleLower = String(record.role).toLowerCase();
+          const isSpectator = roleLower.includes("spectator");
+          const isJockey = roleLower.includes("jockey");
+          const isHorseOwner =
+            roleLower.includes("owner") || roleLower.includes("horse");
+
+          return (
+            <Space align="center" wrap>
+              <Button
+                size="small"
+                type="primary"
+                ghost
+                loading={isDetailLoading}
+                onClick={() => openDetailModal(record.id)}
+              >
+                Detail
               </Button>
-            </Popconfirm>
-          </Space>
-        ),
+              <Button
+                className="user-management-link-btn"
+                size="small"
+                onClick={() => openEditModal(record)}
+              >
+                Edit
+              </Button>
+
+              {/* Nút bấm cập nhật điểm cho Spectator, Jockey và Horse Owner */}
+              {(isSpectator || isJockey || isHorseOwner) && (
+                <Button
+                  size="small"
+                  style={{
+                    borderColor: "#faad14",
+                    color: "#d48806",
+                    fontWeight: 600,
+                  }}
+                  onClick={() => openAdjustPointsModal(record)}
+                >
+                  Points
+                </Button>
+              )}
+
+              {/* <Popconfirm
+                title="Disable tài khoản?"
+                description="Action này sẽ gọi API delete user."
+                okText="Disable"
+                cancelText="Hủy"
+                onConfirm={() => handleDisable(record)}
+              >
+                <Button danger size="small">
+                  Disable
+                </Button>
+              </Popconfirm> */}
+            </Space>
+          );
+        },
       },
     ],
-    [statusChangingId],
+    [statusChangingId, shouldFixColumns],
   );
 
   return (
@@ -963,6 +1033,46 @@ function UserManagement() {
             </Descriptions>
           </div>
         )}
+      </Modal>
+
+      {/* Modal điều chỉnh Điểm / Điểm Uy Tín */}
+      <Modal
+        title={
+          String(adjustModalUser?.role).toLowerCase().includes("spectator")
+            ? `Cập nhật Point Balance (${adjustModalUser?.fullName})`
+            : `Cập nhật Điểm Uy Tín (${adjustModalUser?.fullName})`
+        }
+        open={Boolean(adjustModalUser)}
+        okText="Xác nhận"
+        cancelText="Hủy"
+        confirmLoading={isAdjusting}
+        onCancel={() => {
+          setAdjustModalUser(null);
+          adjustPointsForm.resetFields();
+        }}
+        onOk={handleAdjustPointsSubmit}
+      >
+        <Form
+          form={adjustPointsForm}
+          layout="vertical"
+          style={{ paddingTop: 12 }}
+        >
+          <Form.Item
+            label="Số điểm muốn cộng/trừ"
+            name="amount"
+            rules={[{ required: true, message: "Vui lòng nhập số điểm" }]}
+            extra={
+              !String(adjustModalUser?.role).toLowerCase().includes("spectator")
+                ? "Ghi chú: Điểm uy tín sau khi cập nhật chỉ nằm trong khoảng 0 - 100. Nhập số dương để cộng (VD: 10), số âm để trừ (VD: -5)."
+                : "Ghi chú: Nhập số dương để cộng điểm (VD: 100), số âm để trừ điểm (VD: -50)."
+            }
+          >
+            <InputNumber
+              style={{ width: "100%" }}
+              placeholder="Nhập số điểm (VD: 10 hoặc -10)"
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </section>
   );

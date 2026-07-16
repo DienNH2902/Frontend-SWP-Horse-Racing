@@ -1,5 +1,6 @@
 export const USER_ENDPOINTS = {
   ROOT: "/users",
+  ADMIN_DASHBOARD_STATS: "/users/admin/dashboard/stats",
   DETAIL: (id) => `/users/${id}`,
   UPDATE_SPECTATOR: (id) => `/users/spectator/${id}`,
   UPDATE_JOCKEY: (id) => `/users/jockey/${id}`,
@@ -10,4 +11,8 @@ export const USER_ENDPOINTS = {
   UPLOAD_AVATAR: "/upload/avatar",
   CHANGE_PASSWORD: "/users/change-password",
   UPDATE_STATUS: (id) => `/users/${id}/status`,
+  ADJUST_SPECTATOR_POINTS: (id) => `/users/spectator/${id}/adjust-points`,
+  ADJUST_JOCKEY_REPUTATION: (id) => `/users/jockey/${id}/adjust-reputation`,
+  ADJUST_HORSE_OWNER_REPUTATION: (id) =>
+    `/users/horse-owner/${id}/adjust-reputation`,
 };
