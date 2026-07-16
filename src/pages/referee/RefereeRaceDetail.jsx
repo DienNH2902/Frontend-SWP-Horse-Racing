@@ -640,20 +640,26 @@ export default function RefereeRaceDetail() {
             try {
                 setSavingCondition(true);
 
+                const formattedValues = {
+                  ...values,
+                  windSpeed:
+                    values.windSpeed !== undefined && values.windSpeed !== null
+                      ? Number(values.windSpeed)
+                      : 0,
+                };
+
                 if (condition?._id) {
-                    const updated =
-                        await updateRaceCondition(
-                            id,
-                            values
-                        );
+                    const updated = await updateRaceCondition(
+                      id,
+                      formattedValues,
+                    );
 
                     setCondition(updated);
                 } else {
-                    const created =
-                        await createRaceCondition({
-                            raceId: id,
-                            ...values,
-                        });
+                    const created = await createRaceCondition({
+                      raceId: id,
+                      ...formattedValues,
+                    });
 
                     setCondition(created);
                 }

@@ -2045,10 +2045,7 @@ function Home() {
 
           <div className="home-actions">
             {isSpectator && (
-              <Link
-                className="home-live-btn home-bet-btn"
-                to="/spectator/bets"
-              >
+              <Link className="home-live-btn home-bet-btn" to="/spectator/bets">
                 <span className="home-mobile-action-icon">
                   <Icon name="trophy" size={18} />
                 </span>
@@ -2225,6 +2222,14 @@ function Home() {
                       >
                         <WalletOutlined style={{ fontSize: "18px" }} />
                         <span>Wallet</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/report"
+                      >
+                        <FileTextOutlined style={{ fontSize: "18px" }} />
+                        <span>Report</span>
                       </Link>
                     </>
                   )}
