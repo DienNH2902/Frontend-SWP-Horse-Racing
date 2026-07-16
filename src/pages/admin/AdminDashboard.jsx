@@ -9,6 +9,7 @@ import {
   Skeleton,
   Space,
   Statistic,
+  Table,
   Tag,
   Typography,
 } from "antd";
@@ -22,6 +23,7 @@ import {
 import { getHorses } from "../../api/services/horse.service";
 import { getRaceCourses } from "../../api/services/race-course.service";
 import { getRacesByTournament } from "../../api/services/race.service";
+import { getUpcomingSchedule } from "../../api/services/schedule.service";
 import { getTournaments } from "../../api/services/tournament.service";
 import { getUsers } from "../../api/services/user.service";
 
@@ -74,6 +76,39 @@ function normalizeRole(value) {
   return "Spectator";
 }
 
+function formatDate(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return date.toLocaleDateString("vi-VN");
+}
+
+function formatTime(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getRaceStatusColor(status) {
+  const value = String(status || "").toLowerCase();
+
+  if (value === "ready") return "gold";
+  if (value === "scheduled") return "blue";
+  if (value === "ongoing") return "green";
+  if (value === "finished" || value === "completed") return "default";
+  if (value === "cancelled" || value === "canceled") return "red";
+
+  return "cyan";
+}
+
 export default function AdminDashboard() {
   const [dashboard, setDashboard] = useState({
     users: [],
@@ -81,6 +116,7 @@ export default function AdminDashboard() {
     tournaments: [],
     races: [],
     raceCourses: [],
+    upcomingRaces: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -90,12 +126,19 @@ export default function AdminDashboard() {
     setErrorMessage("");
 
     try {
-      const [usersResult, horsesResult, tournamentsResult, coursesResult] =
+      const [
+        usersResult,
+        horsesResult,
+        tournamentsResult,
+        coursesResult,
+        upcomingResult,
+      ] =
         await Promise.allSettled([
           getUsers(),
           getHorses(),
           getTournaments(),
           getRaceCourses(),
+          getUpcomingSchedule(),
         ]);
 
       const users =
@@ -118,6 +161,10 @@ export default function AdminDashboard() {
         coursesResult.status === "fulfilled"
           ? resolveList(coursesResult.value)
           : [];
+      const upcomingRaces =
+        upcomingResult.status === "fulfilled"
+          ? resolveList(upcomingResult.value)
+          : [];
 
       const raceResults = await Promise.allSettled(
         tournaments.map((tournament) => {
@@ -135,6 +182,7 @@ export default function AdminDashboard() {
         horsesResult,
         tournamentsResult,
         coursesResult,
+        upcomingResult,
       ].filter((result) => result.status === "rejected").length;
 
       setDashboard({
@@ -149,6 +197,7 @@ export default function AdminDashboard() {
           ).values(),
         ),
         raceCourses,
+        upcomingRaces,
       });
 
       if (failedMainRequests > 0) {
@@ -235,6 +284,61 @@ export default function AdminDashboard() {
       icon: <EnvironmentOutlined />,
       color: "#be123c",
       background: "#fff0f4",
+    },
+  ];
+
+  const upcomingRaceColumns = [
+    {
+      title: "Race",
+      dataIndex: "raceName",
+      key: "raceName",
+      fixed: "left",
+      width: 230,
+      render: (value, record) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text strong>{value || "Unnamed race"}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {record.tournamentName || "N/A"}
+          </Typography.Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      width: 110,
+      render: formatDate,
+    },
+    {
+      title: "Start",
+      dataIndex: "startTime",
+      key: "startTime",
+      width: 90,
+      render: formatTime,
+    },
+    {
+      title: "Race Course",
+      dataIndex: "raceCourseName",
+      key: "raceCourseName",
+      width: 220,
+      render: (value) => value || "N/A",
+    },
+    {
+      title: "Slots",
+      key: "slots",
+      width: 110,
+      render: (_, record) =>
+        `${record.filledSlots ?? 0}/${record.totalSlots ?? 0}`,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 110,
+      render: (value) => (
+        <Tag color={getRaceStatusColor(value)}>{value || "Unknown"}</Tag>
+      ),
     },
   ];
 
@@ -464,6 +568,23 @@ export default function AdminDashboard() {
               </Card>
             </Col>
           </Row>
+
+          <Card
+            className="admin-dashboard-panel"
+            title="Upcoming Races"
+            extra={
+              <Tag color="cyan">{dashboard.upcomingRaces.length} races</Tag>
+            }
+          >
+            <Table
+              columns={upcomingRaceColumns}
+              dataSource={dashboard.upcomingRaces}
+              rowKey={(record) => record.raceId || record._id || record.id}
+              pagination={{ pageSize: 5 }}
+              scroll={{ x: 870 }}
+              size="middle"
+            />
+          </Card>
         </Space>
       )}
     </section>
