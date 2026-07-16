@@ -235,6 +235,12 @@ function ContractManagement() {
 
   const shouldFixColumns = useAdminTableFixedColumns();
 
+  const usersMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+  const tournamentsMap = useMemo(
+    () => new Map(tournaments.map((t) => [t.id, t])),
+    [tournaments],
+  );
+
   async function loadTournaments() {
     try {
       const response = await getTournaments();
@@ -285,15 +291,16 @@ function ContractManagement() {
           const userList = resolveList(usersRes).map(normalizeUser);
           const rawContracts = resolveList(contractsRes);
 
-          // Map dùng để tra cứu nhanh thông tin theo ID
-          const usersMap = new Map(userList.map((u) => [u.id, u]));
-          const tournamentsMap = new Map(tournamentList.map((t) => [t.id, t]));
+          const tempUsersMap = new Map(userList.map((u) => [u.id, u]));
+          const tempTournamentsMap = new Map(
+            tournamentList.map((t) => [t.id, t]),
+          );
 
           setTournaments(tournamentList);
           setUsers(userList);
           setContracts(
             rawContracts.map((c, i) =>
-              normalizeContract(c, i, usersMap, tournamentsMap),
+              normalizeContract(c, i, tempUsersMap, tempTournamentsMap),
             ),
           );
         }
@@ -337,21 +344,40 @@ function ContractManagement() {
     setIsDetailLoading(true);
     setSelectedContractDetail(record);
     try {
-      const detailData = await getContractDetailByInvitationId(
+      const detailRes = await getContractDetailByInvitationId(
         record.invitationId || record.id,
       );
 
-      if (detailData) {
-        const usersMap = new Map(users.map((u) => [u.id, u]));
-        const tournamentsMap = new Map(tournaments.map((t) => [t.id, t]));
+      const detailData = detailRes?.data || detailRes;
 
-        setSelectedContractDetail((prev) => ({
-          ...prev,
-          ...normalizeContract(detailData, 0, usersMap, tournamentsMap),
-        }));
+      if (detailData) {
+        const normalizedDetail = normalizeContract(
+          detailData,
+          0,
+          usersMap,
+          tournamentsMap,
+        );
+
+        setSelectedContractDetail({
+          ...record,
+          ...normalizedDetail,
+          // Ưu tiên giữ lại tên từ record hàng nếu dữ liệu detail bị thiếu
+          tournamentTitle:
+            normalizedDetail.tournamentTitle !== "N/A"
+              ? normalizedDetail.tournamentTitle
+              : record.tournamentTitle,
+          jockeyName:
+            normalizedDetail.jockeyName !== "N/A"
+              ? normalizedDetail.jockeyName
+              : record.jockeyName,
+          ownerName:
+            normalizedDetail.ownerName !== "N/A"
+              ? normalizedDetail.ownerName
+              : record.ownerName,
+        });
       }
     } catch (error) {
-      // Fallback giữ nguyên record cũ nếu API detail phát sinh lỗi
+      // Giữ nguyên record nếu gọi API detail bị lỗi
     } finally {
       setIsDetailLoading(false);
     }
