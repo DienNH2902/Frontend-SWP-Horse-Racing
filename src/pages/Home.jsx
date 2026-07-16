@@ -256,6 +256,10 @@ function toNumber(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function formatWinRate(value) {
+  return toNumber(value).toFixed(2);
+}
+
 function resolveImageUrl(path) {
   if (!path) return "/goldenhoof-hero.png";
 
@@ -2386,7 +2390,7 @@ function Home() {
                       </div>
                       <div className="horse-stat-row">
                         <span>Win rate</span>
-                        <strong>{horse.winRate || 0}%</strong>
+                        <strong>{formatWinRate(horse.winRate)}%</strong>
                       </div>
                       <div className="horse-stat-row">
                         <span>Wins</span>
@@ -2432,7 +2436,7 @@ function Home() {
                     <span className="rank-number">{jockey.rank}</span>
                     <Avatar name={jockey.name} rank={jockey.rank} />
                     <strong>{jockey.name}</strong>
-                    <span>Win Rate {jockey.winRate || 0}%</span>
+                    <span>Win Rate {formatWinRate(jockey.winRate)}%</span>
                   </div>
                 ))}
               </div>
@@ -2571,7 +2575,7 @@ function Home() {
                       <div className="horse-profile-stats">
                         <div className="horse-profile-stat">
                           <span>Win rate</span>
-                          <strong>{selectedHorse.winRate || 0}%</strong>
+                          <strong>{formatWinRate(selectedHorse.winRate)}%</strong>
                         </div>
                         <div className="horse-profile-stat">
                           <span>Total wins</span>
