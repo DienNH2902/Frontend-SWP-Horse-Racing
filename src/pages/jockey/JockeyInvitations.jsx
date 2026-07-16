@@ -362,8 +362,7 @@ export default function JockeyInvitations() {
           </Button>
           <Button
             size="small"
-            disabled={!isAccepted(record.status)}
-            loading={contractLoading}
+            disabled={!isAccepted(record.status) || contractLoading}
             onClick={() => openInvitationContract(record)}
           >
             Contract
