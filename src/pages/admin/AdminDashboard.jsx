@@ -104,6 +104,16 @@ function formatStatusLabel(value) {
     .trim();
 }
 
+function toRecord(value) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function formatDate(value) {
   if (!value) return "N/A";
 
@@ -502,7 +512,7 @@ export default function AdminDashboard() {
             };
       const reportStatuses =
         reportStatsResult.status === "fulfilled" && reportStatsResult.value
-          ? reportStatsResult.value
+          ? toRecord(reportStatsResult.value)
           : {};
       const reportStats = {
         totalReports: Object.values(reportStatuses).reduce(
@@ -516,7 +526,9 @@ export default function AdminDashboard() {
           ? resolveList(coursesResult.value)
           : [];
       const walletOverview =
-        walletResult.status === "fulfilled" ? walletResult.value : null;
+        walletResult.status === "fulfilled"
+          ? toRecord(walletResult.value)
+          : null;
       const upcomingRaces =
         upcomingResult.status === "fulfilled"
           ? resolveList(upcomingResult.value)
@@ -564,7 +576,6 @@ export default function AdminDashboard() {
         tournamentStatsResult,
         raceStatsResult,
         registrationStatsResult,
-        upcomingResult,
       ].filter((result) => result.status === "rejected").length;
 
       setDashboard({
@@ -629,7 +640,7 @@ export default function AdminDashboard() {
   const roleCounts = useMemo(() => {
     const counts = Object.fromEntries(ROLE_ORDER.map((role) => [role, 0]));
 
-    Object.entries(dashboard.adminStats.roles || {}).forEach(
+    Object.entries(toRecord(dashboard.adminStats.roles)).forEach(
       ([role, count]) => {
         const normalizedRole = normalizeRole(role);
         counts[normalizedRole] =
@@ -642,18 +653,20 @@ export default function AdminDashboard() {
 
   const totalUsers = dashboard.adminStats.totalUsers;
   const accountStatusEntries = Object.entries(
-    dashboard.adminStats.accountStatuses || {},
+    toRecord(dashboard.adminStats.accountStatuses),
   );
   const jockeyStatusEntries = Object.entries(
-    dashboard.adminStats.jockeyStatuses || {},
+    toRecord(dashboard.adminStats.jockeyStatuses),
   );
   const horseStatusEntries = Object.entries(
-    dashboard.horseStats.statuses || {},
+    toRecord(dashboard.horseStats.statuses),
   );
-  const betStatusEntries = Object.entries(dashboard.betStats.statuses || {});
+  const betStatusEntries = Object.entries(toRecord(dashboard.betStats.statuses));
   const reportStatusEntries = Object.entries(
-    dashboard.reportStats.statuses || {},
+    toRecord(dashboard.reportStats.statuses),
   );
+  const raceCourses = toArray(dashboard.raceCourses);
+  const upcomingRaces = toArray(dashboard.upcomingRaces);
   const maxBetStatusCount = Math.max(
     1,
     ...betStatusEntries.map(([, count]) => Number(count) || 0),
@@ -727,7 +740,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Race Courses",
-      value: dashboard.raceCourses.length,
+      value: raceCourses.length,
       icon: <EnvironmentOutlined />,
       color: "#be123c",
       background: "#fff0f4",
@@ -1841,14 +1854,16 @@ export default function AdminDashboard() {
                 title="Upcoming Races"
                 extra={
                   <Tag color="cyan">
-                    {dashboard.upcomingRaces.length} races
+                    {upcomingRaces.length} races
                   </Tag>
                 }
               >
                 <Table
                   columns={upcomingRaceColumns}
-                  dataSource={dashboard.upcomingRaces}
-                  rowKey={(record) => record.raceId || record._id || record.id}
+                  dataSource={upcomingRaces}
+                  rowKey={(record, index) =>
+                    record.raceId || record._id || record.id || `race-${index}`
+                  }
                   pagination={{ pageSize: 5 }}
                   scroll={{ x: 870 }}
                   size="middle"
