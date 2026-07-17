@@ -503,6 +503,17 @@ function JockeyLicenseManagement() {
         ]}
         onCancel={() => setViewingLicensesJockey(null)}
       >
+        {viewingLicensesJockey && (
+          <Space direction="vertical" size={2} style={{ marginBottom: 12 }}>
+            <Text>
+              Jockey ID: <Text code>{viewingLicensesJockey.id || "N/A"}</Text>
+            </Text>
+            <Text>
+              Profile ID:{" "}
+              <Text code>{viewingLicensesJockey.profileId || "N/A"}</Text>
+            </Text>
+          </Space>
+        )}
         {viewingLicensesJockey?.licenses.length === 0 ? (
           <Text
             type="secondary"
@@ -555,7 +566,22 @@ function JockeyLicenseManagement() {
                   title={
                     <Text strong>License Code: {license.licenseCode}</Text>
                   }
-                  description={`Racing Start Date: ${formatDate(license.racingStartDate)}`}
+                  description={
+                    <Space direction="vertical" size={2}>
+                      <Text>
+                        License ID:{" "}
+                        <Text code>
+                          {license._id ||
+                            license.id ||
+                            license.licenseId ||
+                            "N/A"}
+                        </Text>
+                      </Text>
+                      <Text>
+                        Racing Start Date: {formatDate(license.racingStartDate)}
+                      </Text>
+                    </Space>
+                  }
                 />
               </List.Item>
             )}

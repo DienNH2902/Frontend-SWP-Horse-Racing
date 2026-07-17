@@ -443,6 +443,9 @@ function RaceCourseManagement() {
       >
         {detailCourse && (
           <Descriptions bordered column={1} size="middle">
+            <Descriptions.Item label="ID">
+              <Text code>{detailCourse.id}</Text>
+            </Descriptions.Item>
             <Descriptions.Item label="Name">{detailCourse.name}</Descriptions.Item>
             <Descriptions.Item label="Location">
               {detailCourse.location}

@@ -115,9 +115,18 @@ function normalizeAdvancement(item, index) {
 
   return {
     key: item?._id || item?.id || `advancement-${index}`,
+    id: item?._id || item?.id || "N/A",
+    horseId:
+      typeof horse === "string" ? horse : horse?._id || horse?.id || "N/A",
     horseName: horse?.name || "N/A",
     horseColor: horse?.color || "N/A",
+    fromRaceId:
+      typeof fromRace === "string"
+        ? fromRace
+        : fromRace?._id || fromRace?.id || "N/A",
     fromRaceName: fromRace?.name || "N/A",
+    toRaceId:
+      item?.toRaceId?._id || item?.toRaceId?.id || item?.toRaceId || "N/A",
     advancedAt: item?.advancedAt || item?.createdAt || "",
   };
 }
@@ -1217,12 +1226,25 @@ function TournamentManagement() {
           loading={isAdvancementsLoading}
           dataSource={advancements}
           pagination={false}
+          scroll={{ x: 1180 }}
           locale={{ emptyText: "No horses have advanced yet" }}
           columns={[
+            {
+              title: "Advancement ID",
+              dataIndex: "id",
+              width: 190,
+              render: (value) => <Text code>{value}</Text>,
+            },
             {
               title: "Horse",
               dataIndex: "horseName",
               render: (value) => <Text strong>{value}</Text>,
+            },
+            {
+              title: "Horse ID",
+              dataIndex: "horseId",
+              width: 190,
+              render: (value) => <Text code>{value}</Text>,
             },
             {
               title: "Color",
@@ -1232,6 +1254,18 @@ function TournamentManagement() {
             {
               title: "From Race",
               dataIndex: "fromRaceName",
+            },
+            {
+              title: "From Race ID",
+              dataIndex: "fromRaceId",
+              width: 190,
+              render: (value) => <Text code>{value}</Text>,
+            },
+            {
+              title: "To Race ID",
+              dataIndex: "toRaceId",
+              width: 190,
+              render: (value) => <Text code>{value}</Text>,
             },
             {
               title: "Advanced At",
@@ -1255,6 +1289,10 @@ function TournamentManagement() {
       >
         {detailTournament && (
           <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <p>
+              <strong>ID:</strong> <Text code>{detailTournament.id}</Text>
+            </p>
+
             <p>
               <strong>Title:</strong> {detailTournament.title}
             </p>

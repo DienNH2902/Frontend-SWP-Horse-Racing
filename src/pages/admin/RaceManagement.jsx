@@ -6,6 +6,7 @@ import {
   Form,
   Input,
   Modal,
+  Segmented,
   Select,
   Space,
   Table,
@@ -245,7 +246,9 @@ async function resolveParticipant(participant, index) {
   return {
     key: `${participant?.gateNumber ?? index}-${horseId}-${jockeyId}`,
     gateNumber: participant?.gateNumber ?? "N/A",
+    horseId: horseId || "N/A",
     horseName: horse?.name || "N/A",
+    jockeyId: jockeyId || "N/A",
     jockeyName: getPersonName(jockey) || "N/A",
   };
 }
@@ -267,7 +270,20 @@ function normalizeTournamentOption(item, index) {
   return {
     label: title,
     value: id,
+    startDate: item?.startDate || "",
+    endDate: item?.endDate || "",
   };
+}
+
+function parseTournamentDate(value) {
+  if (!value) return null;
+
+  const slashDate = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const parsed = slashDate
+    ? dayjs(`${slashDate[3]}-${slashDate[2]}-${slashDate[1]}`)
+    : dayjs(value);
+
+  return parsed.isValid() ? parsed.startOf("day") : null;
 }
 
 function RaceManagement() {
@@ -276,6 +292,8 @@ function RaceManagement() {
   const [round2Form] = Form.useForm();
   const [refereeForm] = Form.useForm();
   const [raceCourseForm] = Form.useForm();
+  const batchTournamentId = Form.useWatch("tournamentId", batchForm);
+  const round2TournamentId = Form.useWatch("tournamentId", round2Form);
 
   const [races, setRaces] = useState([]);
   const [referees, setReferees] = useState([]);
@@ -288,6 +306,7 @@ function RaceManagement() {
   const [detailRace, setDetailRace] = useState(null);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isRound2ModalOpen, setIsRound2ModalOpen] = useState(false);
+  const [batchRaceCount, setBatchRaceCount] = useState(1);
   const [assigningRefereeRace, setAssigningRefereeRace] = useState(null);
   const [assigningCourseRace, setAssigningCourseRace] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
@@ -416,6 +435,7 @@ function RaceManagement() {
 
   function openBatchModal() {
     const tournamentId = searchForm.getFieldValue("tournamentId") || "";
+    const suggestedDate = getTournamentDate(tournamentId, "startDate");
 
     batchForm.resetFields();
     batchForm.setFieldsValue({
@@ -423,25 +443,90 @@ function RaceManagement() {
       races: [
         {
           name: "Vong 1 - Race 1",
-          date: null,
-          startTime: "",
-        },
-        {
-          name: "Vong 1 - Race 2",
-          date: null,
-          startTime: "",
+          date: suggestedDate,
+          startTime: "08:00",
         },
       ],
     });
+    setBatchRaceCount(1);
     setIsBatchModalOpen(true);
   }
 
+  function handleBatchRaceCountChange(count) {
+    const currentRaces = batchForm.getFieldValue("races") || [];
+    const firstRace = currentRaces[0] || {
+      name: "Vong 1 - Race 1",
+      date: getTournamentDate(batchTournamentId, "startDate"),
+      startTime: "08:00",
+    };
+
+    batchForm.setFieldValue(
+      "races",
+      count === 1
+        ? [firstRace]
+        : [
+            firstRace,
+            currentRaces[1] || {
+              name: "Vong 1 - Race 2",
+              date:
+                firstRace.date ||
+                getTournamentDate(batchTournamentId, "startDate"),
+              startTime: "08:00",
+            },
+          ],
+    );
+    setBatchRaceCount(count);
+  }
+
+  function getTournamentDate(tournamentId, field) {
+    const tournament = tournaments.find(
+      (option) => option.value === tournamentId,
+    );
+
+    return parseTournamentDate(tournament?.[field]);
+  }
+
+  function isOutsideTournament(date, tournamentId) {
+    const startDate = getTournamentDate(tournamentId, "startDate");
+    const endDate = getTournamentDate(tournamentId, "endDate");
+
+    if (!date || !startDate || !endDate) return false;
+    return date.isBefore(startDate, "day") || date.isAfter(endDate, "day");
+  }
+
+  function getTournamentPeriodText(tournamentId) {
+    const startDate = getTournamentDate(tournamentId, "startDate");
+    const endDate = getTournamentDate(tournamentId, "endDate");
+
+    if (!startDate || !endDate) {
+      return "Tournament period is unavailable";
+    }
+
+    return `Tournament period: ${startDate.format("DD/MM/YYYY")} - ${endDate.format("DD/MM/YYYY")}`;
+  }
+
+  function applyBatchTournamentDefaults(tournamentId) {
+    const suggestedDate = getTournamentDate(tournamentId, "startDate");
+    const races = batchForm.getFieldValue("races") || [];
+
+    batchForm.setFieldValue(
+      "races",
+      races.map((race, index) => ({
+        ...race,
+        name: race?.name || `Vong 1 - Race ${index + 1}`,
+        date: suggestedDate,
+        startTime: race?.startTime || "08:00",
+      })),
+    );
+  }
+
   function openRound2Modal() {
+    const tournamentId = searchForm.getFieldValue("tournamentId") || "";
     round2Form.resetFields();
     round2Form.setFieldsValue({
-      tournamentId: searchForm.getFieldValue("tournamentId") || "",
-      date: null,
-      startTime: "",
+      tournamentId,
+      date: getTournamentDate(tournamentId, "endDate"),
+      startTime: "08:00",
     });
     setIsRound2ModalOpen(true);
   }
@@ -842,6 +927,21 @@ function RaceManagement() {
           gap: 16px;
         }
 
+        .race-batch-mode {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 18px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #dff3ee;
+        }
+
+        .race-batch-mode-label {
+          color: #06332e;
+          font-weight: 900;
+        }
+
         .race-batch-panel {
           padding: 18px;
           border: 1px solid #ccefe7;
@@ -893,6 +993,11 @@ function RaceManagement() {
           .race-batch-grid {
             grid-template-columns: 1fr;
           }
+
+          .race-batch-mode {
+            align-items: flex-start;
+            flex-direction: column;
+          }
         }
       `}</style>
 
@@ -915,7 +1020,7 @@ function RaceManagement() {
             icon={<PlusOutlined />}
             onClick={openBatchModal}
           >
-            Create Round 1 Batch
+            Create Round 1 Races
           </Button>
         </section>
 
@@ -1017,9 +1122,9 @@ function RaceManagement() {
       </section>
 
       <Modal
-        title="Create Round 1 Batch"
+        title="Create Round 1 Races"
         open={isBatchModalOpen}
-        okText="Create 2 Races"
+        okText={`Create ${batchRaceCount} Race${batchRaceCount > 1 ? "s" : ""}`}
         cancelText="Cancel"
         width={960}
         confirmLoading={isSaving}
@@ -1038,8 +1143,21 @@ function RaceManagement() {
               placeholder="Select tournament"
               optionFilterProp="label"
               options={tournaments}
+              onChange={applyBatchTournamentDefaults}
             />
           </Form.Item>
+
+          <div className="race-batch-mode">
+            <span className="race-batch-mode-label">Number of races</span>
+            <Segmented
+              value={batchRaceCount}
+              options={[
+                { label: "1 Race", value: 1 },
+                { label: "2 Races", value: 2 },
+              ]}
+              onChange={handleBatchRaceCountChange}
+            />
+          </div>
 
           <Form.List name="races">
             {(fields) => (
@@ -1064,12 +1182,16 @@ function RaceManagement() {
                       {...restField}
                       label="Date"
                       name={[name, "date"]}
+                      extra={getTournamentPeriodText(batchTournamentId)}
                       rules={[{ required: true, message: "Date is required" }]}
                     >
                       <DatePicker
                         format="DD/MM/YYYY"
                         placeholder="DD/MM/YYYY"
                         style={{ width: "100%" }}
+                        disabledDate={(date) =>
+                          isOutsideTournament(date, batchTournamentId)
+                        }
                       />
                     </Form.Item>
 
@@ -1111,18 +1233,28 @@ function RaceManagement() {
               placeholder="Select tournament"
               optionFilterProp="label"
               options={tournaments}
+              onChange={(tournamentId) =>
+                round2Form.setFieldsValue({
+                  date: getTournamentDate(tournamentId, "endDate"),
+                  startTime: round2Form.getFieldValue("startTime") || "08:00",
+                })
+              }
             />
           </Form.Item>
 
           <Form.Item
             label="Date"
             name="date"
+            extra={getTournamentPeriodText(round2TournamentId)}
             rules={[{ required: true, message: "Date is required" }]}
           >
             <DatePicker
               format="DD/MM/YYYY"
               placeholder="DD/MM/YYYY"
               style={{ width: "100%" }}
+              disabledDate={(date) =>
+                isOutsideTournament(date, round2TournamentId)
+              }
             />
           </Form.Item>
 
@@ -1206,6 +1338,9 @@ function RaceManagement() {
               <Descriptions.Item label="Tournament">
                 {detailRace.tournamentTitle}
               </Descriptions.Item>
+              <Descriptions.Item label="Tournament ID">
+                <Text code>{detailRace.tournamentId || "N/A"}</Text>
+              </Descriptions.Item>
               <Descriptions.Item label="Round">
                 {detailRace.roundNumber}
               </Descriptions.Item>
@@ -1226,8 +1361,14 @@ function RaceManagement() {
               <Descriptions.Item label="Referee">
                 {getRefereeDisplayName(detailRace)}
               </Descriptions.Item>
+              <Descriptions.Item label="Referee ID">
+                <Text code>{detailRace.refereeId || "N/A"}</Text>
+              </Descriptions.Item>
               <Descriptions.Item label="Race Course">
                 {getRaceCourseDisplayName(detailRace)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Race Course ID">
+                <Text code>{detailRace.raceCourseId || "N/A"}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Total Bettors">
                 {detailRace.totalBettors}
@@ -1273,8 +1414,20 @@ function RaceManagement() {
                   render: (value) => <Text strong>{value}</Text>,
                 },
                 {
+                  title: "Horse ID",
+                  dataIndex: "horseId",
+                  width: 190,
+                  render: (value) => <Text code>{value}</Text>,
+                },
+                {
                   title: "Jockey",
                   dataIndex: "jockeyName",
+                },
+                {
+                  title: "Jockey ID",
+                  dataIndex: "jockeyId",
+                  width: 190,
+                  render: (value) => <Text code>{value}</Text>,
                 },
               ]}
             />
