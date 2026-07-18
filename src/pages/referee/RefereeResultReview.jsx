@@ -40,6 +40,7 @@ import {
 import {
     createEndReport,
 } from "../../api/services/refereeReport.service";
+import "./RefereeResultReview.css";
 
 export default function RefereeResultReview() {
     const { id } = useParams();
@@ -230,6 +231,7 @@ export default function RefereeResultReview() {
     return (
         <>
             <Space
+                className="referee-result-review-page"
                 direction="vertical"
                 style={{
                     width: "100%",
@@ -269,6 +271,8 @@ export default function RefereeResultReview() {
                         <Empty />
                     ) : (
                         <Table
+                            className="referee-result-review-table"
+                            rowHoverable={false}
                             rowKey="_id"
                             columns={
                                 rawColumns

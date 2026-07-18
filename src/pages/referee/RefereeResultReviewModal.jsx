@@ -81,7 +81,7 @@ export default function RefereeResultReviewModal({
                         className="review-title"
                         level={3}
                         style={{
-                            color: "#fff",
+                            color: "#0f172a",
                             marginBottom: 6
                         }}
                     >
@@ -132,7 +132,7 @@ export default function RefereeResultReviewModal({
                                     className="review-section-card"
                                 >
                                     <Table
-                                        className="review-table"
+                                        className="review-table review-raw-table"
                                         scroll={{
                                             x: "max-content"
                                         }}
@@ -309,7 +309,7 @@ export default function RefereeResultReviewModal({
                                     </Row>
 
                                     <Table
-                                        className="review-table"
+                                        className="review-table review-final-table"
                                         bordered
                                         scroll={{
                                             x: "max-content"
