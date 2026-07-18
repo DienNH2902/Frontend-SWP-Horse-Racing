@@ -17,6 +17,7 @@ import {
   completeContract,
   getJockeyInvitationById,
   getContractDetailByInvitationId,
+  getBreachByContractId,
 } from "../../api/services/jockey.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 import { getTournaments } from "../../api/services/tournament.service";
@@ -233,6 +234,11 @@ function ContractManagement() {
   const [selectedContractDetail, setSelectedContractDetail] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
 
+  // --- BỔ SUNG STATE CHO ĐƠN VI PHẠM ---
+  const [breachDetail, setBreachDetail] = useState(null);
+  const [isBreachLoading, setIsBreachLoading] = useState(false);
+  const [isBreachModalOpen, setIsBreachModalOpen] = useState(false);
+
   const shouldFixColumns = useAdminTableFixedColumns();
 
   const usersMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
@@ -383,6 +389,22 @@ function ContractManagement() {
     }
   }
 
+  async function handleViewBreach(contractId) {
+    setIsBreachLoading(true);
+    setIsBreachModalOpen(true);
+    setBreachDetail(null);
+    try {
+      const response = await getBreachByContractId(contractId);
+      // Giả định response trả trực tiếp object hoặc bọc trong thuộc tính data
+      setBreachDetail(response?.data || response);
+    } catch (error) {
+      message.error(error?.message || "Unable to load breach report details");
+      setIsBreachModalOpen(false);
+    } finally {
+      setIsBreachLoading(false);
+    }
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -436,9 +458,10 @@ function ContractManagement() {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 200,
+        width: 240, // Tăng nhẹ width để vừa cấu trúc nút mới nếu cần
         render: (_, record) => {
           const isCompleted = record.status === "COMPLETED";
+          const isBreached = record.status === "BREACHED"; // <-- Kiểm tra trạng thái vi phạm
 
           return (
             <Space size="small">
@@ -450,7 +473,19 @@ function ContractManagement() {
                 View Detail
               </Button>
 
-              {!isCompleted && (
+              {/* --- BỔ SUNG NÚT XEM VI PHẠM --- */}
+              {isBreached && (
+                <Button
+                  danger
+                  size="small"
+                  onClick={() => handleViewBreach(record.id)}
+                  style={{ fontWeight: 700 }}
+                >
+                  View Breach
+                </Button>
+              )}
+
+              {!isCompleted && !isBreached && (
                 <Popconfirm
                   title="Complete Contract"
                   description="Are you sure you want to mark this contract as completed?"
@@ -625,14 +660,48 @@ function ContractManagement() {
           loading={isDetailLoading}
           style={{ marginTop: 16 }}
         >
+          <Descriptions.Item label="Contract ID" span={2}>
+            <Text code>{selectedContractDetail?.id || "N/A"}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Invitation ID" span={2}>
+            <Text code>{selectedContractDetail?.invitationId || "N/A"}</Text>
+          </Descriptions.Item>
           <Descriptions.Item label="Contract Code" span={2}>
             <Text strong>{selectedContractDetail?.contractNumber}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Tournament ID" span={2}>
+            <Text code>{selectedContractDetail?.tournamentId || "N/A"}</Text>
           </Descriptions.Item>
           <Descriptions.Item label="Tournament Title" span={2}>
             {selectedContractDetail?.tournamentTitle}
           </Descriptions.Item>
+          <Descriptions.Item label="Jockey ID">
+            <Text code>
+              {selectedContractDetail?.raw?.jockeyId?._id ||
+                selectedContractDetail?.raw?.jockeyId?.id ||
+                selectedContractDetail?.raw?.jockey?._id ||
+                selectedContractDetail?.raw?.jockey?.id ||
+                selectedContractDetail?.raw?.jockeyId ||
+                selectedContractDetail?.raw?.jockey ||
+                "N/A"}
+            </Text>
+          </Descriptions.Item>
           <Descriptions.Item label="Jockey">
             {selectedContractDetail?.jockeyName}
+          </Descriptions.Item>
+          <Descriptions.Item label="Horse Owner ID">
+            <Text code>
+              {selectedContractDetail?.raw?.horseOwnerId?._id ||
+                selectedContractDetail?.raw?.horseOwnerId?.id ||
+                selectedContractDetail?.raw?.ownerId?._id ||
+                selectedContractDetail?.raw?.ownerId?.id ||
+                selectedContractDetail?.raw?.owner?._id ||
+                selectedContractDetail?.raw?.owner?.id ||
+                selectedContractDetail?.raw?.horseOwnerId ||
+                selectedContractDetail?.raw?.ownerId ||
+                selectedContractDetail?.raw?.owner ||
+                "N/A"}
+            </Text>
           </Descriptions.Item>
           <Descriptions.Item label="Horse Owner">
             {selectedContractDetail?.ownerName}
@@ -660,6 +729,69 @@ function ContractManagement() {
           <Descriptions.Item label="Jockey Compensation">
             {selectedContractDetail?.jockeyCompensationRate}%
           </Descriptions.Item>
+        </Descriptions>
+      </Modal>
+
+      {/* --- BỔ SUNG MODAL NỘI DUNG VI PHẠM --- */}
+      <Modal
+        title="Contract Breach Report Information"
+        open={isBreachModalOpen}
+        width={650}
+        onCancel={() => setIsBreachModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsBreachModalOpen(false)}>
+            Close
+          </Button>,
+        ]}
+      >
+        <Descriptions
+          bordered
+          column={1}
+          size="small"
+          loading={isBreachLoading}
+          style={{ marginTop: 16 }}
+        >
+          <Descriptions.Item label="Breach Report ID">
+            <Text code>{breachDetail?.id || breachDetail?._id || "N/A"}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Reporter Name">
+            <Text strong>
+              {breachDetail?.reporterName ||
+                breachDetail?.reporter?.fullName ||
+                "N/A"}
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Reporter Email">
+            <Text strong>
+              {breachDetail?.reporterEmail ||
+                breachDetail?.reporter?.email ||
+                "N/A"}
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Reason / Breach Content">
+            {breachDetail?.reason || breachDetail?.description || "N/A"}
+          </Descriptions.Item>
+          <Descriptions.Item label="Reported Date">
+            {formatDate(breachDetail?.createdAt || breachDetail?.reportedAt)}
+          </Descriptions.Item>
+          <Descriptions.Item label="Admin Process Status">
+            {breachDetail?.status === "APPROVED" && (
+              <Tag color="green">Approved</Tag>
+            )}
+            {breachDetail?.status === "REJECTED" && (
+              <Tag color="red">Rejected</Tag>
+            )}
+            {breachDetail?.status === undefined ||
+            breachDetail?.status === null ||
+            breachDetail?.status === "PENDING" ? (
+              <Tag color="warning">Pending</Tag>
+            ) : null}
+          </Descriptions.Item>
+          {breachDetail?.adminReason && (
+            <Descriptions.Item label="Admin Feedback">
+              <Text type="secondary">{breachDetail.adminReason}</Text>
+            </Descriptions.Item>
+          )}
         </Descriptions>
       </Modal>
     </section>

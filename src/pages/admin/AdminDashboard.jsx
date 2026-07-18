@@ -10,6 +10,7 @@ import {
   Skeleton,
   Space,
   Statistic,
+  Table,
   Tag,
   Typography,
 } from "antd";
@@ -32,6 +33,7 @@ import { getRaceCourses } from "../../api/services/race-course.service";
 import { getAdminRaceStats } from "../../api/services/race.service";
 import { getAdminRegistrationStats } from "../../api/services/registration.service";
 import { getReportStatsAdmin } from "../../api/services/report.service";
+import { getUpcomingSchedule } from "../../api/services/schedule.service";
 import { getAdminTournamentStats } from "../../api/services/tournament.service";
 import { getAdminDashboardStats } from "../../api/services/user.service";
 import { getSystemWalletOverview } from "../../api/services/wallet.service";
@@ -100,6 +102,49 @@ function formatStatusLabel(value) {
     .replaceAll("_", " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function toRecord(value) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+}
+
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function formatDate(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return date.toLocaleDateString("vi-VN");
+}
+
+function formatTime(value) {
+  if (!value) return "N/A";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+
+  return date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getRaceStatusColor(status) {
+  const value = String(status || "").toLowerCase();
+
+  if (value === "ready") return "gold";
+  if (value === "scheduled") return "blue";
+  if (value === "ongoing") return "green";
+  if (value === "finished" || value === "completed") return "default";
+  if (value === "cancelled" || value === "canceled") return "red";
+
+  return "cyan";
 }
 
 function getAccountStatusMeta(status) {
@@ -394,6 +439,7 @@ export default function AdminDashboard() {
       statuses: {},
     },
     raceCourses: [],
+    upcomingRaces: [],
     walletOverview: null,
   });
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -415,6 +461,7 @@ export default function AdminDashboard() {
         raceStatsResult,
         registrationStatsResult,
         walletResult,
+        upcomingResult,
       ] =
         await Promise.allSettled([
           getAdminDashboardStats(),
@@ -426,6 +473,7 @@ export default function AdminDashboard() {
           getAdminRaceStats(),
           getAdminRegistrationStats(),
           getSystemWalletOverview(),
+          getUpcomingSchedule(),
         ]);
 
       const adminStats =
@@ -464,7 +512,7 @@ export default function AdminDashboard() {
             };
       const reportStatuses =
         reportStatsResult.status === "fulfilled" && reportStatsResult.value
-          ? reportStatsResult.value
+          ? toRecord(reportStatsResult.value)
           : {};
       const reportStats = {
         totalReports: Object.values(reportStatuses).reduce(
@@ -478,7 +526,13 @@ export default function AdminDashboard() {
           ? resolveList(coursesResult.value)
           : [];
       const walletOverview =
-        walletResult.status === "fulfilled" ? walletResult.value : null;
+        walletResult.status === "fulfilled"
+          ? toRecord(walletResult.value)
+          : null;
+      const upcomingRaces =
+        upcomingResult.status === "fulfilled"
+          ? resolveList(upcomingResult.value)
+          : [];
       const registrationStats =
         registrationStatsResult.status === "fulfilled" &&
         registrationStatsResult.value
@@ -533,6 +587,7 @@ export default function AdminDashboard() {
         betStats,
         reportStats,
         raceCourses,
+        upcomingRaces,
         walletOverview,
       });
 
@@ -585,7 +640,7 @@ export default function AdminDashboard() {
   const roleCounts = useMemo(() => {
     const counts = Object.fromEntries(ROLE_ORDER.map((role) => [role, 0]));
 
-    Object.entries(dashboard.adminStats.roles || {}).forEach(
+    Object.entries(toRecord(dashboard.adminStats.roles)).forEach(
       ([role, count]) => {
         const normalizedRole = normalizeRole(role);
         counts[normalizedRole] =
@@ -598,18 +653,20 @@ export default function AdminDashboard() {
 
   const totalUsers = dashboard.adminStats.totalUsers;
   const accountStatusEntries = Object.entries(
-    dashboard.adminStats.accountStatuses || {},
+    toRecord(dashboard.adminStats.accountStatuses),
   );
   const jockeyStatusEntries = Object.entries(
-    dashboard.adminStats.jockeyStatuses || {},
+    toRecord(dashboard.adminStats.jockeyStatuses),
   );
   const horseStatusEntries = Object.entries(
-    dashboard.horseStats.statuses || {},
+    toRecord(dashboard.horseStats.statuses),
   );
-  const betStatusEntries = Object.entries(dashboard.betStats.statuses || {});
+  const betStatusEntries = Object.entries(toRecord(dashboard.betStats.statuses));
   const reportStatusEntries = Object.entries(
-    dashboard.reportStats.statuses || {},
+    toRecord(dashboard.reportStats.statuses),
   );
+  const raceCourses = toArray(dashboard.raceCourses);
+  const upcomingRaces = toArray(dashboard.upcomingRaces);
   const maxBetStatusCount = Math.max(
     1,
     ...betStatusEntries.map(([, count]) => Number(count) || 0),
@@ -683,10 +740,65 @@ export default function AdminDashboard() {
     },
     {
       title: "Race Courses",
-      value: dashboard.raceCourses.length,
+      value: raceCourses.length,
       icon: <EnvironmentOutlined />,
       color: "#be123c",
       background: "#fff0f4",
+    },
+  ];
+
+  const upcomingRaceColumns = [
+    {
+      title: "Race",
+      dataIndex: "raceName",
+      key: "raceName",
+      fixed: "left",
+      width: 230,
+      render: (value, record) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text strong>{value || "Unnamed race"}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {record.tournamentName || "N/A"}
+          </Typography.Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      width: 110,
+      render: formatDate,
+    },
+    {
+      title: "Start",
+      dataIndex: "startTime",
+      key: "startTime",
+      width: 90,
+      render: formatTime,
+    },
+    {
+      title: "Race Course",
+      dataIndex: "raceCourseName",
+      key: "raceCourseName",
+      width: 220,
+      render: (value) => value || "N/A",
+    },
+    {
+      title: "Slots",
+      key: "slots",
+      width: 110,
+      render: (_, record) =>
+        `${record.filledSlots ?? 0}/${record.totalSlots ?? 0}`,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 110,
+      render: (value) => (
+        <Tag color={getRaceStatusColor(value)}>{value || "Unknown"}</Tag>
+      ),
     },
   ];
 
@@ -1734,6 +1846,29 @@ export default function AdminDashboard() {
                   </div>
                 </Card>
               </div>
+            </Col>
+
+            <Col xs={24}>
+              <Card
+                className="admin-dashboard-panel"
+                title="Upcoming Races"
+                extra={
+                  <Tag color="cyan">
+                    {upcomingRaces.length} races
+                  </Tag>
+                }
+              >
+                <Table
+                  columns={upcomingRaceColumns}
+                  dataSource={upcomingRaces}
+                  rowKey={(record, index) =>
+                    record.raceId || record._id || record.id || `race-${index}`
+                  }
+                  pagination={{ pageSize: 5 }}
+                  scroll={{ x: 870 }}
+                  size="middle"
+                />
+              </Card>
             </Col>
           </Row>
         </Space>

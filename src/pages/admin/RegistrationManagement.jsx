@@ -551,16 +551,68 @@ function RegistrationManagement() {
       >
         {detailRegistration && (
           <Descriptions bordered column={1} size="middle">
+            <Descriptions.Item label="Registration ID">
+              <Text code>{detailRegistration._id || detailRegistration.id || "N/A"}</Text>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Tournament ID">
+              <Text code>
+                {detailRegistration.tournamentId?._id ||
+                  detailRegistration.tournamentId?.id ||
+                  detailRegistration.tournamentId ||
+                  "N/A"}
+              </Text>
+            </Descriptions.Item>
+
             <Descriptions.Item label="Tournament">
               {detailRegistration.tournamentTitle}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Race ID">
+              <Text code>
+                {detailRegistration.raceId?._id ||
+                  detailRegistration.raceId?.id ||
+                  detailRegistration.raceId ||
+                  "N/A"}
+              </Text>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Horse ID">
+              <Text code>
+                {detailRegistration.horseId?._id ||
+                  detailRegistration.horseId?.id ||
+                  detailRegistration.horseId ||
+                  "N/A"}
+              </Text>
             </Descriptions.Item>
 
             <Descriptions.Item label="Horse">
               {detailRegistration.horseName}
             </Descriptions.Item>
 
+            <Descriptions.Item label="Jockey ID">
+              <Text code>
+                {detailRegistration.jockeyId?._id ||
+                  detailRegistration.jockeyId?.id ||
+                  detailRegistration.jockeyId ||
+                  "N/A"}
+              </Text>
+            </Descriptions.Item>
+
             <Descriptions.Item label="Jockey">
               {detailRegistration.jockeyName}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Owner ID">
+              <Text code>
+                {detailRegistration.ownerId?._id ||
+                  detailRegistration.ownerId?.id ||
+                  detailRegistration.horseOwnerId?._id ||
+                  detailRegistration.horseOwnerId?.id ||
+                  detailRegistration.ownerId ||
+                  detailRegistration.horseOwnerId ||
+                  "N/A"}
+              </Text>
             </Descriptions.Item>
 
             <Descriptions.Item label="Owner">
