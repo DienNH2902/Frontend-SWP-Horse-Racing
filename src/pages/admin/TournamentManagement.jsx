@@ -97,6 +97,34 @@ function toDatePickerValue(value) {
   return parsed.isValid() ? parsed : null;
 }
 
+function parseTournamentDate(value) {
+  if (!value) return null;
+
+  const parsed =
+    dayjs(value, "DD/MM/YYYY", true).isValid()
+      ? dayjs(value, "DD/MM/YYYY", true)
+      : dayjs(value);
+
+  return parsed.isValid() ? parsed : null;
+}
+
+function toDateInputValue(value) {
+  const parsed = parseTournamentDate(value);
+
+  return parsed ? parsed.format("YYYY-MM-DD") : "";
+}
+
+function formatTournamentPeriod(startDate, endDate) {
+  const parsedStartDate = parseTournamentDate(startDate);
+  const parsedEndDate = parseTournamentDate(endDate);
+
+  if (!parsedStartDate || !parsedEndDate) {
+    return "Tournament period is unavailable";
+  }
+
+  return `${parsedStartDate.format("DD/MM/YYYY")} - ${parsedEndDate.format("DD/MM/YYYY")}`;
+}
+
 function getUploadedBannerUrl(response) {
   if (typeof response === "string") return response;
 
@@ -282,6 +310,21 @@ function TournamentManagement() {
       setCreatedTournament({
         id: tournamentId,
         title: response?.title || payload.title,
+        startDate: response?.startDate || payload.startDate,
+        endDate: response?.endDate || payload.endDate,
+      });
+      round1Form.setFieldsValue({
+        races: [
+          {
+            name: "Vong 1 - Race 1",
+            date: toDateInputValue(response?.startDate || payload.startDate),
+            startTime: "08:00",
+          },
+        ],
+      });
+      round2Form.setFieldsValue({
+        date: toDateInputValue(response?.endDate || payload.endDate),
+        startTime: "08:00",
       });
       setSetupStep(1);
       message.success("Tournament created. Continue with Round 1 races.");
@@ -721,6 +764,35 @@ function TournamentManagement() {
           border-bottom: 1px solid #edf5f3;
         }
 
+        .setup-wizard-period {
+          margin: 0 0 18px;
+          padding: 12px 14px;
+          border: 1px solid #ccefe7;
+          border-radius: 8px;
+          background: #f7fffd;
+        }
+
+        .setup-wizard-period-label {
+          display: block;
+          color: #007a68;
+          font-size: 12px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .setup-wizard-period-range {
+          display: block;
+          margin-top: 3px;
+          color: #06332e;
+          font-size: 16px;
+          font-weight: 950;
+        }
+
+        .setup-wizard-period-note {
+          display: block;
+          margin-top: 5px;
+        }
+
         @media (max-width: 920px) {
           .tournament-management-header {
             align-items: flex-start;
@@ -969,6 +1041,22 @@ function TournamentManagement() {
               </Text>
             </div>
 
+            <div className="setup-wizard-period">
+              <span className="setup-wizard-period-label">
+                Tournament time
+              </span>
+              <span className="setup-wizard-period-range">
+                {formatTournamentPeriod(
+                  createdTournament?.startDate,
+                  createdTournament?.endDate,
+                )}
+              </span>
+              <Text type="secondary" className="setup-wizard-period-note">
+                Race date should stay inside this tournament period to avoid
+                backend validation errors.
+              </Text>
+            </div>
+
             <Form form={round1Form} layout="vertical">
               <Form.List name="races">
                 {(fields, { add, remove }) => (
@@ -990,7 +1078,11 @@ function TournamentManagement() {
                           name={[name, "date"]}
                           rules={[{ required: true, message: "Date is required" }]}
                         >
-                          <Input type="date" />
+                          <Input
+                            type="date"
+                            min={toDateInputValue(createdTournament?.startDate)}
+                            max={toDateInputValue(createdTournament?.endDate)}
+                          />
                         </Form.Item>
 
                         <Form.Item
@@ -1018,8 +1110,8 @@ function TournamentManagement() {
                       onClick={() =>
                         add({
                           name: `Vong 1 - Race ${fields.length + 1}`,
-                          date: "",
-                          startTime: "",
+                          date: toDateInputValue(createdTournament?.startDate),
+                          startTime: "08:00",
                         })
                       }
                     >
@@ -1042,6 +1134,22 @@ function TournamentManagement() {
               </Text>
             </div>
 
+            <div className="setup-wizard-period">
+              <span className="setup-wizard-period-label">
+                Tournament time
+              </span>
+              <span className="setup-wizard-period-range">
+                {formatTournamentPeriod(
+                  createdTournament?.startDate,
+                  createdTournament?.endDate,
+                )}
+              </span>
+              <Text type="secondary" className="setup-wizard-period-note">
+                The final race date should also stay inside this tournament
+                period.
+              </Text>
+            </div>
+
             <Form form={round2Form} layout="vertical">
               <div className="setup-wizard-grid">
                 <Form.Item
@@ -1049,7 +1157,11 @@ function TournamentManagement() {
                   name="date"
                   rules={[{ required: true, message: "Date is required" }]}
                 >
-                  <Input type="date" />
+                  <Input
+                    type="date"
+                    min={toDateInputValue(createdTournament?.startDate)}
+                    max={toDateInputValue(createdTournament?.endDate)}
+                  />
                 </Form.Item>
 
                 <Form.Item

@@ -17,9 +17,10 @@ import {
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getProfile } from "../api/services/auth.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
-import { getDisplayName, getInitials } from "../utils/roles";
+import { getInitials } from "../utils/roles";
 
 const { Content, Header, Sider } = Layout;
 
@@ -94,11 +95,32 @@ const NAV_GROUPS = [
 function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = getAuthSession()?.user || {};
-  const displayName = getDisplayName(user) || "Administrator";
+  const session = getAuthSession();
+  const [user, setUser] = useState(() => session?.user || {});
+  const displayName =
+    user?.fullName || user?.name || user?.username || "Administrator";
+  const accountLabel = user?.role || "Admin account";
   const initials = getInitials(displayName);
   const avatarUrl = user?.avatar || user?.avatarUrl || user?.imageUrl;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    getProfile()
+      .then((profile) => {
+        if (active && profile) {
+          setUser((current) => ({ ...current, ...profile }));
+        }
+      })
+      .catch(() => {
+        // Keep the session data when the profile endpoint is unavailable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function isActive(path) {
     if (path === "/admin/dashboard") {
@@ -429,7 +451,7 @@ function AdminLayout({ children }) {
               <div className="admin-account-copy">
                 <div className="admin-account-name">{displayName}</div>
                 <div className="admin-account-email">
-                  {user?.email || "Admin account"}
+                  {accountLabel}
                 </div>
               </div>
               <Tooltip title="Logout">
