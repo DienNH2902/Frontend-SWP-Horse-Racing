@@ -892,6 +892,9 @@ function UserManagement() {
             </div>
 
             <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="User ID" span={2}>
+                <Text code>{detailUser._id || detailUser.id || "N/A"}</Text>
+              </Descriptions.Item>
               <Descriptions.Item label="Họ và tên" span={2}>
                 <Text strong>{detailUser.fullName}</Text>
               </Descriptions.Item>

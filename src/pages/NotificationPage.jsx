@@ -91,14 +91,14 @@ export default function NotificationHistory() {
 
     // --- Hệ thống giao kèo / Thư mời (Invitation / Contract) ---
     Invitation_received: { text: "Lời mời mới", color: "blue" },
-    Invitation_accepted: { text: "Lời mời đã chấp nhận", color: "geekblue" },
+    Invitation_accepted: { text: "Lời mời đã chấp nhận", color: "green" },
     Invitation_rejected: { text: "Lời mời bị từ chối", color: "magenta" },
     Contract_cancelled: { text: "Hợp đồng bị hủy", color: "red" },
-    Contract_breached: { text: "Vi phạm hợp đồng", color: "purple" },
+    Contract_breached: { text: "Vi phạm hợp đồng", color: "red" },
     Contract_completed: { text: "Hợp đồng hoàn thành", color: "lime" },
 
     // --- Hệ thống giải đấu / Vận hành (Tournament) ---
-    Tournament_registered: { text: "Đăng ký giải đấu", color: "purple" },
+    Tournament_registered: { text: "Đăng ký giải đấu", color: "green" },
     Tournament_waitlist: { text: "Hàng chờ giải đấu", color: "warning" },
     Tournament_rejected: { text: "Đăng ký bị từ chối", color: "error" },
     Race_reminder: { text: "Lịch đua sắp tới", color: "processing" },
@@ -110,6 +110,14 @@ export default function NotificationHistory() {
     Bet_win: { text: "Thắng cược", color: "gold" },
     Bet_lose: { text: "Thua cược", color: "red" },
     Refund: { text: "Hoàn tiền cược", color: "green" },
+    Contract_breached_sent: {
+      text: "Tố cáo vi phạm hợp đồng đã gửi",
+      color: "orange",
+    },
+    Contract_breached_sent_rejected: {
+      text: "Tố cáo vi phạm bị từ chối",
+      color: "red",
+    },
     "Race_broadcast-started": {
       text: "Trận đua đang phát sóng",
       color: "magenta",
