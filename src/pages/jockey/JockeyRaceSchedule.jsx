@@ -17,6 +17,7 @@ import {
 import { getJockeyProfile, getJockeyRaceSchedule } from "../../api/services/jockey.service";
 import { getTournamentById } from "../../api/services/tournament.service";
 import RaceHistoryCard from "../../components/races/RaceHistoryCard";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 
 function shouldShowRaceSubtitle(value) {
   const text = String(value || "").trim();
@@ -235,6 +236,12 @@ export default function JockeyRaceSchedule() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <WorkspaceHeader
+        kicker="RACE SCHEDULE"
+        title="Race Schedule"
+        subtitle="Review assigned races, finishes, and recent performance"
+      />
+
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
       <Row gutter={[16, 16]}>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Card, Col, Row, Space, Statistic, Table, Tag, Typography } from "antd";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 import { getOwnerRaceCenter } from "../../api/services/owner.service";
 import RaceHistoryCard from "../../components/races/RaceHistoryCard";
 
@@ -85,6 +86,12 @@ export default function OwnerRaceResults() {
 
   return (
     <Space direction="vertical" size={16} className="owner-page-stack">
+      <WorkspaceHeader
+        kicker="RACE CENTER"
+        title="Race Results"
+        subtitle="Track upcoming races, assignments, and owner history"
+      />
+
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
       <Row gutter={[16, 16]}>

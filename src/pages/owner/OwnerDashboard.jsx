@@ -14,6 +14,7 @@ import {
   Typography,
 } from "antd";
 import { Link } from "react-router-dom";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 import { getHorseById, getMyHorses } from "../../api/services/horse.service";
 import { getHorseStatusColor, horseCollectionFrom, isActiveHorse, normalizeHorse } from "./horseViewModel";
 
@@ -206,6 +207,14 @@ export default function OwnerDashboard() {
           }
         }
       `}</style>
+
+      <WorkspaceHeader
+        kicker="STABLE OVERVIEW"
+        title="Owner Workspace"
+        subtitle="Manage your stable, horse profiles, and race readiness"
+        onRefresh={loadDashboard}
+        refreshLoading={loading}
+      />
 
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 

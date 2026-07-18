@@ -181,6 +181,133 @@
   padding: 24px;
 }
 
+.owner-role-layout .role-header,
+.jockey-role-layout .role-header {
+  display: none;
+}
+
+.owner-role-layout .role-content,
+.jockey-role-layout .role-content {
+  padding: 28px 40px 32px;
+}
+
+.workspace-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+}
+
+.workspace-page-kicker {
+  color: #087a6d;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 1.5px;
+}
+
+.workspace-page-title.ant-typography {
+  margin: 5px 0 0;
+  color: #06332e;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.workspace-page-subtitle.ant-typography {
+  color: #70837f !important;
+  font-size: 16px;
+}
+
+.workspace-page-refresh.ant-btn {
+  border-color: #bdeee5;
+  color: #006755;
+  background: #ffffff;
+  font-weight: 850;
+}
+
+.owner-role-layout .role-content :where(.ant-card),
+.jockey-role-layout .role-content :where(.ant-card) {
+  border: 1px solid #ccefe7;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(13, 70, 63, 0.06);
+}
+
+.owner-role-layout .role-content :where(.ant-card-head),
+.jockey-role-layout .role-content :where(.ant-card-head) {
+  border-bottom-color: #e1ece9;
+}
+
+.owner-role-layout .role-content :where(.ant-card-head-title),
+.jockey-role-layout .role-content :where(.ant-card-head-title) {
+  color: #06332e;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.owner-role-layout .role-content :where(.ant-statistic-title),
+.jockey-role-layout .role-content :where(.ant-statistic-title) {
+  color: #52726e;
+  font-weight: 800;
+}
+
+.owner-role-layout .role-content :where(.ant-statistic-content),
+.jockey-role-layout .role-content :where(.ant-statistic-content) {
+  color: #06332e;
+  font-weight: 950;
+}
+
+.owner-role-layout .role-content :where(.ant-table),
+.jockey-role-layout .role-content :where(.ant-table) {
+  border: 1px solid #ccefe7;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(13, 70, 63, 0.04);
+}
+
+.owner-role-layout .role-content :where(.ant-table-thead > tr > th),
+.jockey-role-layout .role-content :where(.ant-table-thead > tr > th) {
+  background: #f3fbf9 !important;
+  color: #06332e !important;
+  font-weight: 900 !important;
+  border-bottom-color: #ccefe7 !important;
+}
+
+.owner-role-layout .role-content :where(.ant-table-tbody > tr > td),
+.jockey-role-layout .role-content :where(.ant-table-tbody > tr > td) {
+  border-bottom-color: #edf3f1 !important;
+}
+
+.owner-role-layout .role-content :where(.ant-table-tbody > tr:hover > td),
+.jockey-role-layout .role-content :where(.ant-table-tbody > tr:hover > td) {
+  background: #f3fffc !important;
+}
+
+.owner-role-layout .role-content :where(.ant-input, .ant-input-number, .ant-picker),
+.jockey-role-layout .role-content :where(.ant-input, .ant-input-number, .ant-picker) {
+  border-color: #bdeee5;
+  color: #06332e;
+}
+
+.owner-role-layout .role-content :where(.ant-select-selector),
+.jockey-role-layout .role-content :where(.ant-select-selector) {
+  border-color: #bdeee5 !important;
+  color: #06332e !important;
+  background: #ffffff !important;
+}
+
+.owner-role-layout .role-content :where(.ant-input:focus, .ant-input-focused, .ant-input-number-focused, .ant-picker-focused),
+.jockey-role-layout .role-content :where(.ant-input:focus, .ant-input-focused, .ant-input-number-focused, .ant-picker-focused) {
+  border-color: #69f8dd !important;
+  box-shadow: 0 0 0 3px rgba(105, 248, 221, 0.18) !important;
+}
+
+.owner-role-layout .role-content :where(.ant-select-focused .ant-select-selector),
+.jockey-role-layout .role-content :where(.ant-select-focused .ant-select-selector) {
+  border-color: #69f8dd !important;
+  box-shadow: 0 0 0 3px rgba(105, 248, 221, 0.18) !important;
+}
+
 .owner-role-layout .ant-btn,
 .jockey-role-layout .ant-btn {
   border-radius: 8px;
@@ -276,6 +403,33 @@
 }
 
 @media (max-width: 900px) {
+  .owner-role-layout .role-header,
+  .jockey-role-layout .role-header {
+    display: none;
+  }
+
+  .workspace-page-title.ant-typography {
+    font-size: clamp(25px, 8vw, 34px);
+  }
+
+  .workspace-page-subtitle.ant-typography {
+    font-size: 14px;
+  }
+
+  .workspace-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workspace-page-refresh.ant-btn {
+    width: 100%;
+  }
+
+  .owner-role-layout .role-content,
+  .jockey-role-layout .role-content {
+    padding: 20px;
+  }
+
   .role-sider.ant-layout-sider {
     position: fixed !important;
     z-index: 40;

@@ -21,6 +21,7 @@ import { getTournamentById } from "../../api/services/tournament.service";
 import { getUserById } from "../../api/services/user.service";
 import { cancelContract } from "../../api/services/contract.service";
 import JockeyContractModal from "../../components/contracts/JockeyContractModal";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 
 const statusColor = {
   Pending: "gold",
@@ -377,12 +378,17 @@ export default function JockeyInvitations() {
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
       {contextHolder}
+      <WorkspaceHeader
+        kicker="INVITATIONS"
+        title="Horse Owner Invitations"
+        subtitle="Review race invitations, contracts, and owner proposals"
+        onRefresh={loadInvitations}
+        refreshLoading={loading}
+      />
+
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
-      <Card
-        title="Horse owner invitations"
-        extra={<Button onClick={loadInvitations}>Refresh</Button>}
-      >
+      <Card title="Horse owner invitations">
         <Table
           rowKey="id"
           loading={loading}

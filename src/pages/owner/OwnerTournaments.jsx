@@ -13,6 +13,7 @@ import {
   Tag,
   Typography,
 } from "antd";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 import { getTournaments } from "../../api/services/tournament.service";
 
 function pickFirstValue(source, keys, fallback = "") {
@@ -135,6 +136,12 @@ export default function OwnerTournaments() {
 
   return (
     <Space direction="vertical" size={16} className="owner-page-stack">
+      <WorkspaceHeader
+        kicker="COMPETITION"
+        title="Tournaments"
+        subtitle="Browse available tournaments and race capacity"
+      />
+
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
       <Row gutter={[16, 16]}>
