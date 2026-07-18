@@ -18,6 +18,7 @@ import {
   getJockeyInvitationById,
   getContractDetailByInvitationId,
   getBreachByContractId,
+  processBreachReportByAdmin,
 } from "../../api/services/jockey.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 import { getTournaments } from "../../api/services/tournament.service";
@@ -213,6 +214,8 @@ function getContractStatusColor(status) {
       return "red";
     case "BREACHED":
       return "volcano";
+    case "DISPUTED":
+      return "orange";
     default:
       return "default";
   }
@@ -238,6 +241,8 @@ function ContractManagement() {
   const [breachDetail, setBreachDetail] = useState(null);
   const [isBreachLoading, setIsBreachLoading] = useState(false);
   const [isBreachModalOpen, setIsBreachModalOpen] = useState(false);
+
+  const [isProcessingBreach, setIsProcessingBreach] = useState(false);
 
   const shouldFixColumns = useAdminTableFixedColumns();
 
@@ -266,7 +271,11 @@ function ContractManagement() {
 
       const response = await getAllContracts(params);
       const data = resolveList(response);
-      setContracts(data.map(normalizeContract));
+
+      // SỬA TẠI ĐÂY: Truyền đầy đủ usersMap và tournamentsMap hiện tại vào hàm chuẩn hóa
+      setContracts(
+        data.map((c, i) => normalizeContract(c, i, usersMap, tournamentsMap)),
+      );
     } catch (error) {
       message.error(error?.message || "Unable to load contracts");
     } finally {
@@ -405,6 +414,47 @@ function ContractManagement() {
     }
   }
 
+  async function handleProcessBreach(isApproved) {
+    const breachId = breachDetail?.id || breachDetail?._id;
+    if (!breachId) {
+      message.error("Invalid Breach Report ID");
+      return;
+    }
+
+    setIsProcessingBreach(true);
+    try {
+      const adminReason = isApproved
+        ? "Approved by Admin"
+        : "Rejected by Admin";
+
+      await processBreachReportByAdmin(breachId, { isApproved, adminReason });
+      message.success(
+        `Breach report has been ${isApproved ? "approved" : "rejected"} successfully`,
+      );
+
+      // CẬP NHẬT TRỰC TIẾP STATE Ở LOCAL KHÔNG CẦN GỌI LẠI API CẢ BẢNG
+      if (selectedContractDetail?.id) {
+        setContracts((current) =>
+          current.map((item) =>
+            item.id === selectedContractDetail.id
+              ? { ...item, status: isApproved ? "BREACHED" : "ACTIVE" } // Thay đổi trạng thái tùy thuộc vào logic nghiệp vụ của bạn
+              : item,
+          ),
+        );
+      }
+
+      // Đóng modal vi phạm
+      setIsBreachModalOpen(false);
+
+      // Nếu muốn chắc chắn dữ liệu đồng bộ, hãy truyền đủ usersMap và tournamentsMap vào hàm loadContracts sửa đổi phía dưới
+      // loadContracts();
+    } catch (error) {
+      message.error(error?.message || "Failed to process breach report");
+    } finally {
+      setIsProcessingBreach(false);
+    }
+  }
+
   const columns = useMemo(
     () => [
       {
@@ -462,6 +512,9 @@ function ContractManagement() {
         render: (_, record) => {
           const isCompleted = record.status === "COMPLETED";
           const isBreached = record.status === "BREACHED"; // <-- Kiểm tra trạng thái vi phạm
+          const isDisputed = record.status === "DISPUTED"; // <-- Kiểm tra trạng thái chờ duyệt vi phạm
+
+          const shouldShowBreach = isBreached || isDisputed;
 
           return (
             <Space size="small">
@@ -474,7 +527,7 @@ function ContractManagement() {
               </Button>
 
               {/* --- BỔ SUNG NÚT XEM VI PHẠM --- */}
-              {isBreached && (
+              {shouldShowBreach && (
                 <Button
                   danger
                   size="small"
@@ -485,7 +538,7 @@ function ContractManagement() {
                 </Button>
               )}
 
-              {!isCompleted && !isBreached && (
+              {!isCompleted && !shouldShowBreach && (
                 <Popconfirm
                   title="Complete Contract"
                   description="Are you sure you want to mark this contract as completed?"
@@ -739,9 +792,39 @@ function ContractManagement() {
         width={650}
         onCancel={() => setIsBreachModalOpen(false)}
         footer={[
-          <Button key="close" onClick={() => setIsBreachModalOpen(false)}>
-            Close
-          </Button>,
+          // Chỉ hiển thị nút xử lý nếu trạng thái là PENDING, undefined hoặc null
+          (breachDetail?.status === "PENDING" || !breachDetail?.status) && (
+            <Popconfirm
+              key="reject-confirm"
+              title="Reject Report"
+              description="Are you sure you want to reject this breach report?"
+              onConfirm={() => handleProcessBreach(false)}
+              okText="Yes"
+              cancelText="No"
+            >
+              <Button danger loading={isProcessingBreach}>
+                Reject
+              </Button>
+            </Popconfirm>
+          ),
+          (breachDetail?.status === "PENDING" || !breachDetail?.status) && (
+            <Popconfirm
+              key="approve-confirm"
+              title="Approve Report"
+              description="Are you sure you want to approve this breach report?"
+              onConfirm={() => handleProcessBreach(true)}
+              okText="Yes"
+              cancelText="No"
+            >
+              <Button
+                type="primary"
+                loading={isProcessingBreach}
+                style={{ backgroundColor: "#007a68", borderColor: "#007a68" }}
+              >
+                Approve
+              </Button>
+            </Popconfirm>
+          ),
         ]}
       >
         <Descriptions
