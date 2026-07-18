@@ -11,4 +11,8 @@ export const JOCKEY_INVITATION_ENDPOINTS = {
   COMPLETE_CONTRACT: (contractId) =>
     `/jockey-invitations/contracts/${contractId}/complete`,
   REPORT_BREACH: "/jockey-invitations/contracts/report-breach",
+  PROCESS_BREACH: (breachId) =>
+    `/jockey-invitations/contracts/breaches/${breachId}/process`,
+  GET_BREACH_BY_CONTRACT: (contractId) =>
+    `/jockey-invitations/contracts/${contractId}/breach`,
 };
