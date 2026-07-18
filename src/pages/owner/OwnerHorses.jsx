@@ -4,6 +4,7 @@ import {
   Avatar,
   Button,
   Card,
+  Col,
   Descriptions,
   Empty,
   Form,
@@ -14,6 +15,8 @@ import {
   Select,
   Skeleton,
   Space,
+  Row,
+  Statistic,
   Table,
   Tabs,
   Tag,
@@ -115,6 +118,21 @@ export default function OwnerHorses() {
       return matchesKeyword && matchesStatus;
     });
   }, [keyword, rows, statusFilter]);
+
+  const horseStats = useMemo(() => {
+    const total = rows.length;
+    const idle = rows.filter((horse) =>
+      String(horse.status || "").toLowerCase().includes("idle"),
+    ).length;
+    const registered = rows.filter((horse) =>
+      String(horse.status || "").toLowerCase().includes("registered"),
+    ).length;
+    const injured = rows.filter((horse) =>
+      String(horse.status || "").toLowerCase().includes("injured"),
+    ).length;
+
+    return { total, idle, registered, injured };
+  }, [rows]);
 
   function openEditModal(horse) {
     setEditingHorse(horse);
@@ -493,7 +511,50 @@ export default function OwnerHorses() {
     <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
 
+      <header className="owner-workspace-header">
+        <div>
+          <div className="owner-workspace-kicker">STABLE OVERVIEW</div>
+          <Typography.Title level={1} className="owner-workspace-title">
+            Owner Workspace
+          </Typography.Title>
+          <Typography.Text type="secondary">
+            Manage your stable, horse profiles, and registration readiness
+          </Typography.Text>
+        </div>
+        <Button
+          className="owner-workspace-refresh"
+          icon={<ReloadOutlined />}
+          loading={loading}
+          onClick={loadHorses}
+        >
+          Refresh
+        </Button>
+      </header>
+
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
+
+      <Row gutter={[16, 16]} className="owner-workspace-stat-row">
+        <Col xs={24} sm={12} xl={6}>
+          <Card className="owner-workspace-stat-card">
+            <Statistic title="Total Horses" value={horseStats.total} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Card className="owner-workspace-stat-card">
+            <Statistic title="Idle" value={horseStats.idle} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Card className="owner-workspace-stat-card">
+            <Statistic title="Registered" value={horseStats.registered} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <Card className="owner-workspace-stat-card">
+            <Statistic title="Injured" value={horseStats.injured} />
+          </Card>
+        </Col>
+      </Row>
 
       <Card
         className="owner-horses-card"
@@ -726,24 +787,127 @@ export default function OwnerHorses() {
       </Modal>
 
       <style>{`
+        .owner-role-layout .role-header {
+          display: none;
+        }
+
+        .owner-role-layout .role-content {
+          padding: 32px;
+        }
+
+        .owner-page-stack {
+          color: #0d2321;
+        }
+
+        .owner-workspace-header {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 4px;
+        }
+
+        .owner-workspace-kicker {
+          color: #087a6d;
+          font-size: 12px;
+          font-weight: 950;
+          letter-spacing: 1.5px;
+        }
+
+        .owner-workspace-title.ant-typography {
+          margin: 5px 0 0;
+          color: #06332e;
+          font-size: clamp(30px, 4vw, 44px);
+          font-weight: 950;
+          letter-spacing: 0;
+        }
+
+        .owner-workspace-refresh.ant-btn {
+          border-color: #bdeee5;
+          color: #006755;
+          background: #ffffff;
+          font-weight: 850;
+        }
+
+        .owner-workspace-stat-row {
+          width: 100%;
+        }
+
+        .owner-workspace-stat-card {
+          height: 100%;
+          border: 1px solid #ccefe7;
+          border-radius: 12px;
+          box-shadow: 0 14px 36px rgba(13, 70, 63, 0.07);
+        }
+
+        .owner-workspace-stat-card .ant-statistic-title {
+          color: #52726e;
+          font-weight: 800;
+        }
+
+        .owner-workspace-stat-card .ant-statistic-content {
+          color: #06332e;
+          font-weight: 950;
+        }
+
+        .owner-workspace-stat-card .ant-statistic-content-value {
+          font-size: 28px;
+        }
+
+        .owner-horses-card.ant-card {
+          border: 1px solid #ccefe7;
+          border-radius: 12px;
+          box-shadow: 0 14px 36px rgba(13, 70, 63, 0.06);
+        }
+
         .owner-horses-card .ant-card-head {
-          align-items: flex-start;
+          align-items: center;
           gap: 12px;
+          border-bottom-color: #e1ece9;
+          min-height: 68px;
+        }
+
+        .owner-horses-card .ant-card-head-title {
+          color: #06332e;
+          font-size: 20px;
+          font-weight: 900;
         }
 
         .owner-horses-toolbar {
           justify-content: flex-end;
+          gap: 10px !important;
+        }
+
+        .owner-filter-search.ant-input-search .ant-input,
+        .owner-status-select.ant-select .ant-select-selector {
+          border-color: #bdeee5 !important;
+          color: #06332e !important;
+          background: #ffffff !important;
+          box-shadow: none !important;
+        }
+
+        .owner-filter-search.ant-input-search .ant-input-search-button {
+          border-color: #bdeee5 !important;
+          color: #006755 !important;
+          background: #f7fffc !important;
+        }
+
+        .owner-status-select.ant-select .ant-select-selection-item,
+        .owner-status-select.ant-select .ant-select-arrow {
+          color: #06332e !important;
         }
 
         .owner-horses-table-wrap {
           width: 100%;
           overflow-x: auto;
+          padding: 12px 0 0;
         }
 
         .owner-horses-table .ant-table {
-          border: 1px solid #e8f1ef;
+          border: 1px solid #ccefe7;
           border-radius: 12px;
           overflow: hidden;
+          box-shadow: 0 12px 30px rgba(13, 70, 63, 0.04);
         }
 
         .owner-horses-table .ant-table-container {
@@ -755,10 +919,10 @@ export default function OwnerHorses() {
         }
 
         .owner-horses-table .ant-table-thead > tr > th {
-          background: #f7fbfa !important;
-          color: #173f3a;
+          background: #f3fbf9 !important;
+          color: #06332e;
           font-weight: 900;
-          border-bottom-color: #e1ece9 !important;
+          border-bottom-color: #ccefe7 !important;
         }
 
         .owner-horses-table .ant-table-tbody > tr > td {
@@ -780,7 +944,7 @@ export default function OwnerHorses() {
 
         .owner-horse-name {
           display: block;
-          color: #173f3a;
+          color: #06332e;
           font-size: 15px;
           line-height: 1.3;
         }
@@ -812,9 +976,10 @@ export default function OwnerHorses() {
           display: grid;
           gap: 14px;
           padding: 14px;
-          border: 1px solid #e2eeeb;
+          border: 1px solid #ccefe7;
           border-radius: 12px;
           background: #ffffff;
+          box-shadow: 0 10px 24px rgba(13, 70, 63, 0.05);
         }
 
         .owner-horse-mobile-main {
@@ -991,6 +1156,19 @@ export default function OwnerHorses() {
         }
 
         @media (max-width: 640px) {
+          .owner-role-layout .role-content {
+            padding: 20px;
+          }
+
+          .owner-workspace-header {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .owner-workspace-refresh.ant-btn {
+            width: 100%;
+          }
+
           .owner-horses-card .ant-card-head {
             flex-direction: column;
           }

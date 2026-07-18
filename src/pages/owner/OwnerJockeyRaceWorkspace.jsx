@@ -41,6 +41,7 @@ import {
 } from "../../api/services/user.service";
 import { cancelContract } from "../../api/services/contract.service";
 import JockeyContractModal from "../../components/contracts/JockeyContractModal";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 
 const contractColor = {
   ACTIVE: "green",
@@ -695,6 +696,12 @@ export default function OwnerJockeyRaceWorkspace() {
   return (
     <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
+      <WorkspaceHeader
+        kicker="JOCKEY & ENTRIES"
+        title="Jockey & Entries"
+        subtitle="Invite jockeys, manage contracts, and confirm race entries"
+      />
+
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
       {invitationErrorMessage && (
         <Alert type="warning" showIcon message={invitationErrorMessage} />

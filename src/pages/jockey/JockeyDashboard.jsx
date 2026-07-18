@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Col, Row, Space, Statistic, Table, Tag, Typography } from "antd";
 import { Link } from "react-router-dom";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 import { getJockeyDashboard } from "../../api/services/jockey.service";
 
 function formatMoney(value) {
@@ -50,6 +51,12 @@ export default function JockeyDashboard() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <WorkspaceHeader
+        kicker="RACE OVERVIEW"
+        title="Jockey Workspace"
+        subtitle="Manage invitations, assignments, and race performance"
+      />
+
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
       <Row gutter={[16, 16]}>

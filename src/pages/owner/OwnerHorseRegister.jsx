@@ -15,6 +15,7 @@ import {
 import { UploadOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 import { createHorse, uploadHorseAvatar } from "../../api/services/horse.service";
 import { toHorseCreatePayload } from "./horseViewModel";
 
@@ -90,16 +91,11 @@ export default function OwnerHorseRegister() {
     <Space direction="vertical" size={16} className="owner-page-stack">
       {contextHolder}
 
-      <Card>
-        <Space direction="vertical" size={4}>
-          <Typography.Title level={3} className="owner-section-title">
-            Register new horse
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Add a horse to your stable before choosing a jockey or registering for a tournament.
-          </Typography.Text>
-        </Space>
-      </Card>
+      <WorkspaceHeader
+        kicker="STABLE SETUP"
+        title="Register New Horse"
+        subtitle="Add a horse to your stable before choosing a jockey or entering tournaments"
+      />
 
       <Card>
         <Form

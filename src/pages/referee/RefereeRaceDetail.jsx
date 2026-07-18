@@ -3,6 +3,7 @@ import {
     Button,
     Card,
     Col,
+    ConfigProvider,
     Descriptions,
     Empty,
     Form,
@@ -451,56 +452,81 @@ export default function RefereeRaceDetail() {
             render: (_, record) => {
 
                 return (
-                    <Select
-                        className="review-select"
-                        popupClassName="dark-select"
-                        value={
-                            selectedRawResultIds.includes(record._id)
-                                ? "Disqualified"
-                                : "Qualified"
-                        }
-                        disabled={hasFinalResult}
-                        style={{
-                            width: 160
-                        }}
-                        onChange={(value) => {
-
-                            if (value === "Disqualified") {
-
-                                setSelectedRawResultIds(prev =>
-                                    prev.includes(record._id)
-                                        ? prev
-                                        : [...prev, record._id]
-                                );
-
-                                setDisqualifiedHorseIds(prev =>
-                                    prev.includes(record.horseId)
-                                        ? prev
-                                        : [...prev, record.horseId]
-                                );
-
-                            } else {
-
-                                setSelectedRawResultIds(prev =>
-                                    prev.filter(id => id !== record._id)
-                                );
-
-                                setDisqualifiedHorseIds(prev =>
-                                    prev.filter(id => id !== record.horseId)
-                                );
-
-                            }
-
-                        }}
-                        options={[
-                            {
-                                value: "Qualified"
+                    <ConfigProvider
+                        theme={{
+                            token: {
+                                colorPrimary: "#14b8a6",
+                                colorText: "#0f4f48",
+                                colorBorder: "rgba(20, 184, 166, .45)",
+                                colorBgContainer: "#dffaf3",
+                                colorBgElevated: "#f7fffc",
                             },
-                            {
-                                value: "Disqualified"
+                            components: {
+                                Select: {
+                                    selectorBg: "#dffaf3",
+                                    optionActiveBg: "#d9f9f1",
+                                    optionSelectedBg: "#14b8a6",
+                                    optionSelectedColor: "#ffffff",
+                                    hoverBorderColor: "#14b8a6",
+                                    activeBorderColor: "#14b8a6",
+                                    activeOutlineColor: "rgba(20, 184, 166, .18)",
+                                },
+                            },
+                        }}
+                    >
+                        <Select
+                            className={`review-select review-result-select ${hasFinalResult ? "review-result-select-locked" : ""}`}
+                            popupClassName="review-result-select-dropdown"
+                            open={hasFinalResult ? false : undefined}
+                            value={
+                                selectedRawResultIds.includes(record._id)
+                                    ? "Disqualified"
+                                    : "Qualified"
                             }
-                        ]}
-                    />
+                            tabIndex={hasFinalResult ? -1 : 0}
+                            style={{
+                                width: 160
+                            }}
+                            onChange={(value) => {
+                                if (hasFinalResult) return;
+
+                                if (value === "Disqualified") {
+
+                                    setSelectedRawResultIds(prev =>
+                                        prev.includes(record._id)
+                                            ? prev
+                                            : [...prev, record._id]
+                                    );
+
+                                    setDisqualifiedHorseIds(prev =>
+                                        prev.includes(record.horseId)
+                                            ? prev
+                                            : [...prev, record.horseId]
+                                    );
+
+                                } else {
+
+                                    setSelectedRawResultIds(prev =>
+                                        prev.filter(id => id !== record._id)
+                                    );
+
+                                    setDisqualifiedHorseIds(prev =>
+                                        prev.filter(id => id !== record.horseId)
+                                    );
+
+                                }
+
+                            }}
+                            options={[
+                                {
+                                    value: "Qualified"
+                                },
+                                {
+                                    value: "Disqualified"
+                                }
+                            ]}
+                        />
+                    </ConfigProvider>
                 );
 
             },
@@ -1199,6 +1225,7 @@ export default function RefereeRaceDetail() {
                                 pagination={false}
                                 size="large"
                                 rowClassName={() => "race-transparent-row"}
+                                rowHoverable={false}
                                 bordered={false}
                                 size="middle"
                                 rowKey={(record) => record.registrationId}
@@ -1262,7 +1289,7 @@ export default function RefereeRaceDetail() {
                 </Card>
 
                 <Card
-                    className="race-detail-card"
+                    className="race-detail-card race-condition-card"
                     styles={{
                         header: {
                             color: "white",
@@ -1292,8 +1319,26 @@ export default function RefereeRaceDetail() {
                             }
                         >
                             <Select
-                                className="race-select"
+                                className="race-select race-condition-select"
                                 popupClassName="dark-select"
+                                classNames={{
+                                    root: "race-condition-select-root",
+                                    popup: {
+                                        root: "dark-select",
+                                    },
+                                }}
+                                styles={{
+                                    root: {
+                                        backgroundColor: "#0b3d37",
+                                        borderColor: "rgba(46, 196, 182, .45)",
+                                    },
+                                    content: {
+                                        color: "#eafffb",
+                                    },
+                                    input: {
+                                        color: "#eafffb",
+                                    },
+                                }}
                                 options={[
                                     { value: "Sunny" },
                                     { value: "Cloudy" },
@@ -1317,7 +1362,12 @@ export default function RefereeRaceDetail() {
                                     max={100}
                                     style={{ width: "100%" }}
                                 />
-                                <Button disabled>km/h</Button>
+                                <Button
+                                    className="race-speed-unit"
+                                    disabled
+                                >
+                                    km/h
+                                </Button>
                             </Space.Compact>
                         </Form.Item>
 
@@ -1330,8 +1380,26 @@ export default function RefereeRaceDetail() {
                             name="trackCondition"
                         >
                             <Select
-                                className="race-select"
+                                className="race-select race-condition-select"
                                 popupClassName="dark-select"
+                                classNames={{
+                                    root: "race-condition-select-root",
+                                    popup: {
+                                        root: "dark-select",
+                                    },
+                                }}
+                                styles={{
+                                    root: {
+                                        backgroundColor: "#0b3d37",
+                                        borderColor: "rgba(46, 196, 182, .45)",
+                                    },
+                                    content: {
+                                        color: "#eafffb",
+                                    },
+                                    input: {
+                                        color: "#eafffb",
+                                    },
+                                }}
                                 options={[
                                     { value: "Good" },
                                     { value: "Muddy" },
