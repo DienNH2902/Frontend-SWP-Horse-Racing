@@ -339,7 +339,10 @@ function TournamentManagement() {
     try {
       const response = await getTournamentById(record.id);
 
-      setDetailTournament(response);
+      setDetailTournament({
+        ...normalizeTournamentDetail(response),
+        id: response?._id || response?.id || record.id,
+      });
       setIsDetailModalOpen(true);
     } catch (error) {
       message.error(error?.message || "Unable to load tournament detail");
@@ -550,7 +553,7 @@ function TournamentManagement() {
               onClick={() => openDetailModal(record)}
             />
 
-            <Tooltip title="View advancements">
+            <Tooltip title="View qualified horses">
               <Button
                 type="text"
                 icon={<TrophyOutlined />}
@@ -1211,26 +1214,43 @@ function TournamentManagement() {
       </Modal>
 
       <Modal
-        title={`Advancements - ${advancementTournament?.title || ""}`}
+        title={`Qualified Horses for Final - ${advancementTournament?.title || ""}`}
         open={Boolean(advancementTournament)}
         footer={null}
-        width={850}
+        width={920}
         onCancel={() => {
           setAdvancementTournament(null);
           setAdvancements([]);
         }}
         destroyOnClose
       >
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "12px 14px",
+            border: "1px solid #d9f7ef",
+            borderRadius: 8,
+            background: "#f6fffc",
+          }}
+        >
+          <Text strong>Final qualification list</Text>
+          <br />
+          <Text type="secondary">
+            Horses shown here have advanced from Round 1 races into the final
+            race of this tournament.
+          </Text>
+        </div>
+
         <Table
           rowKey="key"
           loading={isAdvancementsLoading}
           dataSource={advancements}
           pagination={false}
           scroll={{ x: 1180 }}
-          locale={{ emptyText: "No horses have advanced yet" }}
+          locale={{ emptyText: "No qualified horses for the final yet" }}
           columns={[
             {
-              title: "Advancement ID",
+              title: "Qualified Record ID",
               dataIndex: "id",
               width: 190,
               render: (value) => <Text code>{value}</Text>,
@@ -1252,23 +1272,23 @@ function TournamentManagement() {
               width: 140,
             },
             {
-              title: "From Race",
+              title: "Qualified From",
               dataIndex: "fromRaceName",
             },
             {
-              title: "From Race ID",
+              title: "Source Race ID",
               dataIndex: "fromRaceId",
               width: 190,
               render: (value) => <Text code>{value}</Text>,
             },
             {
-              title: "To Race ID",
+              title: "Final Race ID",
               dataIndex: "toRaceId",
               width: 190,
               render: (value) => <Text code>{value}</Text>,
             },
             {
-              title: "Advanced At",
+              title: "Qualified At",
               dataIndex: "advancedAt",
               width: 180,
               render: formatDateTime,
