@@ -674,9 +674,9 @@ function ContractManagement() {
             <Select.Option value="BREACHED">Breached</Select.Option>
           </Select>
 
-          {/* <Button className="user-management-refresh" onClick={loadContracts}>
+          <Button className="user-management-refresh" onClick={loadContracts}>
             Refresh
-          </Button> */}
+          </Button>
         </div>
       </div>
 
