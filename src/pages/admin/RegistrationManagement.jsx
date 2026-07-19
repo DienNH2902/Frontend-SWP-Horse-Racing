@@ -29,6 +29,9 @@ import {
 } from "../../api/services/registration.service";
 import { getRacesByTournament } from "../../api/services/race.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
 
 const { Title, Text } = Typography;
 
@@ -52,16 +55,27 @@ function formatMoney(value) {
   return Number(value).toLocaleString("vi-VN") + " VND";
 }
 
-function formatDate(value) {
+// function formatDate(value) {
+//   if (!value) return "N/A";
+
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return value;
+
+//   return new Intl.DateTimeFormat("vi-VN", {
+//     dateStyle: "short",
+//     timeStyle: "short",
+//   }).format(date);
+// }
+
+function formatDateTime(value) {
   if (!value) return "N/A";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const d = dayjs(value);
+  if (!d.isValid()) return value;
 
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  // Sử dụng định dạng giữ nguyên hiển thị theo chuỗi ISO gốc hoặc format thủ công
+  // Để hiển thị dạng DD/MM/YYYY HH:mm đúng chuẩn vi-VN mà không bị lệch múi giờ:
+  return dayjs.utc(value).format("DD/MM/YYYY HH:mm");
 }
 
 function getTimeValue(value) {
@@ -135,7 +149,7 @@ function normalizeRaceOption(item, index) {
   const name = item?.name || `Race ${index + 1}`;
   const round = item?.roundNumber ? `Round ${item.roundNumber}` : "";
   const order = item?.raceOrder ? `Race ${item.raceOrder}` : "";
-  const startTime = formatDate(item?.startTime || item?.date);
+  const startTime = formatDateTime(item?.startTime || item?.date);
   const details = [round, order, startTime !== "N/A" ? startTime : ""]
     .filter(Boolean)
     .join(" - ");
@@ -371,7 +385,7 @@ function RegistrationManagement() {
         title: "Registered At",
         dataIndex: "registeredAt",
         width: 180,
-        render: formatDate,
+        render: formatDateTime,
       },
       {
         title: "Actions",
@@ -552,7 +566,9 @@ function RegistrationManagement() {
         {detailRegistration && (
           <Descriptions bordered column={1} size="middle">
             <Descriptions.Item label="Registration ID">
-              <Text code>{detailRegistration._id || detailRegistration.id || "N/A"}</Text>
+              <Text code>
+                {detailRegistration._id || detailRegistration.id || "N/A"}
+              </Text>
             </Descriptions.Item>
 
             <Descriptions.Item label="Tournament ID">
@@ -634,11 +650,11 @@ function RegistrationManagement() {
             </Descriptions.Item>
 
             <Descriptions.Item label="Registered At">
-              {formatDate(detailRegistration.registeredAt)}
+              {formatDateTime(detailRegistration.registeredAt)}
             </Descriptions.Item>
 
             <Descriptions.Item label="Confirmed At">
-              {formatDate(detailRegistration.confirmedAt)}
+              {formatDateTime(detailRegistration.confirmedAt)}
             </Descriptions.Item>
 
             <Descriptions.Item label="Rejected Reason">
@@ -646,11 +662,11 @@ function RegistrationManagement() {
             </Descriptions.Item>
 
             <Descriptions.Item label="Rejected At">
-              {formatDate(detailRegistration.rejectedAt)}
+              {formatDateTime(detailRegistration.rejectedAt)}
             </Descriptions.Item>
 
             <Descriptions.Item label="Created At">
-              {formatDate(detailRegistration.createdAt)}
+              {formatDateTime(detailRegistration.createdAt)}
             </Descriptions.Item>
           </Descriptions>
         )}

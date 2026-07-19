@@ -5,6 +5,7 @@ import { getRaceById } from "../../api/services/race.service";
 import { getSimulationResult } from "../../api/services/simulation.service";
 import { getAccessToken } from "../../utils/storage";
 import "./Broadcast.css";
+import { getHorses } from "../../api/services/horse.service";
 
 const TICK_DURATION_SECONDS = 0.5;
 // v2 only contains results received from the spectator socket's race_finished.
@@ -271,6 +272,7 @@ export default function Broadcast() {
   const [, setLogs] = useState([]);
   const [results, setResults] = useState([]);
   const [raceStartAt, setRaceStartAt] = useState(null);
+  const [allHorsesMap, setAllHorsesMap] = useState(new Map());
 
   const socketRef = useRef(null);
   const activeRaceRef = useRef("");
@@ -552,6 +554,26 @@ export default function Broadcast() {
   }, [addLog, raceId, resetRace]);
 
   useEffect(() => {
+    const fetchAllHorses = async () => {
+      try {
+        // Giả sử getMyHorses trả về array chứa object có name và id/_id
+        const data = await getHorses();
+        const horseMap = new Map();
+        if (Array.isArray(data)) {
+          data.forEach((h) => {
+            const id = h.id || h._id;
+            if (id) horseMap.set(id, h.name || "Unknown");
+          });
+        }
+        setAllHorsesMap(horseMap);
+      } catch (error) {
+        console.error("Could not load horses mapping:", error);
+      }
+    };
+    fetchAllHorses();
+  }, []);
+
+  useEffect(() => {
     connect();
   }, [connect]);
 
@@ -707,7 +729,7 @@ export default function Broadcast() {
                     <span className="finish-line">FINISH</span>
                     <span
                       className="horse-runner"
-                      title={horse.horseId}
+                      title={allHorsesMap.get(horse.horseId) || horse.horseId}
                       style={{
                         "--horse-color": horse.color,
                         "--horse-progress": `${horse.progress * 100}%`,
@@ -755,7 +777,10 @@ export default function Broadcast() {
                   <strong>
                     {["🥇", "🥈", "🥉"][horse.rank - 1] || `#${horse.rank}`}
                   </strong>
-                  <span title={horse.horseId}>{shortId(horse.horseId, 8)}</span>
+                  <span title={horse.horseId}>
+                    {allHorsesMap.get(horse.horseId) ||
+                      shortId(horse.horseId, 8)}
+                  </span>
                   <span>{horse.lane}</span>
                   <span>{(horse.progress * 100).toFixed(1)}%</span>
                 </div>
@@ -800,7 +825,11 @@ export default function Broadcast() {
                             {medal && `#${result.rawRank}`}
                           </strong>
                         </td>
-                        <td title={result.horseId}>{result.horseId}</td>
+                        <td title={result.horseId}>
+                          {allHorsesMap.get(result.horseId)
+                            ? `${allHorsesMap.get(result.horseId)} (${shortId(result.horseId, 6)})`
+                            : result.horseId}
+                        </td>
                         <td>
                           {formatSeconds(
                             finishElapsedSeconds(

@@ -50,22 +50,35 @@ function resolveList(response) {
   return [];
 }
 
+// function formatDate(value) {
+//   if (!value) return "N/A";
+//   if (typeof value === "string" && value.includes("/")) {
+//     return value;
+//   }
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return value;
+
+//   return new Intl.DateTimeFormat("en-GB", {
+//     day: "2-digit",
+//     month: "2-digit",
+//     year: "numeric",
+//     hour: "2-digit",
+//     minute: "2-digit",
+//     second: "2-digit",
+//   }).format(date);
+// }
+
 function formatDate(value) {
   if (!value) return "N/A";
   if (typeof value === "string" && value.includes("/")) {
     return value;
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(date);
+  // Sử dụng dayjs với plugin utc để tránh tự động convert sang múi giờ địa phương
+  const d = dayjs.utc(value);
+  if (!d.isValid()) return value;
+
+  return d.format("DD/MM/YYYY HH:mm:ss");
 }
 
 function getTimeValue(value) {
