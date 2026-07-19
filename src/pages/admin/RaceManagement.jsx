@@ -37,11 +37,10 @@ import {
   getRaceCourses,
 } from "../../api/services/race-course.service";
 import { getTournaments } from "../../api/services/tournament.service";
-import {
-  getUserById,
-  getUsersByRole,
-} from "../../api/services/user.service";
+import { getUserById, getUsersByRole } from "../../api/services/user.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
 
 const { Title, Text } = Typography;
 
@@ -78,13 +77,7 @@ function unwrapEntity(response) {
 }
 
 function getPersonName(item) {
-  return (
-    item?.fullName ||
-    item?.name ||
-    item?.username ||
-    item?.email ||
-    ""
-  );
+  return item?.fullName || item?.name || item?.username || item?.email || "";
 }
 
 function getRaceCourseName(item) {
@@ -112,16 +105,27 @@ function formatDate(value) {
   }).format(date);
 }
 
+// function formatDateTime(value) {
+//   if (!value) return "N/A";
+
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return value;
+
+//   return new Intl.DateTimeFormat("vi-VN", {
+//     dateStyle: "short",
+//     timeStyle: "short",
+//   }).format(date);
+// }
+
 function formatDateTime(value) {
   if (!value) return "N/A";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const d = dayjs(value);
+  if (!d.isValid()) return value;
 
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  // Sử dụng định dạng giữ nguyên hiển thị theo chuỗi ISO gốc hoặc format thủ công
+  // Để hiển thị dạng DD/MM/YYYY HH:mm đúng chuẩn vi-VN mà không bị lệch múi giờ:
+  return dayjs.utc(value).format("DD/MM/YYYY HH:mm");
 }
 
 function normalizeTimeInput(value = "") {
@@ -601,7 +605,10 @@ function RaceManagement() {
       setIsBatchModalOpen(false);
       batchForm.resetFields();
       searchForm.setFieldsValue({ tournamentId: payload.tournamentId });
-      await loadRacesFor(payload.tournamentId, searchForm.getFieldValue("status"));
+      await loadRacesFor(
+        payload.tournamentId,
+        searchForm.getFieldValue("status"),
+      );
     } catch (error) {
       message.error(error?.message || "Unable to create races");
     } finally {
@@ -624,7 +631,10 @@ function RaceManagement() {
       setIsRound2ModalOpen(false);
       round2Form.resetFields();
       searchForm.setFieldsValue({ tournamentId: values.tournamentId });
-      await loadRacesFor(values.tournamentId, searchForm.getFieldValue("status"));
+      await loadRacesFor(
+        values.tournamentId,
+        searchForm.getFieldValue("status"),
+      );
     } catch (error) {
       message.error(error?.message || "Unable to create round 2 race");
     } finally {
@@ -676,9 +686,7 @@ function RaceManagement() {
 
   function getRaceCourseDisplayName(record) {
     return (
-      record.raceCourseName ||
-      raceCoursesById[record.raceCourseId] ||
-      "N/A"
+      record.raceCourseName || raceCoursesById[record.raceCourseId] || "N/A"
     );
   }
 
@@ -780,7 +788,6 @@ function RaceManagement() {
               icon={<FlagOutlined />}
               onClick={() => openAssignRaceCourseModal(record)}
             />
-
           </Space>
         ),
       },
@@ -1382,9 +1389,7 @@ function RaceManagement() {
         {detailRace && (
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
             <Descriptions bordered column={1} size="middle">
-              <Descriptions.Item label="ID">
-                {detailRace.id}
-              </Descriptions.Item>
+              <Descriptions.Item label="ID">{detailRace.id}</Descriptions.Item>
               <Descriptions.Item label="Name">
                 {detailRace.name}
               </Descriptions.Item>
