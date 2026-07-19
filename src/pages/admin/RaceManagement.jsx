@@ -505,6 +505,26 @@ function RaceManagement() {
     return `Tournament period: ${startDate.format("DD/MM/YYYY")} - ${endDate.format("DD/MM/YYYY")}`;
   }
 
+  function renderTournamentPeriodHint(tournamentId) {
+    const startDate = getTournamentDate(tournamentId, "startDate");
+    const endDate = getTournamentDate(tournamentId, "endDate");
+
+    return (
+      <div className="race-tournament-period">
+        <span className="race-tournament-period-label">Tournament time</span>
+        <span className="race-tournament-period-range">
+          {startDate && endDate
+            ? `${startDate.format("DD/MM/YYYY")} - ${endDate.format("DD/MM/YYYY")}`
+            : "Select a tournament to see its date range"}
+        </span>
+        <Text type="secondary" className="race-tournament-period-note">
+          Race date should stay inside this tournament period to avoid backend
+          validation errors.
+        </Text>
+      </div>
+    );
+  }
+
   function applyBatchTournamentDefaults(tournamentId) {
     const suggestedDate = getTournamentDate(tournamentId, "startDate");
     const races = batchForm.getFieldValue("races") || [];
@@ -970,6 +990,35 @@ function RaceManagement() {
           font-size: 13px;
         }
 
+        .race-tournament-period {
+          margin: -6px 0 18px;
+          padding: 12px 14px;
+          border: 1px solid #ccefe7;
+          border-radius: 8px;
+          background: #f7fffd;
+        }
+
+        .race-tournament-period-label {
+          display: block;
+          color: #007a68;
+          font-size: 12px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .race-tournament-period-range {
+          display: block;
+          margin-top: 3px;
+          color: #06332e;
+          font-size: 16px;
+          font-weight: 950;
+        }
+
+        .race-tournament-period-note {
+          display: block;
+          margin-top: 5px;
+        }
+
         @media (max-width: 920px) {
           .race-management-header,
           .race-management-toolbar {
@@ -1147,6 +1196,8 @@ function RaceManagement() {
             />
           </Form.Item>
 
+          {renderTournamentPeriodHint(batchTournamentId)}
+
           <div className="race-batch-mode">
             <span className="race-batch-mode-label">Number of races</span>
             <Segmented
@@ -1241,6 +1292,8 @@ function RaceManagement() {
               }
             />
           </Form.Item>
+
+          {renderTournamentPeriodHint(round2TournamentId)}
 
           <Form.Item
             label="Date"
