@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import {
   registerHorseOwner,
   registerJockey,
+  registerReferee,
   registerSpectator,
 } from "../../../api/services/auth.service";
 
@@ -150,6 +151,17 @@ export default function RegisterForm() {
       delete payload.certification;
     }
 
+    if (values.role === "Referee") {
+      payload.role = "Referee";
+      payload.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        values.fullName.trim(),
+      )}`;
+      delete payload.stableName;
+      delete payload.stableAddress;
+      delete payload.height;
+      delete payload.weight;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -157,6 +169,8 @@ export default function RegisterForm() {
         await registerHorseOwner(payload);
       } else if (values.role === "Jockey") {
         await registerJockey(payload);
+      } else if (values.role === "Referee") {
+        await registerReferee(payload);
       } else {
         await registerSpectator(payload);
       }
@@ -842,6 +856,38 @@ export default function RegisterForm() {
                 </>
               ) : null}
 
+              {role === "Referee" ? (
+                <>
+                  <div className="gr-section-title">Referee information</div>
+
+                  <Form.Item
+                    className="gr-col-4"
+                    label="Experience (years)"
+                    name="experienceYears"
+                    rules={[{ required: true, message: "Experience is required" }]}
+                  >
+                    <InputNumber
+                      className="gr-input-number"
+                      min={0}
+                      precision={0}
+                      placeholder="Ex: 3"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    className="gr-col-6"
+                    label="Certification"
+                    name="certification"
+                    rules={[{ required: true, message: "Certification is required" }]}
+                  >
+                    <Input
+                      className="gr-input"
+                      placeholder="Ex: National Referee Level 2"
+                      prefix={<Icon name="certificate" size={20} />}
+                    />
+                  </Form.Item>
+                </>
+              ) : null}
             </div>
 
             <div className="gr-form-actions">
