@@ -6,6 +6,7 @@ import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
+import CreateRefereeAccount from "../pages/admin/CreateRefereeAccount";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import TournamentManagement from "../pages/admin/TournamentManagement";
 import RegistrationManagement from "../pages/admin/RegistrationManagement";
@@ -215,6 +216,14 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <UserManagement />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/admin/referees/create"
+          element={
+            <AdminLayout>
+              <CreateRefereeAccount />
             </AdminLayout>
           }
         />

@@ -13,6 +13,7 @@ import {
   ScheduleOutlined,
   TeamOutlined,
   TrophyOutlined,
+  UserAddOutlined,
   WalletOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
@@ -38,6 +39,11 @@ const NAV_GROUPS = [
     label: "People",
     items: [
       { path: "/admin/users", label: "Users", icon: <TeamOutlined /> },
+      {
+        path: "/admin/referees/create",
+        label: "Create Referee",
+        icon: <UserAddOutlined />,
+      },
       {
         path: "/admin/jockey-license",
         label: "Jockey Licenses",
