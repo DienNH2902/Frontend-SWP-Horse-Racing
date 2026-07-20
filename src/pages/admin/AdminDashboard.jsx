@@ -21,7 +21,6 @@ import {
   FileDoneOutlined,
   FlagOutlined,
   FundOutlined,
-  ReloadOutlined,
   TeamOutlined,
   TrophyOutlined,
   WarningOutlined,
@@ -1384,7 +1383,6 @@ export default function AdminDashboard() {
         </div>
         <Button
           className="admin-dashboard-refresh"
-          icon={<ReloadOutlined />}
           loading={isLoading}
           onClick={loadDashboard}
         >

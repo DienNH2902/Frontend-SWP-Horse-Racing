@@ -15,7 +15,6 @@ import {
   Typography,
   message,
 } from "antd";
-import { GiftOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { useSearchParams } from "react-router-dom";
 import { distributeRacePrize } from "../../api/services/prize-distribution.service";
@@ -311,7 +310,7 @@ function Prize() {
             return (
               <Tooltip title={reason}>
                 <span>
-                  <Button icon={<GiftOutlined />} disabled>
+                  <Button disabled>
                     Distribute
                   </Button>
                 </span>
@@ -329,7 +328,6 @@ function Prize() {
             >
               <Button
                 className="prize-primary"
-                icon={<GiftOutlined />}
                 loading={distributingRaceId === record.id}
               >
                 Distribute
@@ -433,7 +431,6 @@ function Prize() {
 
         <Button
           className="prize-primary"
-          icon={<PlusOutlined />}
           onClick={openCreatePrizeModal}
         >
           Create Prize
@@ -457,7 +454,6 @@ function Prize() {
           />
 
           <Button
-            icon={<ReloadOutlined />}
             loading={isLoading}
             onClick={() => {
               loadFinalRaces(selectedTournamentId);

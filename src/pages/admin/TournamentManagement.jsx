@@ -17,13 +17,6 @@ import {
   Upload,
   message,
 } from "antd";
-import {
-  DeleteOutlined,
-  EyeOutlined,
-  GiftOutlined,
-  TrophyOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import { useNavigate } from "react-router-dom";
@@ -615,21 +608,25 @@ function TournamentManagement() {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 340,
+        width: 450,
         render: (_, record) => (
           <Space>
             <Button
-              type="text"
-              icon={<EyeOutlined />}
+              className="tournament-management-link-btn"
+              size="small"
               onClick={() => openDetailModal(record)}
-            />
+            >
+              Detail
+            </Button>
 
             <Tooltip title="View qualified horses">
               <Button
-                type="text"
-                icon={<TrophyOutlined />}
+                className="tournament-management-link-btn"
+                size="small"
                 onClick={() => openAdvancementsModal(record)}
-              />
+              >
+                Qualified
+              </Button>
             </Tooltip>
 
             {record.status === "Completed" && (
@@ -637,7 +634,6 @@ function TournamentManagement() {
                 <Button
                   className="tournament-management-link-btn"
                   size="small"
-                  icon={<GiftOutlined />}
                   onClick={() =>
                     navigate(`/admin/prize?tournamentId=${record.id}`)
                   }
@@ -671,7 +667,9 @@ function TournamentManagement() {
               okButtonProps={{ danger: true, loading: isSaving }}
               onConfirm={() => handleDeleteTournament(record)}
             >
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Button size="small" danger>
+                Delete
+              </Button>
             </Popconfirm>
           </Space>
         ),
@@ -976,10 +974,7 @@ function TournamentManagement() {
                   maxCount={1}
                   showUploadList={false}
                 >
-                  <Button
-                    icon={<UploadOutlined />}
-                    loading={isUploadingBanner}
-                  >
+                  <Button loading={isUploadingBanner}>
                     Upload Banner
                   </Button>
                 </Upload>
@@ -1264,10 +1259,7 @@ function TournamentManagement() {
               maxCount={1}
               showUploadList={false}
             >
-              <Button
-                icon={<UploadOutlined />}
-                loading={isUploadingBanner}
-              >
+              <Button loading={isUploadingBanner}>
                 Upload Banner
               </Button>
             </Upload>

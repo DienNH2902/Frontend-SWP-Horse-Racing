@@ -5,9 +5,7 @@ import {
   EnvironmentOutlined,
   FileTextOutlined,
   GiftOutlined,
-  HomeOutlined,
   IdcardOutlined,
-  LogoutOutlined,
   MenuOutlined,
   ProfileOutlined,
   ScheduleOutlined,
@@ -303,11 +301,8 @@ function AdminLayout({ children }) {
           flex: 0 0 auto;
           color: #ffb3b3 !important;
           border-color: rgba(255, 120, 117, 0.28) !important;
-        }
-        .admin-logout-btn.ant-btn.ant-btn-circle {
-          width: 32px;
-          min-width: 32px;
-          height: 32px;
+          background: rgba(255, 120, 117, 0.08) !important;
+          font-weight: 800;
         }
 
         .admin-header.ant-layout-header {
@@ -460,26 +455,23 @@ function AdminLayout({ children }) {
                   {accountLabel}
                 </div>
               </div>
-              <Tooltip title="Logout">
-                <Button
-                  className="admin-logout-btn"
-                  shape="circle"
-                  danger
-                  icon={<LogoutOutlined />}
-                  aria-label="Logout"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    handleLogout();
-                  }}
-                />
-              </Tooltip>
+              <Button
+                className="admin-logout-btn"
+                size="small"
+                danger
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleLogout();
+                }}
+              >
+                Logout
+              </Button>
             </Link>
 
             <div className="admin-footer-actions">
               <Tooltip title="Open home">
                 <Button
                   block
-                  icon={<HomeOutlined />}
                   onClick={() => navigate("/home")}
                 >
                   Home
