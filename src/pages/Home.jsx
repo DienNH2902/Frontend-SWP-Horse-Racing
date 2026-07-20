@@ -2171,14 +2171,16 @@ function Home() {
 
               {isAccountMenuOpen && (
                 <div className="account-dropdown" role="menu">
-                  <Link
-                    className="account-menu-item"
-                    role="menuitem"
-                    to={isAdmin ? "/admin/dashboard" : dashboardPath}
-                  >
-                    <Icon name="dashboard" size={18} />
-                    <span>Dashboard</span>
-                  </Link>
+                  {!isSpectator && (
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      to={isAdmin ? "/admin/dashboard" : dashboardPath}
+                    >
+                      <Icon name="dashboard" size={18} />
+                      <span>Dashboard</span>
+                    </Link>
+                  )}
                   <Link
                     className="account-menu-item"
                     role="menuitem"

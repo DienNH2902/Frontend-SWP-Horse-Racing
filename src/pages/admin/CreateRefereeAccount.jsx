@@ -88,6 +88,17 @@ export default function CreateRefereeAccount() {
     }
   }
 
+  const handleFinishFailed = (errorInfo) => {
+    // Tìm xem có lỗi của trường avatar không
+    const avatarError = errorInfo.errorFields.find((field) =>
+      field.name.includes("avatar"),
+    );
+    if (avatarError) {
+      // Sử dụng message hoặc notification của Ant Design để hiển thị
+      message.error(avatarError.errors[0]);
+    }
+  };
+
   return (
     <section className="create-referee-page">
       <style>{`
@@ -294,7 +305,9 @@ export default function CreateRefereeAccount() {
           </div>
           <div className="create-referee-card-title">
             <strong>Referee profile</strong>
-            <span>Only admins can create referee accounts from this screen.</span>
+            <span>
+              Only admins can create referee accounts from this screen.
+            </span>
           </div>
         </div>
 
@@ -303,6 +316,7 @@ export default function CreateRefereeAccount() {
           form={form}
           layout="vertical"
           onFinish={handleFinish}
+          onFinishFailed={handleFinishFailed}
           requiredMark={false}
         >
           <div className="create-referee-grid">
@@ -314,7 +328,10 @@ export default function CreateRefereeAccount() {
                 { type: "email", message: "Email is invalid" },
               ]}
             >
-              <Input prefix={<MailOutlined />} placeholder="referee@goldenhoof.com" />
+              <Input
+                prefix={<MailOutlined />}
+                placeholder="referee@goldenhoof.com"
+              />
             </Form.Item>
 
             <Form.Item
@@ -338,7 +355,11 @@ export default function CreateRefereeAccount() {
               name="dateOfBirth"
               rules={[{ required: true, message: "Date of birth is required" }]}
             >
-              <DatePicker style={{ width: "100%" }} format="DD/MM/YYYY" placeholder="DD/MM/YYYY" />
+              <DatePicker
+                style={{ width: "100%" }}
+                format="DD/MM/YYYY"
+                placeholder="DD/MM/YYYY"
+              />
             </Form.Item>
 
             <Form.Item
@@ -378,7 +399,13 @@ export default function CreateRefereeAccount() {
               name="experienceYears"
               rules={[{ required: true, message: "Experience is required" }]}
             >
-              <InputNumber min={0} precision={0} style={{ width: "100%" }} placeholder="3" prefix={<IdcardOutlined />} />
+              <InputNumber
+                min={0}
+                precision={0}
+                style={{ width: "100%" }}
+                placeholder="3"
+                prefix={<IdcardOutlined />}
+              />
             </Form.Item>
 
             <Form.Item
@@ -386,13 +413,18 @@ export default function CreateRefereeAccount() {
               name="certification"
               rules={[{ required: true, message: "Certification is required" }]}
             >
-              <Input prefix={<SafetyCertificateOutlined />} placeholder="National Referee Level 2" />
+              <Input
+                prefix={<SafetyCertificateOutlined />}
+                placeholder="National Referee Level 2"
+              />
             </Form.Item>
 
             <Form.Item
               hidden
               name="avatar"
-              rules={[{ required: true, message: "Please upload referee avatar" }]}
+              rules={[
+                { required: true, message: "Please upload referee avatar" },
+              ]}
             >
               <Input />
             </Form.Item>
