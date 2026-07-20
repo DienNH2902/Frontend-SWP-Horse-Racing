@@ -814,9 +814,9 @@ function UserManagement() {
         onOk={handleUpdate}
       >
         <Form form={form} layout="vertical">
-          <Form.Item label="Ảnh đại diện" name="avatar">
+          {/* <Form.Item label="Ảnh đại diện" name="avatar">
             <Input placeholder="Avatar URL" />
-          </Form.Item>
+          </Form.Item> */}
           <Form.Item
             label="Tên"
             name="fullName"

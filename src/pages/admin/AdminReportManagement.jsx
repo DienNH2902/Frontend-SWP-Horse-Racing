@@ -385,7 +385,7 @@ export default function AdminReportManagement() {
                 </Button>
               )}
 
-              <Popconfirm
+              {/* <Popconfirm
                 title="Delete Report"
                 description="Are you sure you want to delete this report?"
                 onConfirm={() => handleDelete(record.id)}
@@ -396,7 +396,7 @@ export default function AdminReportManagement() {
                 <Button size="small" type="primary" danger ghost>
                   Delete
                 </Button>
-              </Popconfirm>
+              </Popconfirm> */}
             </div>
           );
         },
