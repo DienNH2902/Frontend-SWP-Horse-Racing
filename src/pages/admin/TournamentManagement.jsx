@@ -114,6 +114,27 @@ function toDateInputValue(value) {
   return parsed ? parsed.format("YYYY-MM-DD") : "";
 }
 
+function toRaceDateValue(value) {
+  return parseTournamentDate(value);
+}
+
+function normalizeRaceDateValue(value) {
+  if (dayjs.isDayjs(value)) {
+    return value.format("YYYY-MM-DD");
+  }
+
+  return toDateInputValue(value);
+}
+
+function isOutsidePeriod(date, startDate, endDate) {
+  const parsedStartDate = parseTournamentDate(startDate);
+  const parsedEndDate = parseTournamentDate(endDate);
+
+  if (!date || !parsedStartDate || !parsedEndDate) return false;
+
+  return date.isBefore(parsedStartDate, "day") || date.isAfter(parsedEndDate, "day");
+}
+
 function formatTournamentPeriod(startDate, endDate) {
   const parsedStartDate = parseTournamentDate(startDate);
   const parsedEndDate = parseTournamentDate(endDate);
@@ -317,13 +338,13 @@ function TournamentManagement() {
         races: [
           {
             name: "Vong 1 - Race 1",
-            date: toDateInputValue(response?.startDate || payload.startDate),
+            date: toRaceDateValue(response?.startDate || payload.startDate),
             startTime: "08:00",
           },
         ],
       });
       round2Form.setFieldsValue({
-        date: toDateInputValue(response?.endDate || payload.endDate),
+        date: toRaceDateValue(response?.endDate || payload.endDate),
         startTime: "08:00",
       });
       setSetupStep(1);
@@ -345,7 +366,11 @@ function TournamentManagement() {
         tournamentId: createdTournament.id,
         races: values.races.map((race) => ({
           ...race,
-          startTime: buildRaceStartTime(race.date, race.startTime),
+          date: normalizeRaceDateValue(race.date),
+          startTime: buildRaceStartTime(
+            normalizeRaceDateValue(race.date),
+            race.startTime,
+          ),
         })),
       });
       setSetupStep(2);
@@ -364,8 +389,11 @@ function TournamentManagement() {
 
     try {
       await createRound2Race(createdTournament.id, {
-        date: values.date,
-        startTime: buildRaceStartTime(values.date, values.startTime),
+        date: normalizeRaceDateValue(values.date),
+        startTime: buildRaceStartTime(
+          normalizeRaceDateValue(values.date),
+          values.startTime,
+        ),
       });
       message.success("Tournament and race setup completed");
       await finishSetupWizard();
@@ -1078,10 +1106,17 @@ function TournamentManagement() {
                           name={[name, "date"]}
                           rules={[{ required: true, message: "Date is required" }]}
                         >
-                          <Input
-                            type="date"
-                            min={toDateInputValue(createdTournament?.startDate)}
-                            max={toDateInputValue(createdTournament?.endDate)}
+                          <DatePicker
+                            format="DD/MM/YYYY"
+                            placeholder="DD/MM/YYYY"
+                            style={{ width: "100%" }}
+                            disabledDate={(date) =>
+                              isOutsidePeriod(
+                                date,
+                                createdTournament?.startDate,
+                                createdTournament?.endDate,
+                              )
+                            }
                           />
                         </Form.Item>
 
@@ -1110,7 +1145,7 @@ function TournamentManagement() {
                       onClick={() =>
                         add({
                           name: `Vong 1 - Race ${fields.length + 1}`,
-                          date: toDateInputValue(createdTournament?.startDate),
+                          date: toRaceDateValue(createdTournament?.startDate),
                           startTime: "08:00",
                         })
                       }
@@ -1157,10 +1192,17 @@ function TournamentManagement() {
                   name="date"
                   rules={[{ required: true, message: "Date is required" }]}
                 >
-                  <Input
-                    type="date"
-                    min={toDateInputValue(createdTournament?.startDate)}
-                    max={toDateInputValue(createdTournament?.endDate)}
+                  <DatePicker
+                    format="DD/MM/YYYY"
+                    placeholder="DD/MM/YYYY"
+                    style={{ width: "100%" }}
+                    disabledDate={(date) =>
+                      isOutsidePeriod(
+                        date,
+                        createdTournament?.startDate,
+                        createdTournament?.endDate,
+                      )
+                    }
                   />
                 </Form.Item>
 

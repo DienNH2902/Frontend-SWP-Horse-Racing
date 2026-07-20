@@ -399,6 +399,11 @@ function RegistrationManagement() {
               icon={<EyeOutlined />}
               onClick={() => openDetailModal(record)}
             />
+            <Button
+              type="text"
+              icon={<FieldTimeOutlined />}
+              onClick={() => handleAcceptToWaitlist(record)}
+            />
 
             <Button
               type="text"
@@ -411,12 +416,6 @@ function RegistrationManagement() {
               icon={<CloseOutlined />}
               danger
               onClick={() => openRejectModal(record)}
-            />
-
-            <Button
-              type="text"
-              icon={<FieldTimeOutlined />}
-              onClick={() => handleAcceptToWaitlist(record)}
             />
           </Space>
         ),

@@ -299,12 +299,7 @@ function RevenueChart({ data }) {
   const plotHeight = chartHeight - padding.top - padding.bottom;
   const maxValue = Math.max(
     1,
-    ...data.map((item) =>
-      Math.max(
-        item.totalMonthlyRevenue,
-        item.entryFee,
-      ),
-    ),
+    ...data.map((item) => Math.max(item.totalMonthlyRevenue, item.entryFee)),
   );
   const roundedMax = Math.ceil(maxValue / 1000000) * 1000000 || 1;
   const barSlot = plotWidth / data.length;
@@ -351,8 +346,7 @@ function RevenueChart({ data }) {
           const gap = Math.min(8, barSlot * 0.1);
           const entryX = groupCenter - groupedBarWidth - gap / 2;
           const totalX = groupCenter + gap / 2;
-          const entryHeight =
-            ((item.entryFee || 0) / roundedMax) * plotHeight;
+          const entryHeight = ((item.entryFee || 0) / roundedMax) * plotHeight;
           const totalHeight =
             ((item.totalMonthlyRevenue || 0) / roundedMax) * plotHeight;
           const entryY = padding.top + plotHeight - entryHeight;
@@ -376,10 +370,7 @@ function RevenueChart({ data }) {
                 x={totalX}
                 y={totalY}
                 width={groupedBarWidth}
-                height={Math.max(
-                  totalHeight,
-                  item.totalMonthlyRevenue ? 2 : 0,
-                )}
+                height={Math.max(totalHeight, item.totalMonthlyRevenue ? 2 : 0)}
                 rx="5"
                 fill="#2563eb"
               >
@@ -462,19 +453,18 @@ export default function AdminDashboard() {
         registrationStatsResult,
         walletResult,
         upcomingResult,
-      ] =
-        await Promise.allSettled([
-          getAdminDashboardStats(),
-          getAdminHorseStats(),
-          getAdminBetStats(),
-          getReportStatsAdmin(),
-          getRaceCourses(),
-          getAdminTournamentStats(),
-          getAdminRaceStats(),
-          getAdminRegistrationStats(),
-          getSystemWalletOverview(),
-          getUpcomingSchedule(),
-        ]);
+      ] = await Promise.allSettled([
+        getAdminDashboardStats(),
+        getAdminHorseStats(),
+        getAdminBetStats(),
+        getReportStatsAdmin(),
+        getRaceCourses(),
+        getAdminTournamentStats(),
+        getAdminRaceStats(),
+        getAdminRegistrationStats(),
+        getSystemWalletOverview(),
+        getUpcomingSchedule(),
+      ]);
 
       const adminStats =
         adminStatsResult.status === "fulfilled" && adminStatsResult.value
@@ -661,7 +651,9 @@ export default function AdminDashboard() {
   const horseStatusEntries = Object.entries(
     toRecord(dashboard.horseStats.statuses),
   );
-  const betStatusEntries = Object.entries(toRecord(dashboard.betStats.statuses));
+  const betStatusEntries = Object.entries(
+    toRecord(dashboard.betStats.statuses),
+  );
   const reportStatusEntries = Object.entries(
     toRecord(dashboard.reportStats.statuses),
   );
@@ -1415,13 +1407,9 @@ export default function AdminDashboard() {
         </Card>
       ) : (
         <Space direction="vertical" size={20} style={{ width: "100%" }}>
-
           <Row gutter={[20, 20]}>
             <Col xs={24}>
-              <Card
-                className="admin-dashboard-panel"
-                title="System Wallet"
-              >
+              <Card className="admin-dashboard-panel" title="System Wallet">
                 <Space direction="vertical" size={18} style={{ width: "100%" }}>
                   <Row gutter={[16, 16]}>
                     <Col xs={24} md={12} xl={6}>
@@ -1852,11 +1840,7 @@ export default function AdminDashboard() {
               <Card
                 className="admin-dashboard-panel"
                 title="Upcoming Races"
-                extra={
-                  <Tag color="cyan">
-                    {upcomingRaces.length} races
-                  </Tag>
-                }
+                extra={<Tag color="cyan">{upcomingRaces.length} races</Tag>}
               >
                 <Table
                   columns={upcomingRaceColumns}
