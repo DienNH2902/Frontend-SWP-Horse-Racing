@@ -1,6 +1,24 @@
 import { useState } from "react";
-import { Avatar, Button, DatePicker, Form, Input, InputNumber, Select, Typography, Upload, message } from "antd";
-import { IdcardOutlined, MailOutlined, PhoneOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons";
+import {
+  Avatar,
+  Button,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Typography,
+  Upload,
+  message,
+} from "antd";
+import {
+  IdcardOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  SafetyCertificateOutlined,
+  UserAddOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { registerReferee } from "../../api/services/auth.service";
 import { uploadAvatar } from "../../api/services/user.service";
@@ -9,7 +27,14 @@ const { Title } = Typography;
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 function getUploadedAvatarPath(data) {
-  return data?.imageUrl || data?.avatar || data?.avatarUrl || data?.url || data?.path || data;
+  return (
+    data?.imageUrl ||
+    data?.avatar ||
+    data?.avatarUrl ||
+    data?.url ||
+    data?.path ||
+    data
+  );
 }
 
 function getDisplayAvatarUrl(avatar) {
@@ -443,9 +468,7 @@ export default function CreateRefereeAccount() {
                   disabled={isUploadingAvatar}
                   showUploadList={false}
                 >
-                  <Button loading={isUploadingAvatar}>
-                    Upload Avatar
-                  </Button>
+                  <Button loading={isUploadingAvatar}>Upload Avatar</Button>
                 </Upload>
                 <span>JPG, PNG or WEBP. Maximum file size is 5MB.</span>
               </div>
