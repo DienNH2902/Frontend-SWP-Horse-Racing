@@ -43,8 +43,12 @@ function formatDate(value) {
   if (Number.isNaN(date.getTime())) return value;
 
   return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false, // Dùng hệ 24h (HH:mm)
   }).format(date);
 }
 
@@ -60,7 +64,9 @@ function normalizeTrackType(value) {
   const normalizedValue = String(value || "").toLowerCase();
 
   return (
-    TRACK_TYPES.find((trackType) => trackType.toLowerCase() === normalizedValue) ||
+    TRACK_TYPES.find(
+      (trackType) => trackType.toLowerCase() === normalizedValue,
+    ) ||
     value ||
     "N/A"
   );
@@ -221,12 +227,12 @@ function RaceCourseManagement() {
         width: 420,
         ellipsis: true,
       },
-      {
-        title: "Created At",
-        dataIndex: "createdAt",
-        width: 180,
-        render: formatDate,
-      },
+      // {
+      //   title: "Created At",
+      //   dataIndex: "createdAt",
+      //   width: 180,
+      //   render: formatDate,
+      // },
       {
         title: "Actions",
         key: "actions",
@@ -235,6 +241,7 @@ function RaceCourseManagement() {
         render: (_, record) => (
           <Space>
             <Button
+              className="race-course-management-link-btn"
               size="small"
               onClick={() => openDetailModal(record)}
             >
@@ -242,6 +249,7 @@ function RaceCourseManagement() {
             </Button>
 
             <Button
+              className="race-course-management-link-btn"
               size="small"
               onClick={() => openEditModal(record)}
             >
@@ -315,6 +323,12 @@ function RaceCourseManagement() {
           border-color: #bdeee5;
           color: #006755;
           font-weight: 850;
+          background: #fff;
+        }
+
+        .race-course-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
         }
 
         .race-course-management-primary.ant-btn {
@@ -443,7 +457,9 @@ function RaceCourseManagement() {
             <Descriptions.Item label="ID">
               <Text code>{detailCourse.id}</Text>
             </Descriptions.Item>
-            <Descriptions.Item label="Name">{detailCourse.name}</Descriptions.Item>
+            <Descriptions.Item label="Name">
+              {detailCourse.name}
+            </Descriptions.Item>
             <Descriptions.Item label="Location">
               {detailCourse.location}
             </Descriptions.Item>

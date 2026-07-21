@@ -256,8 +256,8 @@ export default function AdminBetManagement() {
         width: 120,
         render: (_, record) => (
           <Button
+            className="bet-management-link-btn"
             size="small"
-            type="primary"
             ghost
             onClick={() => openDetailModal(record.id)}
             loading={isDetailLoading && activeId === record.id}
@@ -326,6 +326,18 @@ export default function AdminBetManagement() {
         .bet-management-table.ant-table-wrapper .ant-table-tbody > tr > td {
           color: #0d2321;
           background: #fff;
+        }
+
+        .bet-management-link-btn.ant-btn {
+          border-color: #bdeee5;
+          color: #006755;
+          font-weight: 850;
+          background: #fff;
+        }
+
+        .bet-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
         }
 
         .bet-management-refresh.ant-btn {
@@ -434,21 +446,21 @@ export default function AdminBetManagement() {
             <Descriptions.Item label="Bet ID">
               {detailData.id}
             </Descriptions.Item>
-            <Descriptions.Item label="Spectator ID">
+            {/* <Descriptions.Item label="Spectator ID">
               {detailData.spectatorId}
-            </Descriptions.Item>
+            </Descriptions.Item> */}
             <Descriptions.Item label="Spectator Name">
               <Text strong>{detailData.spectatorName}</Text>
             </Descriptions.Item>
-            <Descriptions.Item label="Race ID">
+            {/* <Descriptions.Item label="Race ID">
               {detailData.raceId}
-            </Descriptions.Item>
+            </Descriptions.Item> */}
             <Descriptions.Item label="Race Name">
               {detailData.raceName}
             </Descriptions.Item>
-            <Descriptions.Item label="Horse ID">
+            {/* <Descriptions.Item label="Horse ID">
               {detailData.horseId}
-            </Descriptions.Item>
+            </Descriptions.Item> */}
             <Descriptions.Item label="Horse Name">
               {detailData.horseName}
             </Descriptions.Item>
