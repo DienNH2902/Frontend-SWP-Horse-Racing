@@ -295,8 +295,8 @@ export default function AdminWithdrawalManagement() {
         render: (_, record) => (
           <Space>
             <Button
+              className="withdrawal-management-link-btn"
               size="small"
-              type="primary"
               ghost
               loading={loadingDetailId === record.id}
               onClick={() => openDetailModal(record.id)}
@@ -307,7 +307,11 @@ export default function AdminWithdrawalManagement() {
               <Button
                 className="withdrawal-management-link-btn"
                 size="small"
-                style={{ width: 85, textAlign: "center" }}
+                style={{
+                  width: 85,
+                  textAlign: "center",
+                  backgroundColor: "#69f8dd",
+                }}
                 onClick={() => openActionModal(record)}
               >
                 Process
@@ -461,7 +465,7 @@ export default function AdminWithdrawalManagement() {
 
           <Search
             className="withdrawal-management-search-input"
-            placeholder="Search by name, email, account no..."
+            placeholder="Search by User name"
             allowClear
             enterButton="Search"
             size="middle"
@@ -592,18 +596,16 @@ export default function AdminWithdrawalManagement() {
               {detailData.userId?.fullName}
             </Descriptions.Item>
             <Descriptions.Item label="User ID">
-              <Text code>
-                {detailData.userId?._id ||
-                  detailData.userId?.id ||
-                  detailData.userId ||
-                  "N/A"}
-              </Text>
+              {detailData.userId?._id ||
+                detailData.userId?.id ||
+                detailData.userId ||
+                "N/A"}
             </Descriptions.Item>
             <Descriptions.Item label="Contact Email">
               {detailData.userId?.email}
             </Descriptions.Item>
             <Descriptions.Item label="System Role">
-              {detailData.userId?.role}
+              <span style={{ color: "green" }}>{detailData.userId?.role}</span>
             </Descriptions.Item>
             <Descriptions.Item label="Transaction Bank">
               {detailData.bankName}
