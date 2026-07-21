@@ -5,21 +5,21 @@ import {
   EnvironmentOutlined,
   FileTextOutlined,
   GiftOutlined,
-  HomeOutlined,
   IdcardOutlined,
-  LogoutOutlined,
   MenuOutlined,
   ProfileOutlined,
   ScheduleOutlined,
   TeamOutlined,
   TrophyOutlined,
+  UserAddOutlined,
   WalletOutlined,
 } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getProfile } from "../api/services/auth.service";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
-import { getDisplayName, getInitials } from "../utils/roles";
+import { getInitials } from "../utils/roles";
 
 const { Content, Header, Sider } = Layout;
 
@@ -38,6 +38,11 @@ const NAV_GROUPS = [
     label: "People",
     items: [
       { path: "/admin/users", label: "Users", icon: <TeamOutlined /> },
+      {
+        path: "/admin/referees/create",
+        label: "Create Referee",
+        icon: <UserAddOutlined />,
+      },
       {
         path: "/admin/jockey-license",
         label: "Jockey Licenses",
@@ -94,11 +99,32 @@ const NAV_GROUPS = [
 function AdminLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = getAuthSession()?.user || {};
-  const displayName = getDisplayName(user) || "Administrator";
+  const session = getAuthSession();
+  const [user, setUser] = useState(() => session?.user || {});
+  const displayName =
+    user?.fullName || user?.name || user?.username || "Administrator";
+  const accountLabel = user?.role || "Admin account";
   const initials = getInitials(displayName);
   const avatarUrl = user?.avatar || user?.avatarUrl || user?.imageUrl;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    getProfile()
+      .then((profile) => {
+        if (active && profile) {
+          setUser((current) => ({ ...current, ...profile }));
+        }
+      })
+      .catch(() => {
+        // Keep the session data when the profile endpoint is unavailable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function isActive(path) {
     if (path === "/admin/dashboard") {
@@ -275,11 +301,8 @@ function AdminLayout({ children }) {
           flex: 0 0 auto;
           color: #ffb3b3 !important;
           border-color: rgba(255, 120, 117, 0.28) !important;
-        }
-        .admin-logout-btn.ant-btn.ant-btn-circle {
-          width: 32px;
-          min-width: 32px;
-          height: 32px;
+          background: rgba(255, 120, 117, 0.08) !important;
+          font-weight: 800;
         }
 
         .admin-header.ant-layout-header {
@@ -429,29 +452,26 @@ function AdminLayout({ children }) {
               <div className="admin-account-copy">
                 <div className="admin-account-name">{displayName}</div>
                 <div className="admin-account-email">
-                  {user?.email || "Admin account"}
+                  {accountLabel}
                 </div>
               </div>
-              <Tooltip title="Logout">
-                <Button
-                  className="admin-logout-btn"
-                  shape="circle"
-                  danger
-                  icon={<LogoutOutlined />}
-                  aria-label="Logout"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    handleLogout();
-                  }}
-                />
-              </Tooltip>
+              <Button
+                className="admin-logout-btn"
+                size="small"
+                danger
+                onClick={(event) => {
+                  event.preventDefault();
+                  handleLogout();
+                }}
+              >
+                Logout
+              </Button>
             </Link>
 
             <div className="admin-footer-actions">
               <Tooltip title="Open home">
                 <Button
                   block
-                  icon={<HomeOutlined />}
                   onClick={() => navigate("/home")}
                 >
                   Home

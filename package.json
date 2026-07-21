@@ -10,7 +10,7 @@
     "@vitejs/plugin-react": "latest",
     "antd": "^6.4.3",
     "axios": "^1.16.1",
-    "i": "^0.3.7",
+    "dayjs": "^1.11.21",
     "jwt-decode": "^4.0.0",
     "react": "latest",
     "react-dom": "latest",

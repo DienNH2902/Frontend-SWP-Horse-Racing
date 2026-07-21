@@ -14,12 +14,6 @@ import {
   Typography,
   message,
 } from "antd";
-import {
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
 import "antd/dist/reset.css";
 import {
   createRaceCourse,
@@ -49,8 +43,12 @@ function formatDate(value) {
   if (Number.isNaN(date.getTime())) return value;
 
   return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false, // Dùng hệ 24h (HH:mm)
   }).format(date);
 }
 
@@ -66,7 +64,9 @@ function normalizeTrackType(value) {
   const normalizedValue = String(value || "").toLowerCase();
 
   return (
-    TRACK_TYPES.find((trackType) => trackType.toLowerCase() === normalizedValue) ||
+    TRACK_TYPES.find(
+      (trackType) => trackType.toLowerCase() === normalizedValue,
+    ) ||
     value ||
     "N/A"
   );
@@ -227,30 +227,34 @@ function RaceCourseManagement() {
         width: 420,
         ellipsis: true,
       },
-      {
-        title: "Created At",
-        dataIndex: "createdAt",
-        width: 180,
-        render: formatDate,
-      },
+      // {
+      //   title: "Created At",
+      //   dataIndex: "createdAt",
+      //   width: 180,
+      //   render: formatDate,
+      // },
       {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 180,
+        width: 280,
         render: (_, record) => (
           <Space>
             <Button
-              type="text"
-              icon={<EyeOutlined />}
+              className="race-course-management-link-btn"
+              size="small"
               onClick={() => openDetailModal(record)}
-            />
+            >
+              Detail
+            </Button>
 
             <Button
-              type="text"
-              icon={<EditOutlined />}
+              className="race-course-management-link-btn"
+              size="small"
               onClick={() => openEditModal(record)}
-            />
+            >
+              Edit
+            </Button>
 
             <Popconfirm
               title="Delete race course?"
@@ -260,7 +264,9 @@ function RaceCourseManagement() {
               okButtonProps={{ danger: true, loading: isSaving }}
               onConfirm={() => handleDeleteCourse(record)}
             >
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Button size="small" danger>
+                Delete
+              </Button>
             </Popconfirm>
           </Space>
         ),
@@ -317,6 +323,12 @@ function RaceCourseManagement() {
           border-color: #bdeee5;
           color: #006755;
           font-weight: 850;
+          background: #fff;
+        }
+
+        .race-course-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
         }
 
         .race-course-management-primary.ant-btn {
@@ -351,7 +363,6 @@ function RaceCourseManagement() {
 
           <Button
             className="race-course-management-primary"
-            icon={<PlusOutlined />}
             onClick={openCreateModal}
           >
             Create Race Course
@@ -446,7 +457,9 @@ function RaceCourseManagement() {
             <Descriptions.Item label="ID">
               <Text code>{detailCourse.id}</Text>
             </Descriptions.Item>
-            <Descriptions.Item label="Name">{detailCourse.name}</Descriptions.Item>
+            <Descriptions.Item label="Name">
+              {detailCourse.name}
+            </Descriptions.Item>
             <Descriptions.Item label="Location">
               {detailCourse.location}
             </Descriptions.Item>

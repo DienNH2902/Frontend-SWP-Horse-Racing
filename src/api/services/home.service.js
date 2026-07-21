@@ -62,6 +62,8 @@ function normalizeHomeRace(race, tournament, index, raceCourse) {
     status.trim().toLowerCase(),
   );
   const course = raceCourse || {};
+  const scheduleTime =
+    race?.startAt || race?.scheduledAt || race?.startTime || race?.date || "";
   const distance = race?.distance ?? course?.distance;
   const distanceLabel = distance
     ? /(?:m|km)$/i.test(String(distance))
@@ -88,6 +90,7 @@ function normalizeHomeRace(race, tournament, index, raceCourse) {
     distance: distanceLabel,
     surface: race?.surface || course?.surface || course?.trackType || "Track",
     image: race?.image || course?.image || "/goldenhoof-hero.png",
+    date: scheduleTime,
     tournament:
       race?.tournamentTitle ||
       race?.tournamentName ||
@@ -101,12 +104,7 @@ function normalizeHomeRace(race, tournament, index, raceCourse) {
       race?.totalHorses ??
       race?.filledSlots ??
       (Array.isArray(race?.horses) ? race.horses.length : 0),
-    sortTime:
-      race?.startAt ||
-      race?.scheduledAt ||
-      race?.startTime ||
-      race?.date ||
-      "",
+    sortTime: scheduleTime,
   };
 }
 

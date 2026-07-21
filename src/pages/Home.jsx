@@ -1371,6 +1371,23 @@ function Home() {
           font-size: 14px;
         }
 
+        .race-date {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          margin-top: 12px;
+          color: #214d48;
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .race-date svg {
+          width: 16px;
+          height: 16px;
+          flex: 0 0 auto;
+          color: #0b8d78;
+        }
+
         .race-preview {
           position: relative;
           width: 100%;
@@ -2036,10 +2053,7 @@ function Home() {
               "Horses",
               "Jockeys",
               "Results",
-              "Rankings",
               "Predictions",
-              "News",
-              "About",
             ].map((item) => (
               <a href={`#${item.toLowerCase()}`} key={item}>
                 {item}
@@ -2171,14 +2185,16 @@ function Home() {
 
               {isAccountMenuOpen && (
                 <div className="account-dropdown" role="menu">
-                  <Link
-                    className="account-menu-item"
-                    role="menuitem"
-                    to={isAdmin ? "/admin/dashboard" : dashboardPath}
-                  >
-                    <Icon name="dashboard" size={18} />
-                    <span>Dashboard</span>
-                  </Link>
+                  {!isSpectator && (
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      to={isAdmin ? "/admin/dashboard" : dashboardPath}
+                    >
+                      <Icon name="dashboard" size={18} />
+                      <span>Dashboard</span>
+                    </Link>
+                  )}
                   <Link
                     className="account-menu-item"
                     role="menuitem"
@@ -2304,14 +2320,15 @@ function Home() {
                       <span
                         className={`pill ${race.status ? "pill-live" : ""}`}
                       >
-                        {race.status || race.time}
-                      </span>
-                      <span>
-                        {race.status ? "Đang diễn ra" : "Sắp diễn ra"}
+                        {race.status ? "Live" : "Upcoming"}
                       </span>
                     </div>
                     <h3>{race.name}</h3>
                     <span className="muted">{race.venue}</span>
+                    <span className="race-date">
+                      <Icon name="clock" size={16} />
+                      {formatRaceDateTime(race.date || race.sortTime)}
+                    </span>
                     {race.status && (
                       <div className="race-preview">
                         <img src={race.image} alt={`${race.name} race`} />
@@ -2492,7 +2509,7 @@ function Home() {
                       <strong>{selectedRace.tournament}</strong>
                     </div>
                     <div className="race-detail-item">
-                      <span>Thời gian</span>
+                      <span>Time</span>
                       <strong>
                         {formatRaceDateTime(
                           selectedRace.sortTime,
@@ -2501,32 +2518,20 @@ function Home() {
                       </strong>
                     </div>
                     <div className="race-detail-item">
-                      <span>Địa điểm</span>
+                      <span>Race Course</span>
                       <strong>{selectedRace.venue}</strong>
                     </div>
                     <div className="race-detail-item">
-                      <span>Cự ly</span>
+                      <span>Distance</span>
                       <strong>{selectedRace.distance}</strong>
                     </div>
                     <div className="race-detail-item">
-                      <span>Mặt đường</span>
+                      <span>Race Track</span>
                       <strong>{selectedRace.surface}</strong>
                     </div>
                     <div className="race-detail-item">
-                      <span>Số ngựa</span>
-                      <strong>{selectedRace.horseCount || "—"}</strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Vòng</span>
+                      <span>Round</span>
                       <strong>{selectedRace.round}</strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Thứ tự race</span>
-                      <strong>{selectedRace.raceOrder}</strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Trạng thái</span>
-                      <strong>{selectedRace.rawStatus || "Scheduled"}</strong>
                     </div>
                   </div>
                 </div>

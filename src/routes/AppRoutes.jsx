@@ -6,6 +6,7 @@ import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
 import Profile from "../pages/Profile";
 import UserManagement from "../pages/admin/UserManagement";
+import CreateRefereeAccount from "../pages/admin/CreateRefereeAccount";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import TournamentManagement from "../pages/admin/TournamentManagement";
 import RegistrationManagement from "../pages/admin/RegistrationManagement";
@@ -42,6 +43,7 @@ import Wallet from "../pages/Wallet";
 import PaymentResult from "../pages/PaymentResult";
 import Broadcast from "../pages/spectator/Broadcast";
 import LiveRaceChannels from "../pages/spectator/LiveRaceChannels";
+import ReplayBroadcast from "../pages/spectator/ReplayBroadcast";
 import AllHorses from "../pages/AllHorses";
 import AllJockeys from "../pages/AllJockeys";
 import AllRaceResults from "../pages/AllRaceResults";
@@ -173,6 +175,7 @@ export default function AppRoutes() {
         <Route path="/race-results" element={<AllRaceResults />} />
         <Route path="/spectator/broadcast" element={<LiveRaceChannels />} />
         <Route path="/spectator/broadcast/:raceId" element={<Broadcast />} />
+        <Route path="/spectator/replay/:raceId" element={<ReplayBroadcast />} />
         <Route path="notification" element={<NotificationHistory />} />
         <Route path="report" element={<ReportPage />} />
       </Route>
@@ -215,6 +218,14 @@ export default function AppRoutes() {
           element={
             <AdminLayout>
               <UserManagement />
+            </AdminLayout>
+          }
+        />
+        <Route
+          path="/admin/referees/create"
+          element={
+            <AdminLayout>
+              <CreateRefereeAccount />
             </AdminLayout>
           }
         />

@@ -726,7 +726,9 @@ export default function RegisterForm() {
                 <Radio.Button value="Spectator">Spectator</Radio.Button>
                 <Radio.Button value="HorseOwner">Horse Owner</Radio.Button>
                 <Radio.Button value="Jockey">Jockey</Radio.Button>
-                <Radio.Button value="Referee">Referee</Radio.Button>
+                <Radio.Button value="Referee" disabled>
+                  Referee
+                </Radio.Button>
               </Radio.Group>
             </Form.Item>
 

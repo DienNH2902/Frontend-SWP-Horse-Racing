@@ -50,22 +50,35 @@ function resolveList(response) {
   return [];
 }
 
+// function formatDate(value) {
+//   if (!value) return "N/A";
+//   if (typeof value === "string" && value.includes("/")) {
+//     return value;
+//   }
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return value;
+
+//   return new Intl.DateTimeFormat("en-GB", {
+//     day: "2-digit",
+//     month: "2-digit",
+//     year: "numeric",
+//     hour: "2-digit",
+//     minute: "2-digit",
+//     second: "2-digit",
+//   }).format(date);
+// }
+
 function formatDate(value) {
   if (!value) return "N/A";
   if (typeof value === "string" && value.includes("/")) {
     return value;
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(date);
+  // Sử dụng dayjs với plugin utc để tránh tự động convert sang múi giờ địa phương
+  const d = dayjs.utc(value);
+  if (!d.isValid()) return value;
+
+  return d.format("DD/MM/YYYY HH:mm:ss");
 }
 
 function getTimeValue(value) {
@@ -328,8 +341,8 @@ export default function AdminReportManagement() {
           return (
             <div style={{ display: "flex", gap: "8px" }}>
               <Button
+                className="report-management-link-btn"
                 size="small"
-                type="primary"
                 ghost
                 onClick={() => openDetailModal(record.id)}
                 loading={isDetailLoading && activeId === record.id}
@@ -347,10 +360,10 @@ export default function AdminReportManagement() {
                     size="small"
                     type="default"
                     style={{
-                      backgroundColor: "#e6fffb",
+                      backgroundColor: "#69f8dd",
                       color: "#006d75",
                       borderColor: "#87e8de",
-                      fontWeight: 600,
+                      fontWeight: 900,
                     }}
                   >
                     Resolve
@@ -372,7 +385,7 @@ export default function AdminReportManagement() {
                 </Button>
               )}
 
-              <Popconfirm
+              {/* <Popconfirm
                 title="Delete Report"
                 description="Are you sure you want to delete this report?"
                 onConfirm={() => handleDelete(record.id)}
@@ -383,7 +396,7 @@ export default function AdminReportManagement() {
                 <Button size="small" type="primary" danger ghost>
                   Delete
                 </Button>
-              </Popconfirm>
+              </Popconfirm> */}
             </div>
           );
         },
@@ -448,6 +461,18 @@ export default function AdminReportManagement() {
         .bet-management-table.ant-table-wrapper .ant-table-tbody > tr > td {
           color: #0d2321;
           background: #fff;
+        }
+
+        .report-management-link-btn.ant-btn {
+          border-color: #bdeee5;
+          color: #006755;
+          font-weight: 850;
+          background: #fff;
+        }
+
+        .report-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
         }
 
         .bet-management-refresh.ant-btn {

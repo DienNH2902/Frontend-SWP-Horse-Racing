@@ -1343,7 +1343,7 @@ export default function RefereeRaceDetail() {
                                     { value: "Sunny" },
                                     { value: "Cloudy" },
                                     { value: "Rainy" },
-                                    { value: "Snowy" },
+                                    { value: "Windy" },
                                 ]}
                             />
                         </Form.Item>

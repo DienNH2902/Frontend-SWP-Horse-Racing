@@ -13,12 +13,6 @@ import {
   Typography,
   message,
 } from "antd";
-import {
-  CheckOutlined,
-  CloseOutlined,
-  EyeOutlined,
-  FieldTimeOutlined,
-} from "@ant-design/icons";
 import "antd/dist/reset.css";
 import {
   acceptRegistrationToWaitlist,
@@ -29,6 +23,9 @@ import {
 } from "../../api/services/registration.service";
 import { getRacesByTournament } from "../../api/services/race.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+dayjs.extend(utc);
 
 const { Title, Text } = Typography;
 
@@ -52,16 +49,27 @@ function formatMoney(value) {
   return Number(value).toLocaleString("vi-VN") + " VND";
 }
 
-function formatDate(value) {
+// function formatDate(value) {
+//   if (!value) return "N/A";
+
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return value;
+
+//   return new Intl.DateTimeFormat("vi-VN", {
+//     dateStyle: "short",
+//     timeStyle: "short",
+//   }).format(date);
+// }
+
+function formatDateTime(value) {
   if (!value) return "N/A";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const d = dayjs(value);
+  if (!d.isValid()) return value;
 
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  // Sử dụng định dạng giữ nguyên hiển thị theo chuỗi ISO gốc hoặc format thủ công
+  // Để hiển thị dạng DD/MM/YYYY HH:mm đúng chuẩn vi-VN mà không bị lệch múi giờ:
+  return dayjs.utc(value).format("DD/MM/YYYY HH:mm");
 }
 
 function getTimeValue(value) {
@@ -135,7 +143,7 @@ function normalizeRaceOption(item, index) {
   const name = item?.name || `Race ${index + 1}`;
   const round = item?.roundNumber ? `Round ${item.roundNumber}` : "";
   const order = item?.raceOrder ? `Race ${item.raceOrder}` : "";
-  const startTime = formatDate(item?.startTime || item?.date);
+  const startTime = formatDateTime(item?.startTime || item?.date);
   const details = [round, order, startTime !== "N/A" ? startTime : ""]
     .filter(Boolean)
     .join(" - ");
@@ -367,43 +375,50 @@ function RegistrationManagement() {
         width: 130,
         render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
       },
-      {
-        title: "Registered At",
-        dataIndex: "registeredAt",
-        width: 180,
-        render: formatDate,
-      },
+      // {
+      //   title: "Registered At",
+      //   dataIndex: "registeredAt",
+      //   width: 180,
+      //   render: formatDateTime,
+      // },
       {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 210,
+        width: 390,
         render: (_, record) => (
           <Space>
             <Button
-              type="text"
-              icon={<EyeOutlined />}
+              className="registration-management-link-btn"
+              size="small"
               onClick={() => openDetailModal(record)}
-            />
+            >
+              Detail
+            </Button>
+            <Button
+              className="registration-management-link-btn"
+              size="small"
+              onClick={() => handleAcceptToWaitlist(record)}
+            >
+              Waitlist
+            </Button>
 
             <Button
-              type="text"
-              icon={<CheckOutlined />}
+              className="registration-management-link-btn"
+              size="small"
               onClick={() => openConfirmModal(record)}
-            />
+            >
+              Confirm
+            </Button>
 
             <Button
-              type="text"
-              icon={<CloseOutlined />}
+              danger
+              size="small"
               danger
               onClick={() => openRejectModal(record)}
-            />
-
-            <Button
-              type="text"
-              icon={<FieldTimeOutlined />}
-              onClick={() => handleAcceptToWaitlist(record)}
-            />
+            >
+              Reject
+            </Button>
           </Space>
         ),
       },
@@ -459,6 +474,12 @@ function RegistrationManagement() {
           border-color: #bdeee5;
           color: #006755;
           font-weight: 850;
+          background: #fff;
+        }
+
+        .registration-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
         }
 
         .registration-management-primary.ant-btn {
@@ -501,18 +522,18 @@ function RegistrationManagement() {
 
           <Input
             allowClear
-            placeholder="Search by name"
+            placeholder="Search by tournament title"
             value={searchText}
             style={{ width: 260 }}
             onChange={(event) => setSearchText(event.target.value)}
           />
 
-          <Button
+          {/* <Button
             className="registration-management-link-btn"
             onClick={() => loadRegistrations()}
           >
             Search
-          </Button>
+          </Button> */}
 
           <Button
             className="registration-management-primary"
@@ -552,58 +573,66 @@ function RegistrationManagement() {
         {detailRegistration && (
           <Descriptions bordered column={1} size="middle">
             <Descriptions.Item label="Registration ID">
-              <Text code>{detailRegistration._id || detailRegistration.id || "N/A"}</Text>
+              <Text code>
+                {detailRegistration._id || detailRegistration.id || "N/A"}
+              </Text>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Tournament ID">
+            {/* <Descriptions.Item label="Tournament ID">
               <Text code>
                 {detailRegistration.tournamentId?._id ||
                   detailRegistration.tournamentId?.id ||
                   detailRegistration.tournamentId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Tournament">
               {detailRegistration.tournamentTitle}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Race ID">
+            {/* <Descriptions.Item label="Race ID">
               <Text code>
                 {detailRegistration.raceId?._id ||
                   detailRegistration.raceId?.id ||
                   detailRegistration.raceId ||
                   "N/A"}
               </Text>
+            </Descriptions.Item> */}
+
+            <Descriptions.Item label="Race Title">
+              {detailRegistration.raceId?.raceName ||
+                detailRegistration.raceName ||
+                "N/A"}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Horse ID">
+            {/* <Descriptions.Item label="Horse ID">
               <Text code>
                 {detailRegistration.horseId?._id ||
                   detailRegistration.horseId?.id ||
                   detailRegistration.horseId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Horse">
               {detailRegistration.horseName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Jockey ID">
+            {/* <Descriptions.Item label="Jockey ID">
               <Text code>
                 {detailRegistration.jockeyId?._id ||
                   detailRegistration.jockeyId?.id ||
                   detailRegistration.jockeyId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Jockey">
               {detailRegistration.jockeyName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Owner ID">
+            {/* <Descriptions.Item label="Owner ID">
               <Text code>
                 {detailRegistration.ownerId?._id ||
                   detailRegistration.ownerId?.id ||
@@ -613,7 +642,7 @@ function RegistrationManagement() {
                   detailRegistration.horseOwnerId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Owner">
               {detailRegistration.ownerName}
@@ -634,11 +663,11 @@ function RegistrationManagement() {
             </Descriptions.Item>
 
             <Descriptions.Item label="Registered At">
-              {formatDate(detailRegistration.registeredAt)}
+              {formatDateTime(detailRegistration.registeredAt)}
             </Descriptions.Item>
 
             <Descriptions.Item label="Confirmed At">
-              {formatDate(detailRegistration.confirmedAt)}
+              {formatDateTime(detailRegistration.confirmedAt)}
             </Descriptions.Item>
 
             <Descriptions.Item label="Rejected Reason">
@@ -646,11 +675,11 @@ function RegistrationManagement() {
             </Descriptions.Item>
 
             <Descriptions.Item label="Rejected At">
-              {formatDate(detailRegistration.rejectedAt)}
+              {formatDateTime(detailRegistration.rejectedAt)}
             </Descriptions.Item>
 
             <Descriptions.Item label="Created At">
-              {formatDate(detailRegistration.createdAt)}
+              {formatDateTime(detailRegistration.createdAt)}
             </Descriptions.Item>
           </Descriptions>
         )}
