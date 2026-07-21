@@ -375,12 +375,12 @@ function RegistrationManagement() {
         width: 130,
         render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
       },
-      {
-        title: "Registered At",
-        dataIndex: "registeredAt",
-        width: 180,
-        render: formatDateTime,
-      },
+      // {
+      //   title: "Registered At",
+      //   dataIndex: "registeredAt",
+      //   width: 180,
+      //   render: formatDateTime,
+      // },
       {
         title: "Actions",
         key: "actions",
@@ -389,12 +389,14 @@ function RegistrationManagement() {
         render: (_, record) => (
           <Space>
             <Button
+              className="registration-management-link-btn"
               size="small"
               onClick={() => openDetailModal(record)}
             >
               Detail
             </Button>
             <Button
+              className="registration-management-link-btn"
               size="small"
               onClick={() => handleAcceptToWaitlist(record)}
             >
@@ -402,6 +404,7 @@ function RegistrationManagement() {
             </Button>
 
             <Button
+              className="registration-management-link-btn"
               size="small"
               onClick={() => openConfirmModal(record)}
             >
@@ -409,6 +412,7 @@ function RegistrationManagement() {
             </Button>
 
             <Button
+              danger
               size="small"
               danger
               onClick={() => openRejectModal(record)}
@@ -470,6 +474,12 @@ function RegistrationManagement() {
           border-color: #bdeee5;
           color: #006755;
           font-weight: 850;
+          background: #fff;
+        }
+
+        .registration-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
         }
 
         .registration-management-primary.ant-btn {
@@ -518,12 +528,12 @@ function RegistrationManagement() {
             onChange={(event) => setSearchText(event.target.value)}
           />
 
-          <Button
+          {/* <Button
             className="registration-management-link-btn"
             onClick={() => loadRegistrations()}
           >
             Search
-          </Button>
+          </Button> */}
 
           <Button
             className="registration-management-primary"
@@ -568,55 +578,61 @@ function RegistrationManagement() {
               </Text>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Tournament ID">
+            {/* <Descriptions.Item label="Tournament ID">
               <Text code>
                 {detailRegistration.tournamentId?._id ||
                   detailRegistration.tournamentId?.id ||
                   detailRegistration.tournamentId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Tournament">
               {detailRegistration.tournamentTitle}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Race ID">
+            {/* <Descriptions.Item label="Race ID">
               <Text code>
                 {detailRegistration.raceId?._id ||
                   detailRegistration.raceId?.id ||
                   detailRegistration.raceId ||
                   "N/A"}
               </Text>
+            </Descriptions.Item> */}
+
+            <Descriptions.Item label="Race Title">
+              {detailRegistration.raceId?.raceName ||
+                detailRegistration.raceName ||
+                "N/A"}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Horse ID">
+            {/* <Descriptions.Item label="Horse ID">
               <Text code>
                 {detailRegistration.horseId?._id ||
                   detailRegistration.horseId?.id ||
                   detailRegistration.horseId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Horse">
               {detailRegistration.horseName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Jockey ID">
+            {/* <Descriptions.Item label="Jockey ID">
               <Text code>
                 {detailRegistration.jockeyId?._id ||
                   detailRegistration.jockeyId?.id ||
                   detailRegistration.jockeyId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Jockey">
               {detailRegistration.jockeyName}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Owner ID">
+            {/* <Descriptions.Item label="Owner ID">
               <Text code>
                 {detailRegistration.ownerId?._id ||
                   detailRegistration.ownerId?.id ||
@@ -626,7 +642,7 @@ function RegistrationManagement() {
                   detailRegistration.horseOwnerId ||
                   "N/A"}
               </Text>
-            </Descriptions.Item>
+            </Descriptions.Item> */}
 
             <Descriptions.Item label="Owner">
               {detailRegistration.ownerName}

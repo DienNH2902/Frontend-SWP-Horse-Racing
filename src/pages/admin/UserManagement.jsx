@@ -556,21 +556,21 @@ function UserManagement() {
           <Select
             value={status}
             size="small"
-            style={{ width: 110 }}
+            style={{ width: 110, backgroundColor: "darkgreen" }}
             loading={statusChangingId === record.id}
             onChange={(nextValue) => handleStatusChange(record.id, nextValue)}
             options={[
               {
                 value: "Active",
-                label: <span style={{ color: "green" }}>Active</span>,
+                label: <span style={{ color: "white" }}>Active</span>,
               },
               {
                 value: "Inactive",
-                label: <span style={{ color: "red" }}>Inactive</span>,
+                label: <span style={{ color: "white" }}>Inactive</span>,
               },
               {
                 value: "Banned",
-                label: <span style={{ color: "orange" }}>Banned</span>,
+                label: <span style={{ color: "white" }}>Banned</span>,
               },
             ]}
           />
@@ -769,11 +769,10 @@ function UserManagement() {
             <Select.Option value="Active">Active</Select.Option>
             <Select.Option value="Inactive">Inactive</Select.Option>
             <Select.Option value="Banned">Banned</Select.Option>
-            <Select.Option value="Disabled">Disabled</Select.Option>
           </Select>
           <Search
             className="user-management-search-input"
-            placeholder="Search users..."
+            placeholder="Search users by full name..."
             allowClear
             enterButton="Search"
             size="middle"
@@ -851,7 +850,17 @@ function UserManagement() {
           </Form.Item>
 
           <Form.Item label="Quyền (Role)" name="role">
-            <Input disabled placeholder="Quyền hạn gốc" />
+            <Input
+              disabled
+              style={{
+                backgroundColor: "#e6f7ff", // Màu nền xanh nhạt nổi bật
+                color: "#0958d9", // Màu chữ xanh đậm đậm nét
+                fontWeight: "bold", // In đậm chữ
+                borderColor: "#91caef", // Viền xanh rõ ràng
+                cursor: "not-allowed",
+              }}
+              placeholder="Quyền hạn gốc"
+            />
           </Form.Item>
 
           {renderDynamicFields()}
