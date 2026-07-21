@@ -457,13 +457,13 @@ function ContractManagement() {
 
   const columns = useMemo(
     () => [
-      {
-        title: "Contract Code",
-        dataIndex: "contractNumber",
-        fixed: shouldFixColumns ? "left" : undefined,
-        width: 160,
-        render: (text) => <Text strong>{text}</Text>,
-      },
+      // {
+      //   title: "Contract Code",
+      //   dataIndex: "contractNumber",
+      //   fixed: shouldFixColumns ? "left" : undefined,
+      //   width: 160,
+      //   render: (text) => <Text strong>{text}</Text>,
+      // },
       {
         title: "Tournament Title",
         dataIndex: "tournamentTitle",
@@ -716,15 +716,15 @@ function ContractManagement() {
           <Descriptions.Item label="Contract ID" span={2}>
             <Text code>{selectedContractDetail?.id || "N/A"}</Text>
           </Descriptions.Item>
-          <Descriptions.Item label="Invitation ID" span={2}>
+          {/* <Descriptions.Item label="Invitation ID" span={2}>
             <Text code>{selectedContractDetail?.invitationId || "N/A"}</Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="Contract Code" span={2}>
+          </Descriptions.Item> */}
+          {/* <Descriptions.Item label="Contract Code" span={2}>
             <Text strong>{selectedContractDetail?.contractNumber}</Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="Tournament ID" span={2}>
+          </Descriptions.Item> */}
+          {/* <Descriptions.Item label="Tournament ID" span={2}>
             <Text code>{selectedContractDetail?.tournamentId || "N/A"}</Text>
-          </Descriptions.Item>
+          </Descriptions.Item> */}
           <Descriptions.Item label="Tournament Title" span={2}>
             {selectedContractDetail?.tournamentTitle}
           </Descriptions.Item>
@@ -739,7 +739,7 @@ function ContractManagement() {
                 "N/A"}
             </Text>
           </Descriptions.Item>
-          <Descriptions.Item label="Jockey">
+          <Descriptions.Item label="Jockey Name">
             {selectedContractDetail?.jockeyName}
           </Descriptions.Item>
           <Descriptions.Item label="Horse Owner ID">
@@ -756,7 +756,7 @@ function ContractManagement() {
                 "N/A"}
             </Text>
           </Descriptions.Item>
-          <Descriptions.Item label="Horse Owner">
+          <Descriptions.Item label="Horse Owner Name">
             {selectedContractDetail?.ownerName}
           </Descriptions.Item>
           <Descriptions.Item label="Salary Value">
