@@ -308,7 +308,7 @@ function TournamentManagement() {
       startDate: values.startDate.format("DD/MM/YYYY"),
       endDate: values.endDate.format("DD/MM/YYYY"),
       totalRounds: 2,
-      totalRaces: 3,
+      // totalRaces: 3,
     };
 
     setIsSaving(true);
@@ -434,6 +434,7 @@ function TournamentManagement() {
         location: tournament.location,
         horsesPerRace: tournament.horsesPerRace,
         entryFee: tournament.entryFee,
+        totalRaces: tournament.totalRaces,
       });
     } catch (error) {
       message.error(error?.message || "Unable to load tournament detail");
@@ -450,8 +451,8 @@ function TournamentManagement() {
       endDate: values.endDate.format("DD/MM/YYYY"),
       ...(!editingTournament
         ? {
-            totalRounds: 2,
-            totalRaces: 3,
+            totalRounds: values.totalRounds,
+            totalRaces: values.totalRaces,
           }
         : {}),
     };
@@ -963,7 +964,10 @@ function TournamentManagement() {
                   name="imageUrl"
                   noStyle
                   rules={[
-                    { required: true, message: "Tournament banner is required" },
+                    {
+                      required: true,
+                      message: "Tournament banner is required",
+                    },
                   ]}
                 >
                   <Input type="hidden" />
@@ -974,9 +978,7 @@ function TournamentManagement() {
                   maxCount={1}
                   showUploadList={false}
                 >
-                  <Button loading={isUploadingBanner}>
-                    Upload Banner
-                  </Button>
+                  <Button loading={isUploadingBanner}>Upload Banner</Button>
                 </Upload>
                 {bannerUrl ? (
                   <img
@@ -998,7 +1000,9 @@ function TournamentManagement() {
                 <Form.Item
                   label="Start Date"
                   name="startDate"
-                  rules={[{ required: true, message: "Start date is required" }]}
+                  rules={[
+                    { required: true, message: "Start date is required" },
+                  ]}
                 >
                   <DatePicker
                     format="DD/MM/YYYY"
@@ -1042,6 +1046,22 @@ function TournamentManagement() {
                 >
                   <InputNumber min={8} max={10} style={{ width: "100%" }} />
                 </Form.Item>
+
+                <Form.Item
+                  label="Total Races"
+                  name="totalRaces"
+                  rules={[
+                    { required: true, message: "Total races is required" },
+                    {
+                      type: "number",
+                      min: 3,
+                      max: 11,
+                      message: "Races must be at least 3, maximum 11",
+                    },
+                  ]}
+                >
+                  <InputNumber min={3} style={{ width: "100%" }} />
+                </Form.Item>
               </div>
 
               <Form.Item label="Entry Fee" name="entryFee">
@@ -1065,9 +1085,7 @@ function TournamentManagement() {
             </div>
 
             <div className="setup-wizard-period">
-              <span className="setup-wizard-period-label">
-                Tournament time
-              </span>
+              <span className="setup-wizard-period-label">Tournament time</span>
               <span className="setup-wizard-period-range">
                 {formatTournamentPeriod(
                   createdTournament?.startDate,
@@ -1090,7 +1108,9 @@ function TournamentManagement() {
                           {...restField}
                           label="Race Name"
                           name={[name, "name"]}
-                          rules={[{ required: true, message: "Name is required" }]}
+                          rules={[
+                            { required: true, message: "Name is required" },
+                          ]}
                         >
                           <Input placeholder={`Vong 1 - Race ${index + 1}`} />
                         </Form.Item>
@@ -1099,7 +1119,9 @@ function TournamentManagement() {
                           {...restField}
                           label="Date"
                           name={[name, "date"]}
-                          rules={[{ required: true, message: "Date is required" }]}
+                          rules={[
+                            { required: true, message: "Date is required" },
+                          ]}
                         >
                           <DatePicker
                             format="DD/MM/YYYY"
@@ -1119,7 +1141,9 @@ function TournamentManagement() {
                           {...restField}
                           label="Start Time"
                           name={[name, "startTime"]}
-                          rules={[{ required: true, message: "Time is required" }]}
+                          rules={[
+                            { required: true, message: "Time is required" },
+                          ]}
                         >
                           <Input type="time" />
                         </Form.Item>
@@ -1165,9 +1189,7 @@ function TournamentManagement() {
             </div>
 
             <div className="setup-wizard-period">
-              <span className="setup-wizard-period-label">
-                Tournament time
-              </span>
+              <span className="setup-wizard-period-label">Tournament time</span>
               <span className="setup-wizard-period-range">
                 {formatTournamentPeriod(
                   createdTournament?.startDate,
@@ -1242,14 +1264,13 @@ function TournamentManagement() {
             <Input.TextArea rows={3} />
           </Form.Item>
 
-          <Form.Item
-            label="Tournament Banner"
-            required
-          >
+          <Form.Item label="Tournament Banner" required>
             <Form.Item
               name="imageUrl"
               noStyle
-              rules={[{ required: true, message: "Tournament banner is required" }]}
+              rules={[
+                { required: true, message: "Tournament banner is required" },
+              ]}
             >
               <Input type="hidden" />
             </Form.Item>
@@ -1259,9 +1280,7 @@ function TournamentManagement() {
               maxCount={1}
               showUploadList={false}
             >
-              <Button loading={isUploadingBanner}>
-                Upload Banner
-              </Button>
+              <Button loading={isUploadingBanner}>Upload Banner</Button>
             </Upload>
             {bannerUrl ? (
               <img
@@ -1325,6 +1344,22 @@ function TournamentManagement() {
             ]}
           >
             <InputNumber min={8} max={10} style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item
+            label="Total Races"
+            name="totalRaces"
+            rules={[
+              { required: true, message: "Total races is required" },
+              {
+                type: "number",
+                min: 3,
+                max: 11,
+                message: "Races must be at least 3, maximum 11",
+              },
+            ]}
+          >
+            <InputNumber min={1} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Entry Fee" name="entryFee">
