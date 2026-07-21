@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { Link, useParams } from "react-router-dom";
+import { createReplaySession } from "../../api/services/broadcast.service";
 import { getRaceById } from "../../api/services/race.service";
 import { getSimulationResult } from "../../api/services/simulation.service";
 import { getAccessToken } from "../../utils/storage";
@@ -256,8 +257,9 @@ function createTrack(horses) {
     }));
 }
 
-export default function Broadcast() {
+export function BroadcastExperience({ mode = "live" }) {
   const { raceId = "" } = useParams();
+  const isReplayMode = mode === "replay";
   const token = getAccessToken() || "";
   const host = import.meta.env.VITE_API_BASE_URL || "http://localhost:9000";
   const [connection, setConnection] = useState({
@@ -273,12 +275,15 @@ export default function Broadcast() {
   const [results, setResults] = useState([]);
   const [raceStartAt, setRaceStartAt] = useState(null);
   const [allHorsesMap, setAllHorsesMap] = useState(new Map());
+  const [isReplayStarting, setIsReplayStarting] = useState(false);
+  const [replayMessage, setReplayMessage] = useState("");
 
   const socketRef = useRef(null);
   const activeRaceRef = useRef("");
   const requestedRaceRef = useRef("");
   const trackInitializedRef = useRef(false);
   const finishedRef = useRef(false);
+  const replayStartedRef = useRef("");
   const sessionVersionRef = useRef(0);
   const logIdRef = useRef(0);
 
@@ -553,6 +558,40 @@ export default function Broadcast() {
     resetRace();
   }, [addLog, raceId, resetRace]);
 
+  const handleReplay = useCallback(async () => {
+    const cleanRaceId = raceId.trim();
+    if (!cleanRaceId) {
+      setReplayMessage("Missing race ID.");
+      return;
+    }
+
+    sessionVersionRef.current += 1;
+    trackInitializedRef.current = false;
+    finishedRef.current = false;
+    setHorses([]);
+    setCurrentTick(null);
+    setIsCatchUp(false);
+    setIsFinished(false);
+    setResults([]);
+    setIsReplayStarting(true);
+    setReplayMessage("Starting replay...");
+
+    try {
+      await createReplaySession(cleanRaceId);
+      setReplayMessage("Replay started.");
+      addLog("Replay started.", "system");
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Cannot start replay.";
+      setReplayMessage(message);
+      addLog(message, "error");
+    } finally {
+      setIsReplayStarting(false);
+    }
+  }, [addLog, raceId]);
+
   useEffect(() => {
     const fetchAllHorses = async () => {
       try {
@@ -576,6 +615,26 @@ export default function Broadcast() {
   useEffect(() => {
     connect();
   }, [connect]);
+
+  useEffect(() => {
+    replayStartedRef.current = "";
+    setReplayMessage("");
+  }, [isReplayMode, raceId]);
+
+  useEffect(() => {
+    const cleanRaceId = raceId.trim();
+    if (
+      !isReplayMode ||
+      !cleanRaceId ||
+      joinedRaceId !== cleanRaceId ||
+      replayStartedRef.current === cleanRaceId
+    ) {
+      return;
+    }
+
+    replayStartedRef.current = cleanRaceId;
+    handleReplay();
+  }, [handleReplay, isReplayMode, joinedRaceId, raceId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -664,40 +723,26 @@ export default function Broadcast() {
         </header>
 
         <section className="broadcast-controls" aria-label="Socket controls">
-          <div className="selected-race">
-            <span>Current Channel</span>
-            <strong>Live Race</strong>
-          </div>
-          <div className="broadcast-button-row">
-            <button type="button" className="accent" onClick={joinRace}>
-              Reconnect
-            </button>
-            <button type="button" onClick={leaveRace}>
-              Leave Race
-            </button>
-          </div>
-          <div className="broadcast-button-row socket-buttons">
+          {isReplayMode && (
             <button
               type="button"
-              className="primary"
-              onClick={connect}
-              disabled={connection.state === "connecting"}
+              className="replay-action"
+              onClick={handleReplay}
+              disabled={isReplayStarting}
             >
-              Connect
+              {isReplayStarting ? "Starting replay..." : "Watch replay"}
             </button>
-            <button type="button" onClick={disconnect}>
-              Disconnect
-            </button>
-          </div>
+          )}
           <Link className="channel-back-link" to="/spectator/broadcast">
             ← Select another channel
           </Link>
-          {joinedRaceId && (
-            <p className="joined-race">
-              <strong>✓ Connected to race</strong>
-            </p>
-          )}
         </section>
+
+        {isReplayMode && replayMessage && (
+          <p className="replay-status" role="status">
+            {replayMessage}
+          </p>
+        )}
 
         <section className="broadcast-grid">
           <div className="broadcast-card track-card">
@@ -849,4 +894,8 @@ export default function Broadcast() {
       </section>
     </main>
   );
+}
+
+export default function Broadcast() {
+  return <BroadcastExperience mode="live" />;
 }

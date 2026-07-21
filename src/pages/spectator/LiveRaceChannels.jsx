@@ -143,7 +143,9 @@ function RaceChannelCard({ race, index, replay = false }) {
         </div>
         <Link
           className="watch-channel-button"
-          to={`/spectator/broadcast/${encodeURIComponent(race.id)}`}
+          to={`/spectator/${replay ? "replay" : "broadcast"}/${encodeURIComponent(
+            race.id,
+          )}`}
         >
           {replay ? "Watch replay" : "Watch live"}
           <span aria-hidden="true">→</span>
