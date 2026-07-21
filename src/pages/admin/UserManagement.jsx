@@ -772,7 +772,7 @@ function UserManagement() {
           </Select>
           <Search
             className="user-management-search-input"
-            placeholder="Search users..."
+            placeholder="Search users by full name..."
             allowClear
             enterButton="Search"
             size="middle"
