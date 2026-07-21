@@ -522,7 +522,7 @@ function RegistrationManagement() {
 
           <Input
             allowClear
-            placeholder="Search by name"
+            placeholder="Search by tournament title"
             value={searchText}
             style={{ width: 260 }}
             onChange={(event) => setSearchText(event.target.value)}

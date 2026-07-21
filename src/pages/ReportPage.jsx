@@ -147,7 +147,7 @@ export default function ReportPage() {
       text: "Frozen Points Not Refunded",
       color: "volcano",
     },
-    OTHER: { text: "Other", color: "default" },
+    OTHER: { text: "Other", color: "orange" },
   };
 
   const statusConfigs = {
@@ -301,7 +301,7 @@ export default function ReportPage() {
               Details
             </Button>
 
-            <Popconfirm
+            {/* <Popconfirm
               title="Delete Report"
               description="Are you sure you want to delete this report?"
               onConfirm={() => handleDelete(targetId)}
@@ -312,7 +312,7 @@ export default function ReportPage() {
               <Button size="small" type="primary" danger ghost>
                 Delete
               </Button>
-            </Popconfirm>
+            </Popconfirm> */}
           </div>
         );
       },
