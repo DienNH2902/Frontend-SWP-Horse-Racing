@@ -575,41 +575,41 @@ function TournamentManagement() {
         title: "Title",
         dataIndex: "title",
         fixed: shouldFixColumns ? "left" : undefined,
-        width: 260,
+        width: 100,
         render: (value) => <Text strong>{value}</Text>,
       },
       {
         title: "Start Date",
         dataIndex: "startDate",
-        width: 130,
+        width: 50,
       },
       {
         title: "End Date",
         dataIndex: "endDate",
-        width: 130,
+        width: 50,
       },
-      {
-        title: "Location",
-        dataIndex: "location",
-        width: 260,
-        ellipsis: true,
-      },
+      // {
+      //   title: "Location",
+      //   dataIndex: "location",
+      //   width: 260,
+      //   ellipsis: true,
+      // },
       {
         title: "Status",
         dataIndex: "status",
-        width: 140,
+        width: 50,
         render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
       },
       {
         title: "Available Slot",
         dataIndex: "availableSlot",
-        width: 130,
+        width: 50,
       },
       {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 450,
+        width: 90,
         render: (_, record) => (
           <Space>
             <Button
@@ -630,7 +630,7 @@ function TournamentManagement() {
               </Button>
             </Tooltip>
 
-            {record.status === "Completed" && (
+            {/* {record.status === "Completed" && (
               <Tooltip title="Award tournament prize">
                 <Button
                   className="tournament-management-link-btn"
@@ -642,7 +642,7 @@ function TournamentManagement() {
                   Award Prize
                 </Button>
               </Tooltip>
-            )}
+            )} */}
 
             <Button
               className="tournament-management-link-btn"
@@ -844,7 +844,7 @@ function TournamentManagement() {
             value={filterStatus}
             style={{ width: 170 }}
             options={[
-              { label: "All", value: "" },
+              { label: "Filter by Status", value: "" },
               ...TOURNAMENT_STATUSES.map((status) => ({
                 label: status,
                 value: status,
