@@ -1054,13 +1054,13 @@ function TournamentManagement() {
                     { required: true, message: "Total races is required" },
                     {
                       type: "number",
-                      min: 3,
+                      min: 2,
                       max: 10,
-                      message: "Races must be at least 3, maximum 11",
+                      message: "Races must be at least 2, maximum 10",
                     },
                   ]}
                 >
-                  <InputNumber min={3} style={{ width: "100%" }} />
+                  <InputNumber min={2} max={10} style={{ width: "100%" }} />
                 </Form.Item>
               </div>
 
@@ -1353,13 +1353,13 @@ function TournamentManagement() {
               { required: true, message: "Total races is required" },
               {
                 type: "number",
-                min: 3,
+                min: 2,
                 max: 10,
-                message: "Races must be at least 3, maximum 10",
+                message: "Races must be at least 2, maximum 10",
               },
             ]}
           >
-            <InputNumber min={1} style={{ width: "100%" }} />
+            <InputNumber min={2} max={10} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Entry Fee" name="entryFee">
