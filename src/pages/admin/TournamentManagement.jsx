@@ -82,10 +82,9 @@ function formatDateTime(value) {
 function toDatePickerValue(value) {
   if (!value) return null;
 
-  const parsed =
-    dayjs(value, "DD/MM/YYYY", true).isValid()
-      ? dayjs(value, "DD/MM/YYYY", true)
-      : dayjs(value);
+  const parsed = dayjs(value, "DD/MM/YYYY", true).isValid()
+    ? dayjs(value, "DD/MM/YYYY", true)
+    : dayjs(value);
 
   return parsed.isValid() ? parsed : null;
 }
@@ -93,10 +92,9 @@ function toDatePickerValue(value) {
 function parseTournamentDate(value) {
   if (!value) return null;
 
-  const parsed =
-    dayjs(value, "DD/MM/YYYY", true).isValid()
-      ? dayjs(value, "DD/MM/YYYY", true)
-      : dayjs(value);
+  const parsed = dayjs(value, "DD/MM/YYYY", true).isValid()
+    ? dayjs(value, "DD/MM/YYYY", true)
+    : dayjs(value);
 
   return parsed.isValid() ? parsed : null;
 }
@@ -125,7 +123,9 @@ function isOutsidePeriod(date, startDate, endDate) {
 
   if (!date || !parsedStartDate || !parsedEndDate) return false;
 
-  return date.isBefore(parsedStartDate, "day") || date.isAfter(parsedEndDate, "day");
+  return (
+    date.isBefore(parsedStartDate, "day") || date.isAfter(parsedEndDate, "day")
+  );
 }
 
 function formatTournamentPeriod(startDate, endDate) {
@@ -1048,14 +1048,14 @@ function TournamentManagement() {
                 </Form.Item>
 
                 <Form.Item
-                  label="Total Races"
+                  label="Total Races for round 1"
                   name="totalRaces"
                   rules={[
                     { required: true, message: "Total races is required" },
                     {
                       type: "number",
                       min: 3,
-                      max: 11,
+                      max: 10,
                       message: "Races must be at least 3, maximum 11",
                     },
                   ]}
@@ -1347,15 +1347,15 @@ function TournamentManagement() {
           </Form.Item>
 
           <Form.Item
-            label="Total Races"
+            label="Total Races for round 1"
             name="totalRaces"
             rules={[
               { required: true, message: "Total races is required" },
               {
                 type: "number",
                 min: 3,
-                max: 11,
-                message: "Races must be at least 3, maximum 11",
+                max: 10,
+                message: "Races must be at least 3, maximum 10",
               },
             ]}
           >
@@ -1530,7 +1530,8 @@ function TournamentManagement() {
             </p>
 
             <p>
-              <strong>Total Races:</strong> {detailTournament.totalRaces}
+              <strong>Total Races for round 1:</strong>{" "}
+              {detailTournament.totalRaces}
             </p>
 
             <p>
