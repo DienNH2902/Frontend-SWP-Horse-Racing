@@ -15,11 +15,6 @@ import {
   Typography,
   message,
 } from "antd";
-import {
-  GiftOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { useSearchParams } from "react-router-dom";
 import { distributeRacePrize } from "../../api/services/prize-distribution.service";
@@ -40,7 +35,11 @@ function resolveList(response) {
   if (Array.isArray(response?.data)) return response.data;
   if (Array.isArray(response?.items)) return response.items;
   if (Array.isArray(response?.races)) return response.races;
-  if (response && typeof response === "object" && (response._id || response.id)) {
+  if (
+    response &&
+    typeof response === "object" &&
+    (response._id || response.id)
+  ) {
     return [response];
   }
   return [];
@@ -158,16 +157,8 @@ function Prize() {
       }));
 
       setPrizes(nextPrizes);
-    } catch (error) {
+    } catch {
       setPrizes([]);
-
-      if (error?.response?.status !== 404) {
-        message.error(
-          error?.response?.data?.message ||
-            error?.message ||
-            "Unable to load prizes",
-        );
-      }
     } finally {
       setIsPrizeLoading(false);
     }
@@ -179,7 +170,8 @@ function Prize() {
     try {
       const response = await getTournaments();
       const options = resolveList(response).map((tournament, index) => ({
-        label: tournament?.title || tournament?.name || `Tournament ${index + 1}`,
+        label:
+          tournament?.title || tournament?.name || `Tournament ${index + 1}`,
         value: getId(tournament, `tournament-${index}`),
       }));
 
@@ -318,7 +310,7 @@ function Prize() {
             return (
               <Tooltip title={reason}>
                 <span>
-                  <Button icon={<GiftOutlined />} disabled>
+                  <Button disabled>
                     Distribute
                   </Button>
                 </span>
@@ -336,7 +328,6 @@ function Prize() {
             >
               <Button
                 className="prize-primary"
-                icon={<GiftOutlined />}
                 loading={distributingRaceId === record.id}
               >
                 Distribute
@@ -440,7 +431,6 @@ function Prize() {
 
         <Button
           className="prize-primary"
-          icon={<PlusOutlined />}
           onClick={openCreatePrizeModal}
         >
           Create Prize
@@ -464,7 +454,6 @@ function Prize() {
           />
 
           <Button
-            icon={<ReloadOutlined />}
             loading={isLoading}
             onClick={() => {
               loadFinalRaces(selectedTournamentId);

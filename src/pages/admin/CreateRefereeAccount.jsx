@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Avatar, Button, DatePicker, Form, Input, InputNumber, Select, Typography, Upload, message } from "antd";
-import { IdcardOutlined, MailOutlined, PhoneOutlined, SafetyCertificateOutlined, UploadOutlined, UserAddOutlined, UserOutlined } from "@ant-design/icons";
+import { IdcardOutlined, MailOutlined, PhoneOutlined, SafetyCertificateOutlined, UserOutlined } from "@ant-design/icons";
 import "antd/dist/reset.css";
 import { registerReferee } from "../../api/services/auth.service";
 import { uploadAvatar } from "../../api/services/user.service";
@@ -443,7 +443,7 @@ export default function CreateRefereeAccount() {
                   disabled={isUploadingAvatar}
                   showUploadList={false}
                 >
-                  <Button icon={<UploadOutlined />} loading={isUploadingAvatar}>
+                  <Button loading={isUploadingAvatar}>
                     Upload Avatar
                   </Button>
                 </Upload>
@@ -456,7 +456,6 @@ export default function CreateRefereeAccount() {
             <Button
               className="create-referee-submit"
               htmlType="submit"
-              icon={<UserAddOutlined />}
               disabled={isUploadingAvatar}
             >
               Create Referee

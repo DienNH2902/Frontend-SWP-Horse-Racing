@@ -14,13 +14,6 @@ import {
   Typography,
   message,
 } from "antd";
-import {
-  EyeOutlined,
-  FieldTimeOutlined,
-  FlagOutlined,
-  PlusOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
 import dayjs from "dayjs";
 import "antd/dist/reset.css";
 import {
@@ -768,26 +761,32 @@ function RaceManagement() {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 260,
+        width: 430,
         render: (_, record) => (
           <Space>
             <Button
-              type="text"
-              icon={<EyeOutlined />}
+              className="race-management-link-btn"
+              size="small"
               onClick={() => openDetailModal(record)}
-            />
+            >
+              Detail
+            </Button>
 
             <Button
-              type="text"
-              icon={<TeamOutlined />}
+              className="race-management-link-btn"
+              size="small"
               onClick={() => openAssignRefereeModal(record)}
-            />
+            >
+              Assign Referee
+            </Button>
 
             <Button
-              type="text"
-              icon={<FlagOutlined />}
+              className="race-management-link-btn"
+              size="small"
               onClick={() => openAssignRaceCourseModal(record)}
-            />
+            >
+              Assign Course
+            </Button>
           </Space>
         ),
       },
@@ -1073,7 +1072,6 @@ function RaceManagement() {
 
           <Button
             className="race-management-primary"
-            icon={<PlusOutlined />}
             onClick={openBatchModal}
           >
             Create Round 1 Races
@@ -1088,7 +1086,6 @@ function RaceManagement() {
 
           <Button
             className="race-management-link-btn"
-            icon={<FieldTimeOutlined />}
             onClick={openRound2Modal}
           >
             Create Final Race

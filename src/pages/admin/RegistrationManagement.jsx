@@ -13,12 +13,6 @@ import {
   Typography,
   message,
 } from "antd";
-import {
-  CheckOutlined,
-  CloseOutlined,
-  EyeOutlined,
-  FieldTimeOutlined,
-} from "@ant-design/icons";
 import "antd/dist/reset.css";
 import {
   acceptRegistrationToWaitlist,
@@ -391,33 +385,36 @@ function RegistrationManagement() {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 210,
+        width: 390,
         render: (_, record) => (
           <Space>
             <Button
-              type="text"
-              icon={<EyeOutlined />}
+              size="small"
               onClick={() => openDetailModal(record)}
-            />
+            >
+              Detail
+            </Button>
+            <Button
+              size="small"
+              onClick={() => handleAcceptToWaitlist(record)}
+            >
+              Waitlist
+            </Button>
 
             <Button
-              type="text"
-              icon={<CheckOutlined />}
+              size="small"
               onClick={() => openConfirmModal(record)}
-            />
+            >
+              Confirm
+            </Button>
 
             <Button
-              type="text"
-              icon={<CloseOutlined />}
+              size="small"
               danger
               onClick={() => openRejectModal(record)}
-            />
-
-            <Button
-              type="text"
-              icon={<FieldTimeOutlined />}
-              onClick={() => handleAcceptToWaitlist(record)}
-            />
+            >
+              Reject
+            </Button>
           </Space>
         ),
       },

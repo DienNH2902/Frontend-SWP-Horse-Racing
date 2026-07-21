@@ -14,12 +14,6 @@ import {
   Typography,
   message,
 } from "antd";
-import {
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
 import "antd/dist/reset.css";
 import {
   createRaceCourse,
@@ -237,20 +231,22 @@ function RaceCourseManagement() {
         title: "Actions",
         key: "actions",
         fixed: shouldFixColumns ? "right" : undefined,
-        width: 180,
+        width: 280,
         render: (_, record) => (
           <Space>
             <Button
-              type="text"
-              icon={<EyeOutlined />}
+              size="small"
               onClick={() => openDetailModal(record)}
-            />
+            >
+              Detail
+            </Button>
 
             <Button
-              type="text"
-              icon={<EditOutlined />}
+              size="small"
               onClick={() => openEditModal(record)}
-            />
+            >
+              Edit
+            </Button>
 
             <Popconfirm
               title="Delete race course?"
@@ -260,7 +256,9 @@ function RaceCourseManagement() {
               okButtonProps={{ danger: true, loading: isSaving }}
               onConfirm={() => handleDeleteCourse(record)}
             >
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Button size="small" danger>
+                Delete
+              </Button>
             </Popconfirm>
           </Space>
         ),
@@ -351,7 +349,6 @@ function RaceCourseManagement() {
 
           <Button
             className="race-course-management-primary"
-            icon={<PlusOutlined />}
             onClick={openCreateModal}
           >
             Create Race Course
