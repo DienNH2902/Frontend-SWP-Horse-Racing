@@ -379,7 +379,6 @@ function Home() {
     horses: [],
     jockeys: [],
     results: [],
-    predictors: [],
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -1325,8 +1324,10 @@ function Home() {
 
         .race-card {
           min-height: 315px;
+          min-width: 0;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
           padding: 16px;
         }
 
@@ -1366,16 +1367,40 @@ function Home() {
           font-weight: 950;
         }
 
+        .race-card h3 {
+          min-height: 48px;
+          max-height: 48px;
+          display: -webkit-box;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
         .muted {
           color: #6a817e;
           font-size: 14px;
+        }
+
+        .race-card .muted {
+          min-height: 36px;
+          display: -webkit-box;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
         }
 
         .race-date {
           display: inline-flex;
           align-items: center;
           gap: 7px;
+          max-width: 100%;
+          min-width: 0;
           margin-top: 12px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
           color: #214d48;
           font-size: 13px;
           font-weight: 850;
@@ -1430,6 +1455,7 @@ function Home() {
           place-items: center;
           width: 100%;
           min-height: 42px;
+          flex: 0 0 auto;
           margin-top: auto;
           border: 1px solid #bfece5;
           border-radius: 7px;
@@ -1580,8 +1606,7 @@ function Home() {
         }
 
         .jockey-list,
-        .result-list,
-        .predictor-list {
+        .result-list {
           display: grid;
           gap: 0;
         }
@@ -1713,7 +1738,7 @@ function Home() {
         }
 
         .result-row {
-          grid-template-columns: 140px 1fr auto auto;
+          grid-template-columns: 140px minmax(0, 1fr) 190px 220px;
           min-height: 112px;
         }
 
@@ -1725,8 +1750,16 @@ function Home() {
         }
 
         .result-details {
+          min-width: 0;
           display: grid;
           gap: 5px;
+        }
+
+        .result-details strong,
+        .result-details span:not(.result-status) {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .result-status {
@@ -1747,7 +1780,14 @@ function Home() {
         .winner {
           display: grid;
           gap: 3px;
-          min-width: 150px;
+          min-width: 0;
+        }
+
+        .winner strong,
+        .winner span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .winner-icon {
@@ -1755,67 +1795,9 @@ function Home() {
           font-weight: 950;
         }
 
-        .prediction-band {
-          position: relative;
-          display: grid;
-          grid-template-columns: 1fr 1fr 260px;
-          gap: 34px;
-          align-items: center;
-          min-height: 230px;
-          margin-bottom: 30px;
-          padding: 42px;
-          border-radius: 8px;
-          color: #f4fffb;
-          overflow: hidden;
-          background:
-            radial-gradient(circle at 86% 55%, rgba(105, 248, 221, 0.28), transparent 28%),
-            linear-gradient(120deg, #003b35, #008272);
-        }
-
-        .prediction-band h2 {
-          margin: 0 0 12px;
-          font-size: 27px;
-          font-weight: 950;
-        }
-
-        .prediction-band p {
-          max-width: 390px;
-          margin: 0 0 22px;
-          color: rgba(244, 255, 251, 0.82);
-          line-height: 1.6;
-        }
-
-        .predictor-list {
-          gap: 10px;
-        }
-
-        .predictor-row {
-          display: grid;
-          grid-template-columns: 28px 38px 1fr auto;
-          align-items: center;
-          gap: 12px;
-          min-height: 44px;
-          padding: 0 16px;
-          border: 1px solid rgba(244, 255, 251, 0.24);
-          border-radius: 999px;
-          background: rgba(0, 35, 32, 0.2);
-          font-weight: 900;
-        }
-
-        .predictor-row span:last-child {
-          color: rgba(244, 255, 251, 0.86);
-        }
-
-        .trophy-art {
-          justify-self: center;
-          width: 210px;
-          height: 210px;
-          display: grid;
-          place-items: center;
-          color: #69f8dd;
-          border-radius: 50%;
-          background: rgba(244, 255, 251, 0.08);
-          box-shadow: inset 0 0 60px rgba(105, 248, 221, 0.18);
+        .result-row > strong:last-child {
+          justify-self: start;
+          white-space: nowrap;
         }
 
         .home-footer {
@@ -1884,12 +1866,13 @@ function Home() {
         @media (max-width: 1120px) {
           .home-menu { display: none; }
           .race-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .result-row {
+            grid-template-columns: 140px minmax(0, 1fr) 170px 190px;
+          }
           .dashboard-grid,
-          .lower-grid,
-          .prediction-band { grid-template-columns: 1fr; }
+          .lower-grid { grid-template-columns: 1fr; }
           .horse-grid,
           .top-horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          .trophy-art { display: none; }
           .footer-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
@@ -1937,7 +1920,6 @@ function Home() {
           .home-table td:nth-child(4),
           .home-table th:nth-child(6),
           .home-table td:nth-child(6) { display: none; }
-          .prediction-band { padding: 26px; }
           .horse-modal-backdrop { padding: 14px; }
           .race-detail-grid { grid-template-columns: 1fr 1fr; }
           .horse-profile { grid-template-columns: 1fr; }
@@ -2323,8 +2305,10 @@ function Home() {
                         {race.status ? "Live" : "Upcoming"}
                       </span>
                     </div>
-                    <h3>{race.name}</h3>
-                    <span className="muted">{race.venue}</span>
+                    <h3 title={race.name}>{race.name}</h3>
+                    <span className="muted" title={race.venue}>
+                      {race.venue}
+                    </span>
                     <span className="race-date">
                       <Icon name="clock" size={16} />
                       {formatRaceDateTime(race.date || race.sortTime)}
@@ -2670,35 +2654,6 @@ function Home() {
             </section>
           </div>
 
-          <section className="prediction-band" id="predictions">
-            <div>
-              <h2>Make Your Predictions</h2>
-              <p>
-                Predict race winners and compete with fans around the world. Win
-                points and unlock exclusive rewards.
-              </p>
-              <a className="home-btn home-btn-primary" href="#predictions">
-                Start Predicting
-                <Icon name="arrow" size={20} />
-              </a>
-            </div>
-            <div>
-              <h3>Top Predictors This Week</h3>
-              <div className="predictor-list">
-                {homeData.predictors.map((predictor) => (
-                  <div className="predictor-row" key={predictor.id}>
-                    <span>{predictor.id}</span>
-                    <Avatar name={predictor.name} rank={predictor.id} />
-                    <strong>{predictor.name}</strong>
-                    <span>{predictor.points.toLocaleString()} PTS</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="trophy-art">
-              <Icon name="trophy" size={132} />
-            </div>
-          </section>
         </div>
       </section>
 
