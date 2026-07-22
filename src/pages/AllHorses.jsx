@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { API_BASE_URL } from "../api/client";
 import { getHorses } from "../api/services/horse.service";
@@ -38,114 +38,47 @@ export default function AllHorses() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [sortBy, setSortBy] = useState("name");
-  const [sortOrder, setSortOrder] = useState("asc");
-  const [minValue, setMinValue] = useState("");
-  const [maxValue, setMaxValue] = useState("");
+  const [sortWinRate, setSortWinRate] = useState("");
+  const [sortTotalWin, setSortTotalWin] = useState("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    let mounted = true;
-    getHorses()
-      .then((data) => {
-        if (mounted) setHorses((data || []).map(normalizeHorse));
-      })
-      .catch(() => mounted && setHorses([]))
-      .finally(() => mounted && setLoading(false));
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
 
-  const statuses = useMemo(
-    () => [...new Set(horses.map((horse) => horse.status).filter(Boolean))],
-    [horses],
-  );
-  const visibleHorses = useMemo(() => {
-    const query = search.trim().toLowerCase();
+        const params = {
+          search: search || undefined,
+          status: status === "all" ? undefined : status,
+          sortWinRate: sortWinRate || undefined,
+          sortTotalWin: sortTotalWin || undefined,
+        };
 
-    return horses
-      .filter((horse) => {
-        const matchSearch =
-          !query ||
-          horse.name.toLowerCase().includes(query) ||
-          horse.owner.toLowerCase().includes(query);
+        const data = await getHorses(params);
 
-        const matchStatus =
-          status === "all" || horse.status === status;
+        setHorses((data || []).map(normalizeHorse));
+      } catch {
+        setHorses([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 400);
 
-        let matchRange = true;
-
-        if (sortBy === "winRate") {
-          const value = horse.winRate;
-
-          const min =
-            minValue === ""
-              ? Number.NEGATIVE_INFINITY
-              : Number(minValue);
-
-          const max =
-            maxValue === ""
-              ? Number.POSITIVE_INFINITY
-              : Number(maxValue);
-
-          matchRange =
-            value >= min &&
-            value <= max;
-        }
-
-        if (sortBy === "wins") {
-          const value = horse.wins;
-
-          const min =
-            minValue === ""
-              ? Number.NEGATIVE_INFINITY
-              : Number(minValue);
-
-          const max =
-            maxValue === ""
-              ? Number.POSITIVE_INFINITY
-              : Number(maxValue);
-
-          matchRange =
-            value >= min &&
-            value <= max;
-        }
-
-        return (
-          matchSearch &&
-          matchStatus &&
-          matchRange
-        );
-      })
-      .sort((a, b) => {
-        let result = 0;
-
-        if (sortBy === "name") {
-          result = a.name.localeCompare(b.name);
-        }
-
-        if (sortBy === "wins") {
-          result = a.wins - b.wins;
-        }
-
-        if (sortBy === "winRate") {
-          result = a.winRate - b.winRate;
-        }
-
-        return sortOrder === "asc"
-          ? result
-          : -result;
-      });
-  }, [
-    horses,
-    search,
+    return () => clearTimeout(timer);
+  }, [search,
     status,
-    sortBy,
-    sortOrder,
-    minValue,
-    maxValue,
-  ]);
+    sortWinRate,
+    sortTotalWin,]);
+
+  const statuses = [
+    "IDLE",
+    "INJURED",
+    "REGISTERED",
+    "RACING",
+    "SUSPENDED",
+  ];
+
+  const visibleHorses = horses;
   const paginatedHorses = visibleHorses.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
@@ -156,10 +89,8 @@ export default function AllHorses() {
   }, [
     search,
     status,
-    sortBy,
-    sortOrder,
-    minValue,
-    maxValue,
+    sortWinRate,
+    sortTotalWin,
   ]);
 
   return (
@@ -178,14 +109,14 @@ export default function AllHorses() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm theo tên ngựa hoặc chủ sở hữu…"
+            placeholder="Search by horse name"
           />
 
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
-            <option value="all">Tất cả trạng thái</option>
+            <option value="all">All status</option>
 
             {statuses.map((item) => (
               <option key={item} value={item}>
@@ -195,50 +126,26 @@ export default function AllHorses() {
           </select>
 
           <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+            value={sortWinRate}
+            onChange={(e) => setSortWinRate(e.target.value)}
           >
-            <option value="name">Name</option>
-            <option value="winRate">Win Rate</option>
-            <option value="wins">Total Wins</option>
+            <option value="">Win Rate</option>
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
           </select>
 
           <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
+            value={sortTotalWin}
+            onChange={(e) => setSortTotalWin(e.target.value)}
           >
-            <option value="asc">Low → High</option>
-            <option value="desc">High → Low</option>
+            <option value="">Total Wins</option>
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
           </select>
 
-          {sortBy !== "name" && (
-            <>
-              <input
-                type="number"
-                value={minValue}
-                onChange={(e) => setMinValue(e.target.value)}
-                placeholder={
-                  sortBy === "winRate"
-                    ? "Min Win Rate"
-                    : "Min Total Wins"
-                }
-              />
-
-              <input
-                type="number"
-                value={maxValue}
-                onChange={(e) => setMaxValue(e.target.value)}
-                placeholder={
-                  sortBy === "winRate"
-                    ? "Max Win Rate"
-                    : "Max Total Wins"
-                }
-              />
-            </>
-          )}
         </div>
         {loading ? (
-          <div className="explore-state">Đang tải danh sách ngựa…</div>
+          <div className="explore-state">Loading</div>
         ) : visibleHorses.length ? (
           <section className="explore-grid">
             {paginatedHorses.map((horse) => (
