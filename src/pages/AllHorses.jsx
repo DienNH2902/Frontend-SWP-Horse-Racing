@@ -96,14 +96,14 @@ export default function AllHorses() {
   return (
     <main className="explore-page">
       <div className="explore-shell">
-        <Link className="explore-back" to="/home">← Về Home</Link>
+        <Link className="explore-back" to="/home">← Back Home</Link>
         <header className="explore-header">
           <div>
             <span className="explore-eyebrow">GOLDEN HOOF</span>
             <h1>All Horses</h1>
-            <p>Khám phá toàn bộ ngựa trên hệ thống.</p>
+            <p>View all horse</p>
           </div>
-          <span className="explore-count">{visibleHorses.length} ngựa</span>
+          <span className="explore-count">{visibleHorses.length} horses</span>
         </header>
         <div className="explore-toolbar">
           <input
@@ -170,7 +170,7 @@ export default function AllHorses() {
               </article>
             ))}
           </section>
-        ) : <div className="explore-state">Không tìm thấy ngựa phù hợp.</div>}
+        ) : <div className="explore-state">No horse found</div>}
         <Pagination
           page={page}
           totalItems={visibleHorses.length}
