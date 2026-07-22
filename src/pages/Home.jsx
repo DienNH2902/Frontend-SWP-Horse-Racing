@@ -316,12 +316,12 @@ function normalizeHomeJockey(jockey = {}, index = 0) {
   const winRate = toNumber(jockey.winRate ?? profile.winRate);
   const wins = toNumber(
     jockey.totalWin ??
-      jockey.totalWins ??
-      jockey.careerWins ??
-      jockey.wins ??
-      profile.totalWin ??
-      profile.careerWins ??
-      profile.wins,
+    jockey.totalWins ??
+    jockey.careerWins ??
+    jockey.wins ??
+    profile.totalWin ??
+    profile.careerWins ??
+    profile.wins,
   );
   const status =
     jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
@@ -371,9 +371,11 @@ function Home() {
   const [selectedRace, setSelectedRace] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [horseSortBy, setHorseSortBy] = useState("winRate");
-  const [minHorseWinRate, setMinHorseWinRate] = useState("");
-  const [minHorseTotalWin, setMinHorseTotalWin] = useState("");
+  const [horseSortOrder, setHorseSortOrder] = useState("desc");
+  const [horseMinValue, setHorseMinValue] = useState("");
+  const [horseMaxValue, setHorseMaxValue] = useState("");
   const [minJockeyWinRate, setMinJockeyWinRate] = useState("");
+  const [horseSearch, setHorseSearch] = useState("");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -406,14 +408,14 @@ function Home() {
           : [];
       const jockeys =
         jockeysResult.status === "fulfilled" &&
-        Array.isArray(jockeysResult.value)
+          Array.isArray(jockeysResult.value)
           ? jockeysResult.value
-              .map(normalizeHomeJockey)
-              .filter((jockey) =>
-                ALLOWED_JOCKEY_STATUSES.has(
-                  String(jockey.status).toLowerCase(),
-                ),
-              )
+            .map(normalizeHomeJockey)
+            .filter((jockey) =>
+              ALLOWED_JOCKEY_STATUSES.has(
+                String(jockey.status).toLowerCase(),
+              ),
+            )
           : [];
 
       setHomeData((current) => ({
@@ -432,6 +434,9 @@ function Home() {
   }, []);
 
   useEffect(() => {
+    setHorseMinValue("");
+    setHorseMaxValue("");
+
     let isMounted = true;
 
     if (!authSession) {
@@ -527,22 +532,52 @@ function Home() {
   ).length;
   const notificationPreview = notifications.slice(0, 5);
   const filteredHorses = useMemo(() => {
-    const minWinRate = minHorseWinRate === "" ? 0 : toNumber(minHorseWinRate);
-    const minTotalWin =
-      minHorseTotalWin === "" ? 0 : toNumber(minHorseTotalWin);
     const sortKey = horseSortBy === "totalWin" ? "totalWin" : "winRate";
 
     return homeData.horses
-      .filter(
-        (horse) =>
-          toNumber(horse.winRate) >= minWinRate &&
-          toNumber(horse.totalWin) >= minTotalWin,
-      )
-      .sort(
-        (first, second) => toNumber(second[sortKey]) - toNumber(first[sortKey]),
-      )
+      .filter((horse) => {
+        const value =
+          sortKey === "winRate"
+            ? toNumber(horse.winRate)
+            : toNumber(horse.totalWin);
+
+        const min =
+          horseMinValue === ""
+            ? Number.NEGATIVE_INFINITY
+            : Number(horseMinValue);
+
+        const max =
+          horseMaxValue === ""
+            ? Number.POSITIVE_INFINITY
+            : Number(horseMaxValue);
+
+        const matchRange =
+          value >= min && value <= max;
+
+        const matchSearch =
+          horse.name
+            ?.toLowerCase()
+            .includes(horseSearch.toLowerCase());
+
+        return matchRange && matchSearch;
+      })
+      .sort((first, second) => {
+        const firstValue = toNumber(first[sortKey]);
+        const secondValue = toNumber(second[sortKey]);
+
+        return horseSortOrder === "asc"
+          ? firstValue - secondValue
+          : secondValue - firstValue;
+      })
       .map((horse, index) => ({ ...horse, rank: index + 1 }));
-  }, [homeData.horses, horseSortBy, minHorseTotalWin, minHorseWinRate]);
+  }, [
+    homeData.horses,
+    horseSortBy,
+    horseSortOrder,
+    horseMinValue,
+    horseMaxValue,
+    horseSearch,
+  ]);
   const topHorses = filteredHorses.slice(0, 3);
   const filteredJockeys = useMemo(() => {
     const minWinRate = minJockeyWinRate === "" ? 0 : toNumber(minJockeyWinRate);
@@ -1063,8 +1098,9 @@ function Home() {
           display: flex;
           flex-wrap: wrap;
           align-items: center;
-          gap: 10px;
+          gap: 16px;
           margin: -6px 0 20px;
+          margin-bottom: 24px;
         }
 
         .horse-filter-bar select,
@@ -1080,12 +1116,23 @@ function Home() {
         }
 
         .horse-filter-bar select {
+          width: 210px;
           min-width: 150px;
           padding: 0 10px;
+          flex:0 0 220px;
+        }
+
+        .horse-search-input {
+          width: 280px;
+          flex:1;
+        }
+
+        .horse-range-input {
+          width: 180px;
+          flex:0 0 170px;
         }
 
         .horse-filter-bar input {
-          width: 128px;
           padding: 0 12px;
         }
 
@@ -2079,9 +2126,8 @@ function Home() {
             </Link>
             <div className="nav-dropdown-wrap">
               <button
-                className={`home-icon-btn notification-trigger ${
-                  isNotificationMenuOpen ? "notification-trigger-open" : ""
-                }`}
+                className={`home-icon-btn notification-trigger ${isNotificationMenuOpen ? "notification-trigger-open" : ""
+                  }`}
                 type="button"
                 aria-label="Notifications"
                 aria-expanded={isNotificationMenuOpen}
@@ -2115,11 +2161,10 @@ function Home() {
                     <div className="notification-list">
                       {notificationPreview.map((notification) => (
                         <Link
-                          className={`notification-item ${
-                            notification.isRead
-                              ? ""
-                              : "notification-item-unread"
-                          }`}
+                          className={`notification-item ${notification.isRead
+                            ? ""
+                            : "notification-item-unread"
+                            }`}
                           key={
                             notification.id ||
                             `${notification.title}-${notification.createdAt}`
@@ -2167,9 +2212,8 @@ function Home() {
             </div>
             <div className="account-menu">
               <button
-                className={`home-btn account-trigger ${
-                  isAccountMenuOpen ? "account-trigger-open" : ""
-                }`}
+                className={`home-btn account-trigger ${isAccountMenuOpen ? "account-trigger-open" : ""
+                  }`}
                 type="button"
                 aria-expanded={isAccountMenuOpen}
                 aria-haspopup="menu"
@@ -2368,28 +2412,60 @@ function Home() {
               <div className="horse-filter-bar" aria-label="Horse filters">
                 <select
                   value={horseSortBy}
-                  onChange={(event) => setHorseSortBy(event.target.value)}
-                  aria-label="Sort horses"
+                  onChange={(e) => setHorseSortBy(e.target.value)}
                 >
-                  <option value="winRate">Sort by win rate</option>
-                  <option value="totalWin">Sort by total wins</option>
+                  <option value="winRate">
+                    Sort by Win Rate
+                  </option>
+
+                  <option value="totalWin">
+                    Sort by Total Wins
+                  </option>
                 </select>
+
+                <select
+                  value={horseSortOrder}
+                  onChange={(e) => setHorseSortOrder(e.target.value)}
+                >
+                  <option value="desc">
+                    High → Low
+                  </option>
+
+                  <option value="asc">
+                    Low → High
+                  </option>
+                </select>
+
                 <input
-                  min="0"
-                  max="100"
-                  type="number"
-                  value={minHorseWinRate}
-                  onChange={(event) => setMinHorseWinRate(event.target.value)}
-                  placeholder="Min win rate"
-                  aria-label="Minimum win rate"
+                  type="text"
+                  className="horse-search-input"
+                  placeholder="Search horse name..."
+                  value={horseSearch}
+                  onChange={(e) => setHorseSearch(e.target.value)}
                 />
+
                 <input
-                  min="0"
                   type="number"
-                  value={minHorseTotalWin}
-                  onChange={(event) => setMinHorseTotalWin(event.target.value)}
-                  placeholder="Min wins"
-                  aria-label="Minimum total wins"
+                  className="horse-range-input"
+                  value={horseMinValue}
+                  onChange={(e) => setHorseMinValue(e.target.value)}
+                  placeholder={
+                    horseSortBy === "winRate"
+                      ? "Min Win Rate"
+                      : "Min Total Wins"
+                  }
+                />
+
+                <input
+                  type="number"
+                  className="horse-range-input"
+                  value={horseMaxValue}
+                  onChange={(e) => setHorseMaxValue(e.target.value)}
+                  placeholder={
+                    horseSortBy === "winRate"
+                      ? "Max Win Rate"
+                      : "Max Total Wins"
+                  }
                 />
               </div>
               <div className="horse-grid top-horse-grid">
@@ -2647,9 +2723,8 @@ function Home() {
                     <img src={result.image} alt={result.race} />
                     <div className="result-details">
                       <span
-                        className={`result-status ${
-                          result.status === "LIVE" ? "result-status-live" : ""
-                        }`}
+                        className={`result-status ${result.status === "LIVE" ? "result-status-live" : ""
+                          }`}
                       >
                         {result.status}
                       </span>
