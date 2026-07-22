@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { API_BASE_URL } from "../api/client";
-import { getUsersByRole } from "../api/services/user.service";
+import { searchJockeys } from "../api/services/user.service";
 import Pagination from "../components/ui/Pagination";
 import "./ExploreLists.css";
 
@@ -29,10 +29,10 @@ function normalizeJockey(jockey, index) {
     winRate: Number(jockey?.winRate ?? profile?.winRate ?? 0),
     image: imageUrl(
       jockey?.avatarUrl ||
-        jockey?.avatar ||
-        jockey?.imageUrl ||
-        profile?.avatarUrl ||
-        profile?.avatar,
+      jockey?.avatar ||
+      jockey?.imageUrl ||
+      profile?.avatarUrl ||
+      profile?.avatar,
     ),
   };
 }
@@ -42,41 +42,56 @@ export default function AllJockeys() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState("name-asc");
   const [page, setPage] = useState(1);
+  const [sortWinRate, setSortWinRate] = useState("");
+  const [sortTotalWin, setSortTotalWin] = useState("");
 
   useEffect(() => {
     let mounted = true;
-    getUsersByRole("Jockey")
-      .then((data) => mounted && setJockeys((data || []).map(normalizeJockey)))
-      .catch(() => mounted && setJockeys([]))
-      .finally(() => mounted && setLoading(false));
+
+    setLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const params = {
+          fullName: search || undefined,
+          sortWinRate: sortWinRate || undefined,
+          sortTotalWin: sortTotalWin || undefined,
+        };
+
+        const data = await searchJockeys(params);
+
+        if (mounted) {
+          setJockeys((data || []).map(normalizeJockey));
+        }
+      } catch {
+        if (mounted) {
+          setJockeys([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }, 400);
+
     return () => {
       mounted = false;
+      clearTimeout(timer);
     };
-  }, []);
+  }, [search, sortWinRate, sortTotalWin]);
 
   const statuses = useMemo(
     () => [...new Set(jockeys.map((jockey) => jockey.status).filter(Boolean))],
     [jockeys],
   );
   const visibleJockeys = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return jockeys
-      .filter(
-        (jockey) =>
-          (!query ||
-            jockey.name.toLowerCase().includes(query) ||
-            jockey.email.toLowerCase().includes(query)) &&
-          (status === "all" || jockey.status === status),
-      )
-      .sort((first, second) => {
-        if (sort === "wins-desc") return second.wins - first.wins;
-        if (sort === "rate-desc") return second.winRate - first.winRate;
-        if (sort === "name-desc") return second.name.localeCompare(first.name);
-        return first.name.localeCompare(second.name);
-      });
-  }, [jockeys, search, sort, status]);
+    if (status === "all") return jockeys;
+
+    return jockeys.filter(
+      (jockey) => jockey.status === status,
+    );
+  }, [jockeys, status]);
   const paginatedJockeys = visibleJockeys.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
@@ -84,7 +99,7 @@ export default function AllJockeys() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, sort, status]);
+  }, [search, sortWinRate, sortTotalWin, status]);
 
   return (
     <main className="explore-page">
@@ -108,11 +123,22 @@ export default function AllJockeys() {
             <option value="all">Tất cả trạng thái</option>
             {statuses.map((item) => <option value={item} key={item}>{item}</option>)}
           </select>
-          <select value={sort} onChange={(event) => setSort(event.target.value)}>
-            <option value="name-asc">Tên A → Z</option>
-            <option value="name-desc">Tên Z → A</option>
-            <option value="wins-desc">Nhiều chiến thắng nhất</option>
-            <option value="rate-desc">Win rate cao nhất</option>
+          <select
+            value={sortWinRate}
+            onChange={(e) => setSortWinRate(e.target.value)}
+          >
+            <option value="">Win Rate</option>
+            <option value="desc">Cao → Thấp</option>
+            <option value="asc">Thấp → Cao</option>
+          </select>
+
+          <select
+            value={sortTotalWin}
+            onChange={(e) => setSortTotalWin(e.target.value)}
+          >
+            <option value="">Total Wins</option>
+            <option value="desc">Nhiều → Ít</option>
+            <option value="asc">Ít → Nhiều</option>
           </select>
         </div>
         {loading ? (

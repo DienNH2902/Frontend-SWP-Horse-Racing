@@ -8,6 +8,8 @@ export const TOURNAMENT_ENDPOINTS = {
 
   ADVANCEMENTS: (id) => `/tournaments/${id}/advancements`,
 
+  RESULTS: (id) => `/tournaments/${id}/results`,
+
   UPLOAD_BANNER: "/upload/tournament-banner",
   PARTICIPANTS: (tournamentId) =>
     `/tournaments/${tournamentId}/participants`,
