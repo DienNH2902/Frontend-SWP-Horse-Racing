@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
 import { API_BASE_URL } from "../api/client";
 import { getHorses } from "../api/services/horse.service";
-import { getUsersByRole } from "../api/services/user.service";
+import { getUsersByRole, searchJockeys } from "../api/services/user.service";
 import { getRoleHomePath } from "../utils/roles";
 import {
   clearAuthSession,
@@ -371,8 +371,10 @@ function Home() {
   const [selectedRace, setSelectedRace] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [horseSortOrder, setHorseSortOrder] = useState("desc");
-  const [minJockeyWinRate, setMinJockeyWinRate] = useState("");
   const [horseSearch, setHorseSearch] = useState("");
+  const [jockeySearch, setJockeySearch] = useState("");
+  const [jockeySortWinRate, setJockeySortWinRate] = useState("");
+  const [jockeySortTotalWin, setJockeySortTotalWin] = useState("");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
@@ -403,6 +405,33 @@ function Home() {
 
     return () => clearTimeout(timer);
   }, [horseSearch, horseSortOrder]);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const params = {
+          fullName: jockeySearch || undefined,
+          sortWinRate: jockeySortWinRate || undefined,
+          sortTotalWin: jockeySortTotalWin || undefined,
+        };
+
+        const jockeys = await searchJockeys(params);
+
+        setHomeData((current) => ({
+          ...current,
+          jockeys: jockeys.map(normalizeHomeJockey),
+        }));
+      } catch (error) {
+        console.error(error);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [
+    jockeySearch,
+    jockeySortWinRate,
+    jockeySortTotalWin,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -555,18 +584,12 @@ function Home() {
     }));
   }, [homeData.horses]);
   const topHorses = filteredHorses.slice(0, 3);
-  const filteredJockeys = useMemo(() => {
-    const minWinRate = minJockeyWinRate === "" ? 0 : toNumber(minJockeyWinRate);
-
-    return homeData.jockeys
-      .filter((jockey) => toNumber(jockey.winRate) >= minWinRate)
-      .sort(
-        (first, second) => toNumber(second.winRate) - toNumber(first.winRate),
-      )
-      .map((jockey, index) => ({ ...jockey, rank: index + 1 }));
-  }, [homeData.jockeys, minJockeyWinRate]);
-  const topJockeys = filteredJockeys.slice(0, 5);
-
+  const topJockeys = homeData.jockeys
+    .map((jockey, index) => ({
+      ...jockey,
+      rank: index + 1,
+    }))
+    .slice(0, 5);
   if (!authSession) {
     return <Navigate to="/" replace />;
   }
@@ -2453,13 +2476,10 @@ function Home() {
               />
               <div className="horse-filter-bar" aria-label="Jockey filters">
                 <input
-                  min="0"
-                  max="100"
-                  type="number"
-                  value={minJockeyWinRate}
-                  onChange={(event) => setMinJockeyWinRate(event.target.value)}
-                  placeholder="Min win rate"
-                  aria-label="Minimum jockey win rate"
+                  type="text"
+                  placeholder="Search jockey..."
+                  value={jockeySearch}
+                  onChange={(e) => setJockeySearch(e.target.value)}
                 />
               </div>
               <div className="jockey-list">
