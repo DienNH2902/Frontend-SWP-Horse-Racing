@@ -38,7 +38,10 @@ export default function AllHorses() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState("name-asc");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -60,21 +63,89 @@ export default function AllHorses() {
   );
   const visibleHorses = useMemo(() => {
     const query = search.trim().toLowerCase();
+
     return horses
-      .filter(
-        (horse) =>
-          (!query ||
-            horse.name.toLowerCase().includes(query) ||
-            horse.owner.toLowerCase().includes(query)) &&
-          (status === "all" || horse.status === status),
-      )
-      .sort((first, second) => {
-        if (sort === "wins-desc") return second.wins - first.wins;
-        if (sort === "rate-desc") return second.winRate - first.winRate;
-        if (sort === "name-desc") return second.name.localeCompare(first.name);
-        return first.name.localeCompare(second.name);
+      .filter((horse) => {
+        const matchSearch =
+          !query ||
+          horse.name.toLowerCase().includes(query) ||
+          horse.owner.toLowerCase().includes(query);
+
+        const matchStatus =
+          status === "all" || horse.status === status;
+
+        let matchRange = true;
+
+        if (sortBy === "winRate") {
+          const value = horse.winRate;
+
+          const min =
+            minValue === ""
+              ? Number.NEGATIVE_INFINITY
+              : Number(minValue);
+
+          const max =
+            maxValue === ""
+              ? Number.POSITIVE_INFINITY
+              : Number(maxValue);
+
+          matchRange =
+            value >= min &&
+            value <= max;
+        }
+
+        if (sortBy === "wins") {
+          const value = horse.wins;
+
+          const min =
+            minValue === ""
+              ? Number.NEGATIVE_INFINITY
+              : Number(minValue);
+
+          const max =
+            maxValue === ""
+              ? Number.POSITIVE_INFINITY
+              : Number(maxValue);
+
+          matchRange =
+            value >= min &&
+            value <= max;
+        }
+
+        return (
+          matchSearch &&
+          matchStatus &&
+          matchRange
+        );
+      })
+      .sort((a, b) => {
+        let result = 0;
+
+        if (sortBy === "name") {
+          result = a.name.localeCompare(b.name);
+        }
+
+        if (sortBy === "wins") {
+          result = a.wins - b.wins;
+        }
+
+        if (sortBy === "winRate") {
+          result = a.winRate - b.winRate;
+        }
+
+        return sortOrder === "asc"
+          ? result
+          : -result;
       });
-  }, [horses, search, sort, status]);
+  }, [
+    horses,
+    search,
+    status,
+    sortBy,
+    sortOrder,
+    minValue,
+    maxValue,
+  ]);
   const paginatedHorses = visibleHorses.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
@@ -82,7 +153,14 @@ export default function AllHorses() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, sort, status]);
+  }, [
+    search,
+    status,
+    sortBy,
+    sortOrder,
+    minValue,
+    maxValue,
+  ]);
 
   return (
     <main className="explore-page">
@@ -102,16 +180,62 @@ export default function AllHorses() {
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Tìm theo tên ngựa hoặc chủ sở hữu…"
           />
-          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+
+          <select
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+          >
             <option value="all">Tất cả trạng thái</option>
-            {statuses.map((item) => <option value={item} key={item}>{item}</option>)}
+
+            {statuses.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
-          <select value={sort} onChange={(event) => setSort(event.target.value)}>
-            <option value="name-asc">Tên A → Z</option>
-            <option value="name-desc">Tên Z → A</option>
-            <option value="wins-desc">Nhiều chiến thắng nhất</option>
-            <option value="rate-desc">Win rate cao nhất</option>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="name">Name</option>
+            <option value="winRate">Win Rate</option>
+            <option value="wins">Total Wins</option>
           </select>
+
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+          >
+            <option value="asc">Low → High</option>
+            <option value="desc">High → Low</option>
+          </select>
+
+          {sortBy !== "name" && (
+            <>
+              <input
+                type="number"
+                value={minValue}
+                onChange={(e) => setMinValue(e.target.value)}
+                placeholder={
+                  sortBy === "winRate"
+                    ? "Min Win Rate"
+                    : "Min Total Wins"
+                }
+              />
+
+              <input
+                type="number"
+                value={maxValue}
+                onChange={(e) => setMaxValue(e.target.value)}
+                placeholder={
+                  sortBy === "winRate"
+                    ? "Max Win Rate"
+                    : "Max Total Wins"
+                }
+              />
+            </>
+          )}
         </div>
         {loading ? (
           <div className="explore-state">Đang tải danh sách ngựa…</div>
