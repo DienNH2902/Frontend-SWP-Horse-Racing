@@ -187,10 +187,10 @@ function JockeyLicenseManagement() {
   const [viewingLicensesJockey, setViewingLicensesJockey] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadJockeys() {
+  async function loadJockeys(jockeyStatus = "") {
     setIsLoading(true);
     try {
-      const data = await getJockeysWithLicenses();
+      const data = await getJockeysWithLicenses(jockeyStatus);
       setJockeys(data.map(normalizeJockey).sort(sortNewestJockeyFirst));
     } catch (error) {
       message.error(error?.message || "Unable to load jockeys");
@@ -199,12 +199,7 @@ function JockeyLicenseManagement() {
     }
   }
 
-  const filteredJockeys = useMemo(() => {
-    if (!selectedStatusFilter) return jockeys;
-    return jockeys.filter(
-      (jockey) => jockey.jockeyStatus === selectedStatusFilter,
-    );
-  }, [jockeys, selectedStatusFilter]);
+  const filteredJockeys = useMemo(() => jockeys, [jockeys]);
 
   async function handleJockeyStatusChange(profileId, recordId, nextStatus) {
     if (!profileId) {
@@ -309,7 +304,7 @@ function JockeyLicenseManagement() {
           <Select
             value={jockeyStatus}
             size="small"
-            style={{ width: 155, background: "darkgreen" }}
+            style={{ width: 155, background: "darkgreen", color: "white" }}
             loading={statusChangingId === record.id}
             onChange={(nextValue) =>
               handleJockeyStatusChange(record.profileId, record.id, nextValue)
@@ -461,7 +456,10 @@ function JockeyLicenseManagement() {
             placeholder="Filter by Jockey Status"
             allowClear
             style={{ width: 220 }}
-            onChange={(val) => setSelectedStatusFilter(val)}
+            onChange={(val) => {
+              setSelectedStatusFilter(val);
+              loadJockeys(val || "");
+            }}
           >
             <Select.Option value="Pending_Approval">
               Pending Approval
@@ -475,7 +473,10 @@ function JockeyLicenseManagement() {
             <Select.Option value="Banned">Banned</Select.Option>
           </Select>
 
-          <Button className="user-management-refresh" onClick={loadJockeys}>
+          <Button
+            className="user-management-refresh"
+            onClick={() => loadJockeys(selectedStatusFilter || "")}
+          >
             Refresh
           </Button>
         </div>
