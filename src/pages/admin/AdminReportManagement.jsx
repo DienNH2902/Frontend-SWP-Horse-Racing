@@ -336,7 +336,9 @@ export default function AdminReportManagement() {
             },
           ];
 
-          const isNotPending = record.status !== ReportStatus.PENDING;
+          const isPendingAndInvestigate =
+            record.status === ReportStatus.PENDING ||
+            record.status === ReportStatus.INVESTIGATING;
 
           return (
             <div style={{ display: "flex", gap: "8px" }}>
@@ -350,7 +352,7 @@ export default function AdminReportManagement() {
                 Details
               </Button>
 
-              {!isNotPending ? (
+              {isPendingAndInvestigate ? (
                 <Dropdown
                   menu={{ items: resolveMenuItems }}
                   trigger={["click"]}
