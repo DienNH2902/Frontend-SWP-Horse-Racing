@@ -239,6 +239,15 @@ export default function RefereeTournamentList() {
         }
     }
 
+    const statusColor = {
+        Preparing: "gold",
+        Registration: "cyan",
+        Upcoming: "blue",
+        Ongoing: "green",
+        Completed: "purple",
+        Canceled: "red"
+    }
+
     const filteredData = useMemo(() => {
         return tournaments.filter((item) =>
             (item?.title || "")
@@ -436,6 +445,17 @@ export default function RefereeTournamentList() {
                                 Tournament List
                             </span>
                         }
+
+                        extra={
+                            <Space>
+
+                                <Tag className="dashboard-total-tag">
+                                    {filteredData.length} tournaments
+                                </Tag>
+
+                            </Space>
+                        }
+
                         extra={
                             <Typography.Text
                                 className="dashboard-card-extra"
@@ -458,56 +478,58 @@ export default function RefereeTournamentList() {
                                     marginBottom: 16
                                 }}
                             >
-                                <Input.Search
-                                    size="large"
-                                    style={{
-                                        width: "100%"
-                                    }}
-                                    placeholder="Search tournament"
-                                    allowClear
-                                    onChange={(e) =>
-                                        setSearchText(e.target.value)
-                                    }
-                                />
+                                <div className="dashboard-filter-bar">
+                                    <Input.Search
+                                        size="large"
+                                        style={{
+                                            width: "100%"
+                                        }}
+                                        placeholder="Search tournament"
+                                        allowClear
+                                        onChange={(e) =>
+                                            setSearchText(e.target.value)
+                                        }
+                                    />
 
-                                <Select
-                                    size="large"
-                                    style={{
-                                        width: "100%"
-                                    }}
-                                    placeholder="Filter status"
-                                    allowClear
-                                    value={statusFilter || undefined}
-                                    onChange={(value) =>
-                                        setStatusFilter(value || "")
-                                    }
-                                    options={[
-                                        {
-                                            value: "Preparing",
-                                            label: "Preparing",
-                                        },
-                                        {
-                                            value: "Registration",
-                                            label: "Registration",
-                                        },
-                                        {
-                                            value: "Upcoming",
-                                            label: "Upcoming",
-                                        },
-                                        {
-                                            value: "Ongoing",
-                                            label: "Ongoing",
-                                        },
-                                        {
-                                            value: "Completed",
-                                            label: "Completed",
-                                        },
-                                        {
-                                            value: "Canceled",
-                                            label: "Canceled",
-                                        },
-                                    ]}
-                                />
+                                    <Select
+                                        size="large"
+                                        style={{
+                                            width: "100%"
+                                        }}
+                                        placeholder="Filter status"
+                                        allowClear
+                                        value={statusFilter || undefined}
+                                        onChange={(value) =>
+                                            setStatusFilter(value || "")
+                                        }
+                                        options={[
+                                            {
+                                                value: "Preparing",
+                                                label: "Preparing",
+                                            },
+                                            {
+                                                value: "Registration",
+                                                label: "Registration",
+                                            },
+                                            {
+                                                value: "Upcoming",
+                                                label: "Upcoming",
+                                            },
+                                            {
+                                                value: "Ongoing",
+                                                label: "Ongoing",
+                                            },
+                                            {
+                                                value: "Completed",
+                                                label: "Completed",
+                                            },
+                                            {
+                                                value: "Canceled",
+                                                label: "Canceled",
+                                            },
+                                        ]}
+                                    />
+                                </div>
                             </Space>
 
                             <div className="table-responsive">
@@ -548,8 +570,17 @@ export default function RefereeTournamentList() {
                     maxWidth: "95vw"
                 }}
                 title={
-                    selectedTournament?.title
+                    <div>
+                        <div className="dashboard-modal-title">
+                            {selectedTournament?.title}
+                        </div>
+
+                        <div className="dashboard-modal-subtitle">
+                            Tournament information and race overview
+                        </div>
+                    </div>
                 }
+
             >
                 {selectedTournament && (
                     <>
@@ -629,7 +660,7 @@ export default function RefereeTournamentList() {
                                                 direction="vertical"
                                                 size={4}
                                             >
-                                                <Tag color="green">
+                                                <Tag color={statusColor[status]}>
                                                     {race.status}
                                                 </Tag>
 
@@ -662,8 +693,15 @@ export default function RefereeTournamentList() {
                     maxWidth: "95vw"
                 }}
                 title={
-                    selectedRace?.name ||
-                    "Race Detail"
+                    <div>
+                        <div className="dashboard-modal-title">
+                            {selectedRace?.name || "Race Detail"}
+                        </div>
+
+                        <div className="dashboard-modal-subtitle">
+                            Inspect race information and participants
+                        </div>
+                    </div>
                 }
             >
                 {raceLoading ? (
@@ -735,12 +773,20 @@ export default function RefereeTournamentList() {
 
                             <div className="dashboard-divider" />
 
-                            <Typography.Title
-                                level={4}
-                                className="dashboard-section-title"
-                            >
-                                Participants
-                            </Typography.Title>
+                            <div className="dashboard-section-header">
+
+                                <Typography.Title
+                                    level={4}
+                                    className="dashboard-section-title"
+                                >
+                                    Participants
+                                </Typography.Title>
+
+                                <Tag color="cyan">
+                                    {raceParticipants.length} Horses
+                                </Tag>
+
+                            </div>
                             <div className="table-responsive">
                                 <Table
                                     scroll={{ x: 600 }}
@@ -756,8 +802,12 @@ export default function RefereeTournamentList() {
                                     columns={[
                                         {
                                             title: "Gate",
-                                            dataIndex:
-                                                "gateNumber",
+                                            dataIndex: "gateNumber",
+                                            render: (gate) =>
+
+                                                <Tag color="cyan">
+                                                    Gate {gate}
+                                                </Tag>
                                         },
 
                                         {
@@ -779,13 +829,17 @@ export default function RefereeTournamentList() {
                                                         size={52}
                                                     />
 
-                                                    <span
-                                                        className="dashboard-horse-name"
-                                                    >
-                                                        {
-                                                            record.horseName
-                                                        }
-                                                    </span>
+                                                    <div>
+
+                                                        <div className="dashboard-horse-name">
+                                                            {record.horseName}
+                                                        </div>
+
+                                                        <div className="dashboard-horse-subtitle">
+                                                            Race Horse
+                                                        </div>
+
+                                                    </div>
                                                 </Space>
                                             ),
                                         },

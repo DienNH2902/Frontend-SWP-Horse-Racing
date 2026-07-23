@@ -261,3 +261,15 @@ export async function adjustHorseOwnerReputation(userId, amount) {
 
   return response.data;
 }
+
+export async function searchJockeys(params) {
+  const response = await apiClient.get(
+    USER_ENDPOINTS.SEARCH_JOCKEY_BY_NAME,
+    {
+      includeAuth: true,
+      params,
+    }
+  );
+
+  return unwrapCollection(response);
+}

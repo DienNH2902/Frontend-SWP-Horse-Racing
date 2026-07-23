@@ -15,4 +15,5 @@ export const USER_ENDPOINTS = {
   ADJUST_JOCKEY_REPUTATION: (id) => `/users/jockey/${id}/adjust-reputation`,
   ADJUST_HORSE_OWNER_REPUTATION: (id) =>
     `/users/horse-owner/${id}/adjust-reputation`,
+  SEARCH_JOCKEY_BY_NAME: "/users/search/jockey/by-name",
 };

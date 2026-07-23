@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { getHomePageData } from "../api/services/home.service";
 import { API_BASE_URL } from "../api/client";
 import { getHorses } from "../api/services/horse.service";
-import { getUsersByRole } from "../api/services/user.service";
+import { getUsersByRole, searchJockeys } from "../api/services/user.service";
 import { getRoleHomePath } from "../utils/roles";
 import {
   clearAuthSession,
@@ -316,12 +316,12 @@ function normalizeHomeJockey(jockey = {}, index = 0) {
   const winRate = toNumber(jockey.winRate ?? profile.winRate);
   const wins = toNumber(
     jockey.totalWin ??
-      jockey.totalWins ??
-      jockey.careerWins ??
-      jockey.wins ??
-      profile.totalWin ??
-      profile.careerWins ??
-      profile.wins,
+    jockey.totalWins ??
+    jockey.careerWins ??
+    jockey.wins ??
+    profile.totalWin ??
+    profile.careerWins ??
+    profile.wins,
   );
   const status =
     jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
@@ -370,17 +370,72 @@ function Home() {
   const [selectedHorse, setSelectedHorse] = useState(null);
   const [selectedRace, setSelectedRace] = useState(null);
   const [notifications, setNotifications] = useState([]);
-  const [horseSortBy, setHorseSortBy] = useState("winRate");
-  const [minHorseWinRate, setMinHorseWinRate] = useState("");
-  const [minHorseTotalWin, setMinHorseTotalWin] = useState("");
-  const [minJockeyWinRate, setMinJockeyWinRate] = useState("");
+  const [horseSortOrder, setHorseSortOrder] = useState("desc");
+  const [horseSearch, setHorseSearch] = useState("");
+  const [jockeySearch, setJockeySearch] = useState("");
+  const [jockeySortWinRate, setJockeySortWinRate] = useState("");
+  const [jockeySortTotalWin, setJockeySortTotalWin] = useState("");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
     jockeys: [],
     results: [],
+    predictors: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const params = {
+          search: horseSearch,
+          sortWinRate: horseSortOrder,
+        };
+
+        const horses = await getHorses(params);
+
+        setHomeData((current) => ({
+          ...current,
+          horses: Array.isArray(horses)
+            ? horses.map(normalizeHomeHorse)
+            : [],
+        }));
+      } catch (error) {
+        console.error(error);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [horseSearch, horseSortOrder]);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const params = {
+          fullName: jockeySearch || undefined,
+          sortWinRate: jockeySortWinRate || undefined,
+          sortTotalWin: jockeySortTotalWin || undefined,
+        };
+
+        const jockeys = await searchJockeys(params);
+
+        setHomeData((current) => ({
+          ...current,
+          jockeys: Array.isArray(jockeys)
+            ? jockeys.map(normalizeHomeJockey)
+            : [],
+        }));
+      } catch (error) {
+        console.error(error);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [
+    jockeySearch,
+    jockeySortWinRate,
+    jockeySortTotalWin,
+  ]);
 
   useEffect(() => {
     let isMounted = true;
@@ -405,14 +460,14 @@ function Home() {
           : [];
       const jockeys =
         jockeysResult.status === "fulfilled" &&
-        Array.isArray(jockeysResult.value)
+          Array.isArray(jockeysResult.value)
           ? jockeysResult.value
-              .map(normalizeHomeJockey)
-              .filter((jockey) =>
-                ALLOWED_JOCKEY_STATUSES.has(
-                  String(jockey.status).toLowerCase(),
-                ),
-              )
+            .map(normalizeHomeJockey)
+            .filter((jockey) =>
+              ALLOWED_JOCKEY_STATUSES.has(
+                String(jockey.status).toLowerCase(),
+              ),
+            )
           : [];
 
       setHomeData((current) => ({
@@ -431,6 +486,7 @@ function Home() {
   }, []);
 
   useEffect(() => {
+
     let isMounted = true;
 
     if (!authSession) {
@@ -526,35 +582,18 @@ function Home() {
   ).length;
   const notificationPreview = notifications.slice(0, 5);
   const filteredHorses = useMemo(() => {
-    const minWinRate = minHorseWinRate === "" ? 0 : toNumber(minHorseWinRate);
-    const minTotalWin =
-      minHorseTotalWin === "" ? 0 : toNumber(minHorseTotalWin);
-    const sortKey = horseSortBy === "totalWin" ? "totalWin" : "winRate";
-
-    return homeData.horses
-      .filter(
-        (horse) =>
-          toNumber(horse.winRate) >= minWinRate &&
-          toNumber(horse.totalWin) >= minTotalWin,
-      )
-      .sort(
-        (first, second) => toNumber(second[sortKey]) - toNumber(first[sortKey]),
-      )
-      .map((horse, index) => ({ ...horse, rank: index + 1 }));
-  }, [homeData.horses, horseSortBy, minHorseTotalWin, minHorseWinRate]);
+    return (homeData.horses ?? []).map((horse, index) => ({
+      ...horse,
+      rank: index + 1,
+    }));
+  }, [homeData.horses]);
   const topHorses = filteredHorses.slice(0, 3);
-  const filteredJockeys = useMemo(() => {
-    const minWinRate = minJockeyWinRate === "" ? 0 : toNumber(minJockeyWinRate);
-
-    return homeData.jockeys
-      .filter((jockey) => toNumber(jockey.winRate) >= minWinRate)
-      .sort(
-        (first, second) => toNumber(second.winRate) - toNumber(first.winRate),
-      )
-      .map((jockey, index) => ({ ...jockey, rank: index + 1 }));
-  }, [homeData.jockeys, minJockeyWinRate]);
-  const topJockeys = filteredJockeys.slice(0, 5);
-
+  const topJockeys = (homeData.jockeys ?? [])
+    .map((jockey, index) => ({
+      ...jockey,
+      rank: index + 1,
+    }))
+    .slice(0, 5);
   if (!authSession) {
     return <Navigate to="/" replace />;
   }
@@ -1062,8 +1101,9 @@ function Home() {
           display: flex;
           flex-wrap: wrap;
           align-items: center;
-          gap: 10px;
+          gap: 16px;
           margin: -6px 0 20px;
+          margin-bottom: 24px;
         }
 
         .horse-filter-bar select,
@@ -1079,12 +1119,23 @@ function Home() {
         }
 
         .horse-filter-bar select {
+          width: 210px;
           min-width: 150px;
           padding: 0 10px;
+          flex:0 0 220px;
+        }
+
+        .horse-search-input {
+          width: 280px;
+          flex:1;
+        }
+
+        .horse-range-input {
+          width: 180px;
+          flex:0 0 170px;
         }
 
         .horse-filter-bar input {
-          width: 128px;
           padding: 0 12px;
         }
 
@@ -2061,9 +2112,8 @@ function Home() {
             </Link>
             <div className="nav-dropdown-wrap">
               <button
-                className={`home-icon-btn notification-trigger ${
-                  isNotificationMenuOpen ? "notification-trigger-open" : ""
-                }`}
+                className={`home-icon-btn notification-trigger ${isNotificationMenuOpen ? "notification-trigger-open" : ""
+                  }`}
                 type="button"
                 aria-label="Notifications"
                 aria-expanded={isNotificationMenuOpen}
@@ -2097,11 +2147,10 @@ function Home() {
                     <div className="notification-list">
                       {notificationPreview.map((notification) => (
                         <Link
-                          className={`notification-item ${
-                            notification.isRead
-                              ? ""
-                              : "notification-item-unread"
-                          }`}
+                          className={`notification-item ${notification.isRead
+                            ? ""
+                            : "notification-item-unread"
+                            }`}
                           key={
                             notification.id ||
                             `${notification.title}-${notification.createdAt}`
@@ -2149,9 +2198,8 @@ function Home() {
             </div>
             <div className="account-menu">
               <button
-                className={`home-btn account-trigger ${
-                  isAccountMenuOpen ? "account-trigger-open" : ""
-                }`}
+                className={`home-btn account-trigger ${isAccountMenuOpen ? "account-trigger-open" : ""
+                  }`}
                 type="button"
                 aria-expanded={isAccountMenuOpen}
                 aria-haspopup="menu"
@@ -2350,31 +2398,26 @@ function Home() {
                 }}
               />
               <div className="horse-filter-bar" aria-label="Horse filters">
+                <input
+                  type="text"
+                  className="horse-search-input"
+                  placeholder="Search horse name..."
+                  value={horseSearch}
+                  onChange={(e) => setHorseSearch(e.target.value)}
+                />
+
                 <select
-                  value={horseSortBy}
-                  onChange={(event) => setHorseSortBy(event.target.value)}
-                  aria-label="Sort horses"
+                  value={horseSortOrder}
+                  onChange={(e) => setHorseSortOrder(e.target.value)}
                 >
-                  <option value="winRate">Sort by win rate</option>
-                  <option value="totalWin">Sort by total wins</option>
+                  <option value="desc">
+                    Win rate descending
+                  </option>
+
+                  <option value="asc">
+                    Win rate ascending
+                  </option>
                 </select>
-                <input
-                  min="0"
-                  max="100"
-                  type="number"
-                  value={minHorseWinRate}
-                  onChange={(event) => setMinHorseWinRate(event.target.value)}
-                  placeholder="Min win rate"
-                  aria-label="Minimum win rate"
-                />
-                <input
-                  min="0"
-                  type="number"
-                  value={minHorseTotalWin}
-                  onChange={(event) => setMinHorseTotalWin(event.target.value)}
-                  placeholder="Min wins"
-                  aria-label="Minimum total wins"
-                />
               </div>
               <div className="horse-grid top-horse-grid">
                 {topHorses.map((horse) => (
@@ -2422,13 +2465,10 @@ function Home() {
               />
               <div className="horse-filter-bar" aria-label="Jockey filters">
                 <input
-                  min="0"
-                  max="100"
-                  type="number"
-                  value={minJockeyWinRate}
-                  onChange={(event) => setMinJockeyWinRate(event.target.value)}
-                  placeholder="Min win rate"
-                  aria-label="Minimum jockey win rate"
+                  type="text"
+                  placeholder="Search jockey..."
+                  value={jockeySearch}
+                  onChange={(e) => setJockeySearch(e.target.value)}
                 />
               </div>
               <div className="jockey-list">
@@ -2449,175 +2489,179 @@ function Home() {
             </section>
           </div>
 
-          {selectedRace && (
-            <div
-              className="horse-modal-backdrop"
-              role="presentation"
-              onClick={() => setSelectedRace(null)}
-            >
-              <section
-                className="horse-modal"
-                role="dialog"
-                aria-modal="true"
-                aria-label={`${selectedRace.name} details`}
-                onClick={(event) => event.stopPropagation()}
+          {
+            selectedRace && (
+              <div
+                className="horse-modal-backdrop"
+                role="presentation"
+                onClick={() => setSelectedRace(null)}
               >
-                <div className="horse-modal-head">
-                  <h3>Race Details</h3>
-                  <button
-                    className="horse-modal-close"
-                    type="button"
-                    aria-label="Close race details"
-                    onClick={() => setSelectedRace(null)}
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="horse-modal-body">
-                  <div
-                    className="race-detail-hero"
-                    style={{
-                      "--race-detail-image": `url("${selectedRace.image}")`,
-                    }}
-                  >
-                    <div>
-                      <span className="race-detail-status">
-                        {selectedRace.status || selectedRace.rawStatus}
-                      </span>
-                      <h4>{selectedRace.name}</h4>
+                <section
+                  className="horse-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={`${selectedRace.name} details`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="horse-modal-head">
+                    <h3>Race Details</h3>
+                    <button
+                      className="horse-modal-close"
+                      type="button"
+                      aria-label="Close race details"
+                      onClick={() => setSelectedRace(null)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="horse-modal-body">
+                    <div
+                      className="race-detail-hero"
+                      style={{
+                        "--race-detail-image": `url("${selectedRace.image}")`,
+                      }}
+                    >
+                      <div>
+                        <span className="race-detail-status">
+                          {selectedRace.status || selectedRace.rawStatus}
+                        </span>
+                        <h4>{selectedRace.name}</h4>
+                      </div>
+                    </div>
+                    <div className="race-detail-grid">
+                      <div className="race-detail-item">
+                        <span>Tournament</span>
+                        <strong>{selectedRace.tournament}</strong>
+                      </div>
+                      <div className="race-detail-item">
+                        <span>Time</span>
+                        <strong>
+                          {formatRaceDateTime(
+                            selectedRace.sortTime,
+                            selectedRace.time,
+                          )}
+                        </strong>
+                      </div>
+                      <div className="race-detail-item">
+                        <span>Race Course</span>
+                        <strong>{selectedRace.venue}</strong>
+                      </div>
+                      <div className="race-detail-item">
+                        <span>Distance</span>
+                        <strong>{selectedRace.distance}</strong>
+                      </div>
+                      <div className="race-detail-item">
+                        <span>Race Track</span>
+                        <strong>{selectedRace.surface}</strong>
+                      </div>
+                      <div className="race-detail-item">
+                        <span>Round</span>
+                        <strong>{selectedRace.round}</strong>
+                      </div>
                     </div>
                   </div>
-                  <div className="race-detail-grid">
-                    <div className="race-detail-item">
-                      <span>Tournament</span>
-                      <strong>{selectedRace.tournament}</strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Time</span>
-                      <strong>
-                        {formatRaceDateTime(
-                          selectedRace.sortTime,
-                          selectedRace.time,
+                </section>
+              </div>
+            )
+          }
+
+          {
+            selectedHorse && (
+              <div
+                className="horse-modal-backdrop"
+                role="presentation"
+                onClick={() => setSelectedHorse(null)}
+              >
+                <section
+                  className="horse-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={`${selectedHorse.name} profile`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="horse-modal-head">
+                    <h3>Horse Profile</h3>
+                    <button
+                      className="horse-modal-close"
+                      type="button"
+                      aria-label="Close horse profile"
+                      onClick={() => setSelectedHorse(null)}
+                    >
+                      x
+                    </button>
+                  </div>
+                  <div className="horse-modal-body">
+                    <div className="horse-profile">
+                      <img
+                        className="horse-profile-image"
+                        src={selectedHorse.image}
+                        alt={selectedHorse.name}
+                      />
+                      <div className="horse-profile-main">
+                        <h4>{selectedHorse.name}</h4>
+                        <div className="horse-profile-meta">
+                          {selectedHorse.breed}
+                          {selectedHorse.color ? ` · ${selectedHorse.color}` : ""}
+                        </div>
+
+                        <div className="horse-profile-stats">
+                          <div className="horse-profile-stat">
+                            <span>Win rate</span>
+                            <strong>{formatWinRate(selectedHorse.winRate)}%</strong>
+                          </div>
+                          <div className="horse-profile-stat">
+                            <span>Total wins</span>
+                            <strong>{selectedHorse.totalWin || 0}</strong>
+                          </div>
+                          <div className="horse-profile-stat">
+                            <span>Rating</span>
+                            <strong>{selectedHorse.rating || 0}</strong>
+                          </div>
+                        </div>
+
+                        <div className="horse-profile-details">
+                          <div className="horse-profile-detail">
+                            <span>Owner</span>
+                            <strong>{selectedHorse.owner}</strong>
+                          </div>
+                          <div className="horse-profile-detail">
+                            <span>Status</span>
+                            <strong>{selectedHorse.status || "N/A"}</strong>
+                          </div>
+                          <div className="horse-profile-detail">
+                            <span>Height</span>
+                            <strong>
+                              {selectedHorse.height
+                                ? `${selectedHorse.height} m`
+                                : "N/A"}
+                            </strong>
+                          </div>
+                          <div className="horse-profile-detail">
+                            <span>Weight</span>
+                            <strong>
+                              {selectedHorse.weight
+                                ? `${selectedHorse.weight} kg`
+                                : "N/A"}
+                            </strong>
+                          </div>
+                          <div className="horse-profile-detail">
+                            <span>Rank</span>
+                            <strong>#{selectedHorse.rank}</strong>
+                          </div>
+                        </div>
+
+                        {selectedHorse.description && (
+                          <p className="horse-profile-description">
+                            {selectedHorse.description}
+                          </p>
                         )}
-                      </strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Race Course</span>
-                      <strong>{selectedRace.venue}</strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Distance</span>
-                      <strong>{selectedRace.distance}</strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Race Track</span>
-                      <strong>{selectedRace.surface}</strong>
-                    </div>
-                    <div className="race-detail-item">
-                      <span>Round</span>
-                      <strong>{selectedRace.round}</strong>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </section>
-            </div>
-          )}
-
-          {selectedHorse && (
-            <div
-              className="horse-modal-backdrop"
-              role="presentation"
-              onClick={() => setSelectedHorse(null)}
-            >
-              <section
-                className="horse-modal"
-                role="dialog"
-                aria-modal="true"
-                aria-label={`${selectedHorse.name} profile`}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="horse-modal-head">
-                  <h3>Horse Profile</h3>
-                  <button
-                    className="horse-modal-close"
-                    type="button"
-                    aria-label="Close horse profile"
-                    onClick={() => setSelectedHorse(null)}
-                  >
-                    x
-                  </button>
-                </div>
-                <div className="horse-modal-body">
-                  <div className="horse-profile">
-                    <img
-                      className="horse-profile-image"
-                      src={selectedHorse.image}
-                      alt={selectedHorse.name}
-                    />
-                    <div className="horse-profile-main">
-                      <h4>{selectedHorse.name}</h4>
-                      <div className="horse-profile-meta">
-                        {selectedHorse.breed}
-                        {selectedHorse.color ? ` · ${selectedHorse.color}` : ""}
-                      </div>
-
-                      <div className="horse-profile-stats">
-                        <div className="horse-profile-stat">
-                          <span>Win rate</span>
-                          <strong>{formatWinRate(selectedHorse.winRate)}%</strong>
-                        </div>
-                        <div className="horse-profile-stat">
-                          <span>Total wins</span>
-                          <strong>{selectedHorse.totalWin || 0}</strong>
-                        </div>
-                        <div className="horse-profile-stat">
-                          <span>Rating</span>
-                          <strong>{selectedHorse.rating || 0}</strong>
-                        </div>
-                      </div>
-
-                      <div className="horse-profile-details">
-                        <div className="horse-profile-detail">
-                          <span>Owner</span>
-                          <strong>{selectedHorse.owner}</strong>
-                        </div>
-                        <div className="horse-profile-detail">
-                          <span>Status</span>
-                          <strong>{selectedHorse.status || "N/A"}</strong>
-                        </div>
-                        <div className="horse-profile-detail">
-                          <span>Height</span>
-                          <strong>
-                            {selectedHorse.height
-                              ? `${selectedHorse.height} m`
-                              : "N/A"}
-                          </strong>
-                        </div>
-                        <div className="horse-profile-detail">
-                          <span>Weight</span>
-                          <strong>
-                            {selectedHorse.weight
-                              ? `${selectedHorse.weight} kg`
-                              : "N/A"}
-                          </strong>
-                        </div>
-                        <div className="horse-profile-detail">
-                          <span>Rank</span>
-                          <strong>#{selectedHorse.rank}</strong>
-                        </div>
-                      </div>
-
-                      {selectedHorse.description && (
-                        <p className="horse-profile-description">
-                          {selectedHorse.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-          )}
+                </section>
+              </div>
+            )
+          }
 
           <div className="lower-grid results-only">
             <section className="panel" id="results">
@@ -2631,9 +2675,8 @@ function Home() {
                     <img src={result.image} alt={result.race} />
                     <div className="result-details">
                       <span
-                        className={`result-status ${
-                          result.status === "LIVE" ? "result-status-live" : ""
-                        }`}
+                        className={`result-status ${result.status === "LIVE" ? "result-status-live" : ""
+                          }`}
                       >
                         {result.status}
                       </span>
@@ -2654,8 +2697,37 @@ function Home() {
             </section>
           </div>
 
-        </div>
-      </section>
+          <section className="prediction-band" id="predictions">
+            <div>
+              <h2>Make Your Predictions</h2>
+              <p>
+                Predict race winners and compete with fans around the world. Win
+                points and unlock exclusive rewards.
+              </p>
+              <a className="home-btn home-btn-primary" href="#predictions">
+                Start Predicting
+                <Icon name="arrow" size={20} />
+              </a>
+            </div>
+            <div>
+              <h3>Top Predictors This Week</h3>
+              <div className="predictor-list">
+                {homeData.predictors.map((predictor) => (
+                  <div className="predictor-row" key={predictor.id}>
+                    <span>{predictor.id}</span>
+                    <Avatar name={predictor.name} rank={predictor.id} />
+                    <strong>{predictor.name}</strong>
+                    <span>{predictor.points.toLocaleString()} PTS</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="trophy-art">
+              <Icon name="trophy" size={132} />
+            </div>
+          </section>
+        </div >
+      </section >
 
       <footer className="home-footer">
         <div className="home-container footer-grid">
@@ -2719,7 +2791,7 @@ function Home() {
           </div>
         </div>
       </footer>
-    </main>
+    </main >
   );
 }
 
