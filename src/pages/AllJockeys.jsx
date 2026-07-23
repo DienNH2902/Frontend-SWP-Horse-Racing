@@ -24,15 +24,19 @@ function normalizeJockey(jockey, index) {
       profile?.name ||
       "Unnamed jockey",
     email: jockey?.email || profile?.email || "—",
-    status: jockey?.jockeyStatus || profile?.jockeyStatus || jockey?.status || "Unknown",
+    status:
+      jockey?.jockeyStatus ||
+      profile?.jockeyStatus ||
+      jockey?.status ||
+      "Unknown",
     wins: Number(jockey?.totalWin ?? jockey?.wins ?? profile?.totalWin ?? 0),
     winRate: Number(jockey?.winRate ?? profile?.winRate ?? 0),
     image: imageUrl(
       jockey?.avatarUrl ||
-      jockey?.avatar ||
-      jockey?.imageUrl ||
-      profile?.avatarUrl ||
-      profile?.avatar,
+        jockey?.avatar ||
+        jockey?.imageUrl ||
+        profile?.avatarUrl ||
+        profile?.avatar,
     ),
   };
 }
@@ -88,9 +92,7 @@ export default function AllJockeys() {
   const visibleJockeys = useMemo(() => {
     if (status === "all") return jockeys;
 
-    return jockeys.filter(
-      (jockey) => jockey.status === status,
-    );
+    return jockeys.filter((jockey) => jockey.status === status);
   }, [jockeys, status]);
   const paginatedJockeys = visibleJockeys.slice(
     (page - 1) * PAGE_SIZE,
@@ -104,12 +106,14 @@ export default function AllJockeys() {
   return (
     <main className="explore-page">
       <div className="explore-shell">
-        <Link className="explore-back" to="/home">← Về Home</Link>
+        <Link className="explore-back" to="/home">
+          ← Back Home
+        </Link>
         <header className="explore-header">
           <div>
             <span className="explore-eyebrow">GOLDEN HOOF</span>
             <h1>All Jockeys</h1>
-            <p>Danh sách jockey và thành tích thi đấu.</p>
+            <p>View all Jockeys</p>
           </div>
           <span className="explore-count">{visibleJockeys.length} jockey</span>
         </header>
@@ -117,19 +121,26 @@ export default function AllJockeys() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm theo tên hoặc email jockey…"
+            placeholder="Search by jockey name"
           />
-          <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="all">Tất cả trạng thái</option>
-            {statuses.map((item) => <option value={item} key={item}>{item}</option>)}
+          <select
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+          >
+            <option value="all">All status</option>
+            {statuses.map((item) => (
+              <option value={item} key={item}>
+                {item}
+              </option>
+            ))}
           </select>
           <select
             value={sortWinRate}
             onChange={(e) => setSortWinRate(e.target.value)}
           >
             <option value="">Win Rate</option>
-            <option value="desc">Cao → Thấp</option>
-            <option value="asc">Thấp → Cao</option>
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
           </select>
 
           <select
@@ -137,12 +148,12 @@ export default function AllJockeys() {
             onChange={(e) => setSortTotalWin(e.target.value)}
           >
             <option value="">Total Wins</option>
-            <option value="desc">Nhiều → Ít</option>
-            <option value="asc">Ít → Nhiều</option>
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
           </select>
         </div>
         {loading ? (
-          <div className="explore-state">Đang tải danh sách jockey…</div>
+          <div className="explore-state">Loading jockeys list…</div>
         ) : visibleJockeys.length ? (
           <section className="explore-grid">
             {paginatedJockeys.map((jockey, index) => (
@@ -160,16 +171,26 @@ export default function AllJockeys() {
                     JOCKEY #{(page - 1) * PAGE_SIZE + index + 1}
                   </span>
                   <h2>{jockey.name}</h2>
-                  <span className="explore-card-subtitle">{jockey.email} · {jockey.status}</span>
+                  <span className="explore-card-subtitle">
+                    {jockey.email} · {jockey.status}
+                  </span>
                   <div className="explore-card-stats">
-                    <div><span>Wins</span><strong>{jockey.wins}</strong></div>
-                    <div><span>Win rate</span><strong>{jockey.winRate}%</strong></div>
+                    <div>
+                      <span>Wins</span>
+                      <strong>{jockey.wins}</strong>
+                    </div>
+                    <div>
+                      <span>Win rate</span>
+                      <strong>{jockey.winRate}%</strong>
+                    </div>
                   </div>
                 </div>
               </article>
             ))}
           </section>
-        ) : <div className="explore-state">Không tìm thấy jockey phù hợp.</div>}
+        ) : (
+          <div className="explore-state">No jockey found.</div>
+        )}
         <Pagination
           page={page}
           totalItems={visibleJockeys.length}

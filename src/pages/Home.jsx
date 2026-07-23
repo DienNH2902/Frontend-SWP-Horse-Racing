@@ -20,14 +20,31 @@ import {
   markNotificationAsRead,
 } from "../api/services/notification.service";
 
-function formatRaceDateTime(value, fallback = "TBA") {
-  if (!value) return fallback;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return fallback;
+// function formatRaceDateTime(value, fallback = "TBA") {
+//   if (!value) return fallback;
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return fallback;
 
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "medium",
-    timeStyle: "short",
+//   return new Intl.DateTimeFormat("vi-VN", {
+//     dateStyle: "medium",
+//     timeStyle: "short",
+//   }).format(date);
+// }
+
+function formatRaceDateTime(value) {
+  if (!value) return "N/A";
+  if (typeof value === "string" && value.includes("/")) {
+    return value;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
@@ -316,12 +333,12 @@ function normalizeHomeJockey(jockey = {}, index = 0) {
   const winRate = toNumber(jockey.winRate ?? profile.winRate);
   const wins = toNumber(
     jockey.totalWin ??
-    jockey.totalWins ??
-    jockey.careerWins ??
-    jockey.wins ??
-    profile.totalWin ??
-    profile.careerWins ??
-    profile.wins,
+      jockey.totalWins ??
+      jockey.careerWins ??
+      jockey.wins ??
+      profile.totalWin ??
+      profile.careerWins ??
+      profile.wins,
   );
   const status =
     jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
@@ -396,9 +413,7 @@ function Home() {
 
         setHomeData((current) => ({
           ...current,
-          horses: Array.isArray(horses)
-            ? horses.map(normalizeHomeHorse)
-            : [],
+          horses: Array.isArray(horses) ? horses.map(normalizeHomeHorse) : [],
         }));
       } catch (error) {
         console.error(error);
@@ -431,11 +446,7 @@ function Home() {
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [
-    jockeySearch,
-    jockeySortWinRate,
-    jockeySortTotalWin,
-  ]);
+  }, [jockeySearch, jockeySortWinRate, jockeySortTotalWin]);
 
   useEffect(() => {
     let isMounted = true;
@@ -460,14 +471,14 @@ function Home() {
           : [];
       const jockeys =
         jockeysResult.status === "fulfilled" &&
-          Array.isArray(jockeysResult.value)
+        Array.isArray(jockeysResult.value)
           ? jockeysResult.value
-            .map(normalizeHomeJockey)
-            .filter((jockey) =>
-              ALLOWED_JOCKEY_STATUSES.has(
-                String(jockey.status).toLowerCase(),
-              ),
-            )
+              .map(normalizeHomeJockey)
+              .filter((jockey) =>
+                ALLOWED_JOCKEY_STATUSES.has(
+                  String(jockey.status).toLowerCase(),
+                ),
+              )
           : [];
 
       setHomeData((current) => ({
@@ -486,7 +497,6 @@ function Home() {
   }, []);
 
   useEffect(() => {
-
     let isMounted = true;
 
     if (!authSession) {
@@ -2081,17 +2091,13 @@ function Home() {
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {[
-              "Races",
-              "Horses",
-              "Jockeys",
-              "Results",
-              "Predictions",
-            ].map((item) => (
-              <a href={`#${item.toLowerCase()}`} key={item}>
-                {item}
-              </a>
-            ))}
+            {["Races", "Horses", "Jockeys", "Results", "Predictions"].map(
+              (item) => (
+                <a href={`#${item.toLowerCase()}`} key={item}>
+                  {item}
+                </a>
+              ),
+            )}
           </nav>
 
           <div className="home-actions">
@@ -2112,8 +2118,9 @@ function Home() {
             </Link>
             <div className="nav-dropdown-wrap">
               <button
-                className={`home-icon-btn notification-trigger ${isNotificationMenuOpen ? "notification-trigger-open" : ""
-                  }`}
+                className={`home-icon-btn notification-trigger ${
+                  isNotificationMenuOpen ? "notification-trigger-open" : ""
+                }`}
                 type="button"
                 aria-label="Notifications"
                 aria-expanded={isNotificationMenuOpen}
@@ -2147,10 +2154,11 @@ function Home() {
                     <div className="notification-list">
                       {notificationPreview.map((notification) => (
                         <Link
-                          className={`notification-item ${notification.isRead
-                            ? ""
-                            : "notification-item-unread"
-                            }`}
+                          className={`notification-item ${
+                            notification.isRead
+                              ? ""
+                              : "notification-item-unread"
+                          }`}
                           key={
                             notification.id ||
                             `${notification.title}-${notification.createdAt}`
@@ -2198,8 +2206,9 @@ function Home() {
             </div>
             <div className="account-menu">
               <button
-                className={`home-btn account-trigger ${isAccountMenuOpen ? "account-trigger-open" : ""
-                  }`}
+                className={`home-btn account-trigger ${
+                  isAccountMenuOpen ? "account-trigger-open" : ""
+                }`}
                 type="button"
                 aria-expanded={isAccountMenuOpen}
                 aria-haspopup="menu"
@@ -2410,13 +2419,9 @@ function Home() {
                   value={horseSortOrder}
                   onChange={(e) => setHorseSortOrder(e.target.value)}
                 >
-                  <option value="desc">
-                    Win rate descending
-                  </option>
+                  <option value="desc">Win rate descending</option>
 
-                  <option value="asc">
-                    Win rate ascending
-                  </option>
+                  <option value="asc">Win rate ascending</option>
                 </select>
               </div>
               <div className="horse-grid top-horse-grid">
@@ -2489,179 +2494,177 @@ function Home() {
             </section>
           </div>
 
-          {
-            selectedRace && (
-              <div
-                className="horse-modal-backdrop"
-                role="presentation"
-                onClick={() => setSelectedRace(null)}
+          {selectedRace && (
+            <div
+              className="horse-modal-backdrop"
+              role="presentation"
+              onClick={() => setSelectedRace(null)}
+            >
+              <section
+                className="horse-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${selectedRace.name} details`}
+                onClick={(event) => event.stopPropagation()}
               >
-                <section
-                  className="horse-modal"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label={`${selectedRace.name} details`}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div className="horse-modal-head">
-                    <h3>Race Details</h3>
-                    <button
-                      className="horse-modal-close"
-                      type="button"
-                      aria-label="Close race details"
-                      onClick={() => setSelectedRace(null)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="horse-modal-body">
-                    <div
-                      className="race-detail-hero"
-                      style={{
-                        "--race-detail-image": `url("${selectedRace.image}")`,
-                      }}
-                    >
-                      <div>
-                        <span className="race-detail-status">
-                          {selectedRace.status || selectedRace.rawStatus}
-                        </span>
-                        <h4>{selectedRace.name}</h4>
-                      </div>
-                    </div>
-                    <div className="race-detail-grid">
-                      <div className="race-detail-item">
-                        <span>Tournament</span>
-                        <strong>{selectedRace.tournament}</strong>
-                      </div>
-                      <div className="race-detail-item">
-                        <span>Time</span>
-                        <strong>
-                          {formatRaceDateTime(
-                            selectedRace.sortTime,
-                            selectedRace.time,
-                          )}
-                        </strong>
-                      </div>
-                      <div className="race-detail-item">
-                        <span>Race Course</span>
-                        <strong>{selectedRace.venue}</strong>
-                      </div>
-                      <div className="race-detail-item">
-                        <span>Distance</span>
-                        <strong>{selectedRace.distance}</strong>
-                      </div>
-                      <div className="race-detail-item">
-                        <span>Race Track</span>
-                        <strong>{selectedRace.surface}</strong>
-                      </div>
-                      <div className="race-detail-item">
-                        <span>Round</span>
-                        <strong>{selectedRace.round}</strong>
-                      </div>
+                <div className="horse-modal-head">
+                  <h3>Race Details</h3>
+                  <button
+                    className="horse-modal-close"
+                    type="button"
+                    aria-label="Close race details"
+                    onClick={() => setSelectedRace(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="horse-modal-body">
+                  <div
+                    className="race-detail-hero"
+                    style={{
+                      "--race-detail-image": `url("${selectedRace.image}")`,
+                    }}
+                  >
+                    <div>
+                      <span className="race-detail-status">
+                        {selectedRace.status || selectedRace.rawStatus}
+                      </span>
+                      <h4>{selectedRace.name}</h4>
                     </div>
                   </div>
-                </section>
-              </div>
-            )
-          }
-
-          {
-            selectedHorse && (
-              <div
-                className="horse-modal-backdrop"
-                role="presentation"
-                onClick={() => setSelectedHorse(null)}
-              >
-                <section
-                  className="horse-modal"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label={`${selectedHorse.name} profile`}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div className="horse-modal-head">
-                    <h3>Horse Profile</h3>
-                    <button
-                      className="horse-modal-close"
-                      type="button"
-                      aria-label="Close horse profile"
-                      onClick={() => setSelectedHorse(null)}
-                    >
-                      x
-                    </button>
-                  </div>
-                  <div className="horse-modal-body">
-                    <div className="horse-profile">
-                      <img
-                        className="horse-profile-image"
-                        src={selectedHorse.image}
-                        alt={selectedHorse.name}
-                      />
-                      <div className="horse-profile-main">
-                        <h4>{selectedHorse.name}</h4>
-                        <div className="horse-profile-meta">
-                          {selectedHorse.breed}
-                          {selectedHorse.color ? ` · ${selectedHorse.color}` : ""}
-                        </div>
-
-                        <div className="horse-profile-stats">
-                          <div className="horse-profile-stat">
-                            <span>Win rate</span>
-                            <strong>{formatWinRate(selectedHorse.winRate)}%</strong>
-                          </div>
-                          <div className="horse-profile-stat">
-                            <span>Total wins</span>
-                            <strong>{selectedHorse.totalWin || 0}</strong>
-                          </div>
-                          <div className="horse-profile-stat">
-                            <span>Rating</span>
-                            <strong>{selectedHorse.rating || 0}</strong>
-                          </div>
-                        </div>
-
-                        <div className="horse-profile-details">
-                          <div className="horse-profile-detail">
-                            <span>Owner</span>
-                            <strong>{selectedHorse.owner}</strong>
-                          </div>
-                          <div className="horse-profile-detail">
-                            <span>Status</span>
-                            <strong>{selectedHorse.status || "N/A"}</strong>
-                          </div>
-                          <div className="horse-profile-detail">
-                            <span>Height</span>
-                            <strong>
-                              {selectedHorse.height
-                                ? `${selectedHorse.height} m`
-                                : "N/A"}
-                            </strong>
-                          </div>
-                          <div className="horse-profile-detail">
-                            <span>Weight</span>
-                            <strong>
-                              {selectedHorse.weight
-                                ? `${selectedHorse.weight} kg`
-                                : "N/A"}
-                            </strong>
-                          </div>
-                          <div className="horse-profile-detail">
-                            <span>Rank</span>
-                            <strong>#{selectedHorse.rank}</strong>
-                          </div>
-                        </div>
-
-                        {selectedHorse.description && (
-                          <p className="horse-profile-description">
-                            {selectedHorse.description}
-                          </p>
+                  <div className="race-detail-grid">
+                    <div className="race-detail-item">
+                      <span>Tournament</span>
+                      <strong>{selectedRace.tournament}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Time</span>
+                      <strong>
+                        {formatRaceDateTime(
+                          selectedRace.sortTime,
+                          selectedRace.time,
                         )}
-                      </div>
+                      </strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Race Course</span>
+                      <strong>{selectedRace.venue}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Distance</span>
+                      <strong>{selectedRace.distance}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Race Track</span>
+                      <strong>{selectedRace.surface}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Round</span>
+                      <strong>{selectedRace.round}</strong>
                     </div>
                   </div>
-                </section>
-              </div>
-            )
-          }
+                </div>
+              </section>
+            </div>
+          )}
+
+          {selectedHorse && (
+            <div
+              className="horse-modal-backdrop"
+              role="presentation"
+              onClick={() => setSelectedHorse(null)}
+            >
+              <section
+                className="horse-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${selectedHorse.name} profile`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="horse-modal-head">
+                  <h3>Horse Profile</h3>
+                  <button
+                    className="horse-modal-close"
+                    type="button"
+                    aria-label="Close horse profile"
+                    onClick={() => setSelectedHorse(null)}
+                  >
+                    x
+                  </button>
+                </div>
+                <div className="horse-modal-body">
+                  <div className="horse-profile">
+                    <img
+                      className="horse-profile-image"
+                      src={selectedHorse.image}
+                      alt={selectedHorse.name}
+                    />
+                    <div className="horse-profile-main">
+                      <h4>{selectedHorse.name}</h4>
+                      <div className="horse-profile-meta">
+                        {selectedHorse.breed}
+                        {selectedHorse.color ? ` · ${selectedHorse.color}` : ""}
+                      </div>
+
+                      <div className="horse-profile-stats">
+                        <div className="horse-profile-stat">
+                          <span>Win rate</span>
+                          <strong>
+                            {formatWinRate(selectedHorse.winRate)}%
+                          </strong>
+                        </div>
+                        <div className="horse-profile-stat">
+                          <span>Total wins</span>
+                          <strong>{selectedHorse.totalWin || 0}</strong>
+                        </div>
+                        <div className="horse-profile-stat">
+                          <span>Rating</span>
+                          <strong>{selectedHorse.rating || 0}</strong>
+                        </div>
+                      </div>
+
+                      <div className="horse-profile-details">
+                        <div className="horse-profile-detail">
+                          <span>Owner</span>
+                          <strong>{selectedHorse.owner}</strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Status</span>
+                          <strong>{selectedHorse.status || "N/A"}</strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Height</span>
+                          <strong>
+                            {selectedHorse.height
+                              ? `${selectedHorse.height} m`
+                              : "N/A"}
+                          </strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Weight</span>
+                          <strong>
+                            {selectedHorse.weight
+                              ? `${selectedHorse.weight} kg`
+                              : "N/A"}
+                          </strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Rank</span>
+                          <strong>#{selectedHorse.rank}</strong>
+                        </div>
+                      </div>
+
+                      {selectedHorse.description && (
+                        <p className="horse-profile-description">
+                          {selectedHorse.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
 
           <div className="lower-grid results-only">
             <section className="panel" id="results">
@@ -2675,8 +2678,9 @@ function Home() {
                     <img src={result.image} alt={result.race} />
                     <div className="result-details">
                       <span
-                        className={`result-status ${result.status === "LIVE" ? "result-status-live" : ""
-                          }`}
+                        className={`result-status ${
+                          result.status === "LIVE" ? "result-status-live" : ""
+                        }`}
                       >
                         {result.status}
                       </span>
@@ -2690,14 +2694,14 @@ function Home() {
                       <strong>{result.winner}</strong>
                       <span>{result.jockey}</span>
                     </div>
-                    <strong>{result.time}</strong>
+                    <strong>{formatRaceDateTime(result.date)}</strong>
                   </article>
                 ))}
               </div>
             </section>
           </div>
 
-          <section className="prediction-band" id="predictions">
+          {/* <section className="prediction-band" id="predictions">
             <div>
               <h2>Make Your Predictions</h2>
               <p>
@@ -2725,9 +2729,9 @@ function Home() {
             <div className="trophy-art">
               <Icon name="trophy" size={132} />
             </div>
-          </section>
-        </div >
-      </section >
+          </section> */}
+        </div>
+      </section>
 
       <footer className="home-footer">
         <div className="home-container footer-grid">
@@ -2791,7 +2795,7 @@ function Home() {
           </div>
         </div>
       </footer>
-    </main >
+    </main>
   );
 }
 
