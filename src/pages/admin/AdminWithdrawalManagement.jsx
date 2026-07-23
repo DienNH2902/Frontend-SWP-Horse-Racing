@@ -455,11 +455,11 @@ export default function AdminWithdrawalManagement() {
             onChange={(val) => {
               const nextStatus = val || null;
               setSelectedStatus(nextStatus);
-              loadWithdrawals({ status: nextStatus, fullName: searchKey });
+              loadWithdrawals({ status: nextStatus, search: searchKey });
             }}
             onClear={() => {
               setSelectedStatus(null);
-              loadWithdrawals({ status: "", fullName: searchKey });
+              loadWithdrawals({ status: "", search: searchKey });
             }}
           >
             <Select.Option value="PENDING">PENDING</Select.Option>
@@ -476,11 +476,11 @@ export default function AdminWithdrawalManagement() {
             value={searchKey}
             onChange={(e) => setSearchKey(e.target.value)}
             onSearch={(value) =>
-              loadWithdrawals({ status: selectedStatus, fullName: value })
+              loadWithdrawals({ status: selectedStatus, search: value })
             }
             onClear={() => {
               setSearchKey("");
-              loadWithdrawals({ status: selectedStatus, fullName: "" });
+              loadWithdrawals({ status: selectedStatus, search: "" });
             }}
           />
           <Button
