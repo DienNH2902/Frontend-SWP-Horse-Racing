@@ -15,9 +15,13 @@ export async function getMyWithdrawalRequests() {
   return response.data;
 }
 
-export async function getAllWithdrawalRequests() {
+export async function getAllWithdrawalRequests({ status, fullName } = {}) {
   const response = await apiClient.get(WITHDRAWAL_ENDPOINTS.ADMIN_ALL, {
     includeAuth: true,
+    params: {
+      ...(status ? { status } : {}),
+      ...(fullName ? { fullName } : {}),
+    },
   });
   return response.data;
 }
