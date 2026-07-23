@@ -2686,7 +2686,7 @@ function Home() {
                       </span>
                       <strong>{result.race}</strong>
                       <span>
-                        {result.venue} · {result.distance} · {result.surface}
+                        {result.venue} · {result.distance} · {result.trackType}
                       </span>
                     </div>
                     <div className="winner">

@@ -234,12 +234,13 @@ function normalizeFinishedRace(race, tournament, index, raceCourse) {
         ? String(distance)
         : `${distance}m`
       : "Distance TBA",
-    surface: race?.surface || course?.surface || course?.trackType || "Track",
+    trackType: race?.trackType || "Track",
     winner: winnerResult?.horseName || "Awaiting confirmation",
     jockey: winnerResult?.jockeyName || "—",
     time: formatResultTime(race?.startTime),
     date,
     image: race?.image || course?.image || "/goldenhoof-hero.png",
+    results: Array.isArray(results) ? results : [],
   };
 }
 
