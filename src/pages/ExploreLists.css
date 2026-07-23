@@ -57,7 +57,7 @@
   font-weight: 900;
 }
 
-.explore-toolbar {
+/* .explore-toolbar {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(150px, 220px));
   gap: 12px;
@@ -67,6 +67,34 @@
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 15px 40px rgb(0 72 62 / 7%);
+} */
+
+.explore-toolbar {
+  display: grid;
+  /* Chia 4 cột: input chiếm không gian còn lại (1fr), 3 select cố định khoảng min 120px - max 180px */
+  grid-template-columns: minmax(200px, 1fr) repeat(3, minmax(120px, 180px));
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #cdeee8;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 15px 40px rgb(0 72 62 / 7%);
+}
+
+/* Thêm xử lý responsive khi màn hình vừa và nhỏ */
+@media (max-width: 980px) {
+  .explore-toolbar {
+    /* Màn hình medium: xếp 2x2 cho đẹp mắt */
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .explore-toolbar {
+    /* Mobile: về 1 cột dọc */
+    grid-template-columns: 1fr;
+  }
 }
 
 .explore-toolbar input,

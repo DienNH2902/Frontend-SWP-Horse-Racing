@@ -122,13 +122,19 @@ export default function OwnerHorses() {
   const horseStats = useMemo(() => {
     const total = rows.length;
     const idle = rows.filter((horse) =>
-      String(horse.status || "").toLowerCase().includes("idle"),
+      String(horse.status || "")
+        .toLowerCase()
+        .includes("idle"),
     ).length;
     const registered = rows.filter((horse) =>
-      String(horse.status || "").toLowerCase().includes("registered"),
+      String(horse.status || "")
+        .toLowerCase()
+        .includes("registered"),
     ).length;
     const injured = rows.filter((horse) =>
-      String(horse.status || "").toLowerCase().includes("injured"),
+      String(horse.status || "")
+        .toLowerCase()
+        .includes("injured"),
     ).length;
 
     return { total, idle, registered, injured };
@@ -427,12 +433,18 @@ export default function OwnerHorses() {
             <Avatar size={84} src={getImageUrl(detailHorse.imageUrl)}>
               {getHorseInitial(detailHorse.name)}
             </Avatar>
-            <Space direction="vertical" size={6} className="owner-detail-heading">
+            <Space
+              direction="vertical"
+              size={6}
+              className="owner-detail-heading"
+            >
               <Typography.Title level={4} className="owner-detail-title">
                 {detailHorse.name || "Unnamed horse"}
               </Typography.Title>
               <Space size={8} wrap>
-                <Tag color={getHorseStatusColor(detailHorse.status)}>{detailHorse.status}</Tag>
+                <Tag color={getHorseStatusColor(detailHorse.status)}>
+                  {detailHorse.status}
+                </Tag>
                 <Typography.Text type="secondary">
                   {detailHorse.color || "No color"}
                 </Typography.Text>
@@ -456,7 +468,9 @@ export default function OwnerHorses() {
           </div>
 
           <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
-            <Descriptions.Item label="Color">{detailHorse.color || "N/A"}</Descriptions.Item>
+            <Descriptions.Item label="Color">
+              {detailHorse.color || "N/A"}
+            </Descriptions.Item>
             <Descriptions.Item label="Height">
               {detailHorse.height ? `${detailHorse.height} m` : "N/A"}
             </Descriptions.Item>
@@ -493,8 +507,17 @@ export default function OwnerHorses() {
             {
               title: "Race date",
               dataIndex: "raceDate",
-              render: (value) =>
-                value ? new Date(value).toLocaleDateString("vi-VN") : "N/A",
+              render: (value) => {
+                if (!value) return "N/A";
+                const date = new Date(value);
+                if (isNaN(date.getTime())) return "N/A";
+
+                const day = String(date.getDate()).padStart(2, "0");
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const year = date.getFullYear();
+
+                return `${day}/${month}/${year}`;
+              },
               responsive: ["md"],
             },
             { title: "Raw rank", dataIndex: "rawRank", width: 100 },
@@ -698,7 +721,9 @@ export default function OwnerHorses() {
       >
         <Tabs items={detailTabs} defaultActiveKey="info" />
         {detailLoading && (
-          <Typography.Text type="secondary">Loading latest horse detail...</Typography.Text>
+          <Typography.Text type="secondary">
+            Loading latest horse detail...
+          </Typography.Text>
         )}
       </Modal>
 
@@ -759,7 +784,9 @@ export default function OwnerHorses() {
           <Form.Item label="Horse image">
             <div className="owner-edit-image-field">
               <Avatar size={72} src={getImageUrl(editImageUrl)}>
-                {getHorseInitial(form.getFieldValue("name") || editingHorse?.name)}
+                {getHorseInitial(
+                  form.getFieldValue("name") || editingHorse?.name,
+                )}
               </Avatar>
               <Space direction="vertical" size={6}>
                 <Upload
@@ -769,11 +796,17 @@ export default function OwnerHorses() {
                   customRequest={handleEditImageUpload}
                   disabled={uploadingEditImage}
                 >
-                  <Button icon={<CameraOutlined />} loading={uploadingEditImage}>
+                  <Button
+                    icon={<CameraOutlined />}
+                    loading={uploadingEditImage}
+                  >
                     Upload image
                   </Button>
                 </Upload>
-                <Typography.Text type="secondary" className="owner-edit-image-note">
+                <Typography.Text
+                  type="secondary"
+                  className="owner-edit-image-note"
+                >
                   JPG, PNG, WEBP up to 5MB
                 </Typography.Text>
               </Space>

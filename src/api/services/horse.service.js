@@ -29,8 +29,14 @@ export async function createHorse(payload) {
   return unwrapData(response);
 }
 
-export async function getHorses() {
-  const response = await apiClient.get(HORSE_ENDPOINTS.ROOT, authConfig());
+export async function getHorses(params = {}) {
+  const response = await apiClient.get(
+    HORSE_ENDPOINTS.ROOT,
+    {
+      ...authConfig(),
+      params,
+    },
+  );
 
   return unwrapCollection(response);
 }

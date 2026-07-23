@@ -43,6 +43,7 @@ import Wallet from "../pages/Wallet";
 import PaymentResult from "../pages/PaymentResult";
 import Broadcast from "../pages/spectator/Broadcast";
 import LiveRaceChannels from "../pages/spectator/LiveRaceChannels";
+import ReplayBroadcast from "../pages/spectator/ReplayBroadcast";
 import AllHorses from "../pages/AllHorses";
 import AllJockeys from "../pages/AllJockeys";
 import AllRaceResults from "../pages/AllRaceResults";
@@ -174,6 +175,7 @@ export default function AppRoutes() {
         <Route path="/race-results" element={<AllRaceResults />} />
         <Route path="/spectator/broadcast" element={<LiveRaceChannels />} />
         <Route path="/spectator/broadcast/:raceId" element={<Broadcast />} />
+        <Route path="/spectator/replay/:raceId" element={<ReplayBroadcast />} />
         <Route path="notification" element={<NotificationHistory />} />
         <Route path="report" element={<ReportPage />} />
       </Route>

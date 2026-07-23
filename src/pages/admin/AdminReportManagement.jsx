@@ -341,8 +341,8 @@ export default function AdminReportManagement() {
           return (
             <div style={{ display: "flex", gap: "8px" }}>
               <Button
+                className="report-management-link-btn"
                 size="small"
-                type="primary"
                 ghost
                 onClick={() => openDetailModal(record.id)}
                 loading={isDetailLoading && activeId === record.id}
@@ -360,10 +360,10 @@ export default function AdminReportManagement() {
                     size="small"
                     type="default"
                     style={{
-                      backgroundColor: "#e6fffb",
+                      backgroundColor: "#69f8dd",
                       color: "#006d75",
                       borderColor: "#87e8de",
-                      fontWeight: 600,
+                      fontWeight: 900,
                     }}
                   >
                     Resolve
@@ -461,6 +461,18 @@ export default function AdminReportManagement() {
         .bet-management-table.ant-table-wrapper .ant-table-tbody > tr > td {
           color: #0d2321;
           background: #fff;
+        }
+
+        .report-management-link-btn.ant-btn {
+          border-color: #bdeee5;
+          color: #006755;
+          font-weight: 850;
+          background: #fff;
+        }
+
+        .report-management-link-btn.ant-btn:hover {
+          border-color: #69f8dd !important;
+          color: #006755 !important;
         }
 
         .bet-management-refresh.ant-btn {

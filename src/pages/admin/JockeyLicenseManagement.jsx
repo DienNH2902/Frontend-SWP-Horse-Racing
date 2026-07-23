@@ -11,6 +11,7 @@ import {
   Typography,
   message,
   List,
+  Image,
 } from "antd";
 import "antd/dist/reset.css";
 import { getJockeysWithLicenses } from "../../api/services/user.service";
@@ -83,6 +84,7 @@ function getNewestLicenseTime(licenses = []) {
       getObjectIdTime(license?.licenseId),
       getTimeValue(license?.createdAt),
       getTimeValue(license?.uploadedAt),
+      getTimeValue(license?.racingStartDate),
       getTimeValue(license?.submittedAt),
       getTimeValue(license?.registeredAt),
       getTimeValue(license?.requestedAt),
@@ -138,12 +140,7 @@ function normalizeJockey(jockey, index) {
       getTimeValue(
         pick(
           jockey,
-          [
-            "createdAt",
-            "submittedAt",
-            "registeredAt",
-            "requestedAt",
-          ],
+          ["createdAt", "submittedAt", "registeredAt", "requestedAt"],
           "",
         ),
       ),
@@ -190,10 +187,10 @@ function JockeyLicenseManagement() {
   const [viewingLicensesJockey, setViewingLicensesJockey] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadJockeys() {
+  async function loadJockeys(jockeyStatus = "") {
     setIsLoading(true);
     try {
-      const data = await getJockeysWithLicenses();
+      const data = await getJockeysWithLicenses(jockeyStatus);
       setJockeys(data.map(normalizeJockey).sort(sortNewestJockeyFirst));
     } catch (error) {
       message.error(error?.message || "Unable to load jockeys");
@@ -202,12 +199,7 @@ function JockeyLicenseManagement() {
     }
   }
 
-  const filteredJockeys = useMemo(() => {
-    if (!selectedStatusFilter) return jockeys;
-    return jockeys.filter(
-      (jockey) => jockey.jockeyStatus === selectedStatusFilter,
-    );
-  }, [jockeys, selectedStatusFilter]);
+  const filteredJockeys = useMemo(() => jockeys, [jockeys]);
 
   async function handleJockeyStatusChange(profileId, recordId, nextStatus) {
     if (!profileId) {
@@ -278,17 +270,25 @@ function JockeyLicenseManagement() {
         dataIndex: "phoneNumber",
         width: 150,
       },
+      // {
+      //   title: "Height / Weight",
+      //   key: "specs",
+      //   width: 160,
+      //   render: (_, record) => `${record.height} cm / ${record.weight} kg`,
+      // },
       {
-        title: "Height / Weight",
-        key: "specs",
-        width: 160,
-        render: (_, record) => `${record.height} cm / ${record.weight} kg`,
-      },
-      {
-        title: "Licenses Count",
+        title: "License Active",
         dataIndex: "licenses",
         width: 130,
-        render: (licenses) => <Tag color="blue">{licenses.length} active</Tag>,
+        // render: (licenses) => <Tag color="blue">{licenses.length} active</Tag>,
+        render: (licenses) => {
+          const isActive = licenses && licenses.length > 0;
+          return (
+            <Tag color={isActive ? "darkgreen" : "red"}>
+              {isActive ? "Active" : "Inactive"}
+            </Tag>
+          );
+        },
       },
       {
         title: "Latest",
@@ -297,14 +297,14 @@ function JockeyLicenseManagement() {
         render: (sortTime) => (sortTime ? formatDate(sortTime) : "N/A"),
       },
       {
-        title: "Jockey Status",
+        title: "Update Jockey Status",
         dataIndex: "jockeyStatus",
         width: 180,
         render: (jockeyStatus, record) => (
           <Select
             value={jockeyStatus}
             size="small"
-            style={{ width: 155 }}
+            style={{ width: 155, background: "darkgreen", color: "white" }}
             loading={statusChangingId === record.id}
             onChange={(nextValue) =>
               handleJockeyStatusChange(record.profileId, record.id, nextValue)
@@ -312,37 +312,35 @@ function JockeyLicenseManagement() {
             options={[
               {
                 value: "Pending_Approval",
-                label: (
-                  <span style={{ color: "orange" }}>Pending Approval</span>
-                ),
+                label: <span style={{ color: "white" }}>Pending Approval</span>,
               },
               {
                 value: "Available",
-                label: <span style={{ color: "green" }}>Available</span>,
+                label: <span style={{ color: "white" }}>Available</span>,
               },
-              {
-                value: "Contracted",
-                label: <span style={{ color: "blue" }}>Contracted</span>,
-              },
-              {
-                value: "Busy",
-                label: <span style={{ color: "purple" }}>Busy</span>,
-              },
-              {
-                value: "Resting",
-                label: <span style={{ color: "gray" }}>Resting</span>,
-              },
-              {
-                value: "Injured",
-                label: <span style={{ color: "magenta" }}>Injured</span>,
-              },
+              // {
+              //   value: "Contracted",
+              //   label: <span style={{ color: "white" }}>Contracted</span>,
+              // },
+              // {
+              //   value: "Busy",
+              //   label: <span style={{ color: "white" }}>Busy</span>,
+              // },
+              // {
+              //   value: "Resting",
+              //   label: <span style={{ color: "white" }}>Resting</span>,
+              // },
+              // {
+              //   value: "Injured",
+              //   label: <span style={{ color: "white" }}>Injured</span>,
+              // },
               {
                 value: "Rejected",
-                label: <span style={{ color: "red" }}>Rejected</span>,
+                label: <span style={{ color: "white" }}>Rejected</span>,
               },
               {
                 value: "Banned",
-                label: <span style={{ color: "darkred" }}>Banned</span>,
+                label: <span style={{ color: "white" }}>Banned</span>,
               },
             ]}
           />
@@ -458,7 +456,10 @@ function JockeyLicenseManagement() {
             placeholder="Filter by Jockey Status"
             allowClear
             style={{ width: 220 }}
-            onChange={(val) => setSelectedStatusFilter(val)}
+            onChange={(val) => {
+              setSelectedStatusFilter(val);
+              loadJockeys(val || "");
+            }}
           >
             <Select.Option value="Pending_Approval">
               Pending Approval
@@ -472,7 +473,10 @@ function JockeyLicenseManagement() {
             <Select.Option value="Banned">Banned</Select.Option>
           </Select>
 
-          <Button className="user-management-refresh" onClick={loadJockeys}>
+          <Button
+            className="user-management-refresh"
+            onClick={() => loadJockeys(selectedStatusFilter || "")}
+          >
             Refresh
           </Button>
         </div>
@@ -508,10 +512,10 @@ function JockeyLicenseManagement() {
             <Text>
               Jockey ID: <Text code>{viewingLicensesJockey.id || "N/A"}</Text>
             </Text>
-            <Text>
+            {/* <Text>
               Profile ID:{" "}
               <Text code>{viewingLicensesJockey.profileId || "N/A"}</Text>
-            </Text>
+            </Text> */}
           </Space>
         )}
         {viewingLicensesJockey?.licenses.length === 0 ? (
@@ -531,7 +535,7 @@ function JockeyLicenseManagement() {
                 extra={
                   license.licenseUrl ? (
                     <div style={{ marginTop: 8, marginBottom: 8 }}>
-                      <img
+                      <Image
                         src={license.licenseUrl}
                         alt={`License ${license.licenseCode}`}
                         style={{
@@ -542,10 +546,9 @@ function JockeyLicenseManagement() {
                           borderRadius: "6px",
                           border: "1px solid #f0f0f0",
                           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                          cursor: "pointer",
                         }}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                        }}
+                        fallback="https://via.placeholder.com/220x140?text=Image+Error"
                       />
                     </div>
                   ) : null
