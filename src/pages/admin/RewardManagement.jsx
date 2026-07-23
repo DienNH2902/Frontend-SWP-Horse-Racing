@@ -343,7 +343,7 @@ function RewardManagement() {
         </div>
         <div className="user-management-actions">
           <Select
-            placeholder="Filter by condition"
+            placeholder="Condition"
             allowClear
             style={{ width: 170 }}
             onChange={(val) => {
@@ -357,7 +357,7 @@ function RewardManagement() {
           </Select>
 
           <Select
-            placeholder="Filter by reward type"
+            placeholder="Reward Type"
             allowClear
             style={{ width: 170 }}
             onChange={(val) => {

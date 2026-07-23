@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Button,
-  Input,
   Modal,
   Select,
   Table,
@@ -26,7 +25,6 @@ import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns
 dayjs.extend(customParseFormat);
 
 const { Text, Title } = Typography;
-const { Search } = Input;
 
 const ReportCategory = {
   MISSING_WINNING_POINTS: "MISSING_WINNING_POINTS",
@@ -164,19 +162,20 @@ export default function AdminReportManagement() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [detailData, setDetailData] = useState(null);
-  const [searchKey, setSearchKey] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadReports() {
+  async function loadReports({
+    status = selectedStatus,
+    category = selectedCategory,
+  } = {}) {
     setIsLoading(true);
     try {
-      const response = await getAllReportsAdmin();
+      const response = await getAllReportsAdmin({ status, category });
       setReports(
         resolveList(response).map(normalizeReport).sort(sortNewestRequestFirst),
       );
-      setSearchKey("");
     } catch (error) {
       message.error(
         error?.message || "Failed to load system report requests list",
@@ -190,26 +189,7 @@ export default function AdminReportManagement() {
     loadReports();
   }, []);
 
-  const filteredReports = useMemo(() => {
-    return reports.filter((report) => {
-      const matchStatus = selectedStatus
-        ? report.status === selectedStatus
-        : true;
-      const matchCategory = selectedCategory
-        ? report.category === selectedCategory
-        : true;
-
-      const rName = String(report.reporterName || "").toLowerCase();
-      const rDesc = String(report.description || "").toLowerCase();
-      const query = searchKey.toLowerCase();
-
-      const matchSearch = searchKey
-        ? rName.includes(query) || rDesc.includes(query)
-        : true;
-
-      return matchStatus && matchCategory && matchSearch;
-    });
-  }, [reports, selectedStatus, selectedCategory, searchKey]);
+  const filteredReports = useMemo(() => reports, [reports]);
 
   async function openDetailModal(id) {
     setActiveId(id);
@@ -512,10 +492,22 @@ export default function AdminReportManagement() {
         </div>
         <div className="bet-management-actions">
           <Select
-            placeholder="Filter by category"
+            placeholder="Category"
             allowClear
+            value={selectedCategory}
             style={{ width: 200 }}
-            onChange={(val) => setSelectedCategory(val)}
+            onChange={(val) => {
+              const nextCategory = val || null;
+              setSelectedCategory(nextCategory);
+              loadReports({
+                status: selectedStatus,
+                category: nextCategory,
+              });
+            }}
+            onClear={() => {
+              setSelectedCategory(null);
+              loadReports({ status: selectedStatus, category: "" });
+            }}
           >
             {Object.values(ReportCategory).map((cat) => (
               <Select.Option key={cat} value={cat}>
@@ -525,10 +517,22 @@ export default function AdminReportManagement() {
           </Select>
 
           <Select
-            placeholder="Filter by status"
+            placeholder="Status"
             allowClear
+            value={selectedStatus}
             style={{ width: 160 }}
-            onChange={(val) => setSelectedStatus(val)}
+            onChange={(val) => {
+              const nextStatus = val || null;
+              setSelectedStatus(nextStatus);
+              loadReports({
+                status: nextStatus,
+                category: selectedCategory,
+              });
+            }}
+            onClear={() => {
+              setSelectedStatus(null);
+              loadReports({ status: "", category: selectedCategory });
+            }}
           >
             {Object.values(ReportStatus).map((status) => (
               <Select.Option key={status} value={status}>
@@ -537,17 +541,9 @@ export default function AdminReportManagement() {
             ))}
           </Select>
 
-          <Search
-            placeholder="Search by Reporter or Description..."
-            allowClear
-            enterButton="Search"
-            size="middle"
-            value={searchKey}
-            onChange={(e) => setSearchKey(e.target.value)}
-          />
           <Button
             className="bet-management-refresh"
-            onClick={loadReports}
+            onClick={() => loadReports()}
             loading={isLoading}
           >
             Refresh
