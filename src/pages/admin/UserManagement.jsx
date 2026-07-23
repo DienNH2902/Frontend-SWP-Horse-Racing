@@ -27,6 +27,7 @@ import {
   adjustSpectatorPoints,
   adjustJockeyReputation,
   adjustHorseOwnerReputation,
+  getUsersByRole,
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
@@ -188,6 +189,7 @@ function UserManagement() {
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [detailUser, setDetailUser] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [selectedJockeyStatus, setSelectedJockeyStatus] = useState(null);
   // --- States cho Modal Adjust Points ---
   const [adjustPointsForm] = Form.useForm();
   const [adjustModalUser, setAdjustModalUser] = useState(null);
@@ -209,15 +211,7 @@ function UserManagement() {
     }
   }
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const matchRole = selectedRole ? user.role === selectedRole : true;
-      const matchStatus = selectedStatus
-        ? user.status === selectedStatus
-        : true;
-      return matchRole && matchStatus;
-    });
-  }, [users, selectedRole, selectedStatus]);
+  const filteredUsers = useMemo(() => users, [users]);
 
   async function handleSearch(value) {
     setSearchKey(value);
@@ -292,6 +286,26 @@ function UserManagement() {
       message.error(error?.message || "Cập nhật trạng thái thất bại");
     } finally {
       setStatusChangingId(null);
+    }
+  }
+
+  async function handleFilterChange(role, jockeyStatus, status) {
+    setIsLoading(true);
+
+    try {
+      if (!role && !status) {
+        return loadUsers();
+      }
+
+      const response = await getUsersByRole(role, jockeyStatus, status);
+
+      setUsers(
+        resolveList(response).map(normalizeUser).sort(sortNewestUserFirst),
+      );
+    } catch (error) {
+      message.error(error?.message || "Unable to filter users");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -752,19 +766,34 @@ function UserManagement() {
             placeholder="Filter by Role"
             allowClear
             style={{ width: 140 }}
-            onChange={(val) => setSelectedRole(val)}
+            onChange={(val) => {
+              setSelectedRole(val);
+
+              if (val !== "Jockey") {
+                setSelectedJockeyStatus(null);
+              }
+
+              handleFilterChange(
+                val,
+                val === "Jockey" ? selectedJockeyStatus : null,
+                selectedStatus,
+              );
+            }}
           >
             <Select.Option value="Spectator">Spectator</Select.Option>
             <Select.Option value="Jockey">Jockey</Select.Option>
             <Select.Option value="Referee">Referee</Select.Option>
-            <Select.Option value="Horse-Owner">Horse-Owner</Select.Option>
+            <Select.Option value="Horse Owner">Horse Owner</Select.Option>
           </Select>
 
           <Select
             placeholder="Filter by Status"
             allowClear
             style={{ width: 140 }}
-            onChange={(val) => setSelectedStatus(val)}
+            onChange={(val) => {
+              setSelectedStatus(val);
+              handleFilterChange(selectedRole, selectedJockeyStatus, val);
+            }}
           >
             <Select.Option value="Active">Active</Select.Option>
             <Select.Option value="Inactive">Inactive</Select.Option>

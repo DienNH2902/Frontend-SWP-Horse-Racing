@@ -309,7 +309,7 @@ function JockeyLicenseManagement() {
           <Select
             value={jockeyStatus}
             size="small"
-            style={{ width: 155, background: "darkgreen" }}
+            style={{ width: 155, background: "darkgreen", color: "white" }}
             loading={statusChangingId === record.id}
             onChange={(nextValue) =>
               handleJockeyStatusChange(record.profileId, record.id, nextValue)
