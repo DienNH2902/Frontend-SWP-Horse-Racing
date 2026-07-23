@@ -1,4 +1,14 @@
-import { Button, Card, Descriptions, Empty, Modal, Space, Table, Tag, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Descriptions,
+  Empty,
+  Modal,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
 import { useState } from "react";
 
 function asArray(value) {
@@ -19,7 +29,7 @@ function formatRaceDateTime(value) {
   if (!value) return "N/A";
 
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
+  if (Number.isNaN(parsed.getTime())) return String(value);
 
   return parsed.toLocaleString("vi-VN", {
     day: "2-digit",
@@ -38,14 +48,17 @@ function displayValue(value) {
 
 function buildHistoryRows(history) {
   return asArray(history)
-    .filter((item) => item && typeof item === "object" && (item.raceId || item.raceName))
+    .filter(
+      (item) =>
+        item && typeof item === "object" && (item.raceId || item.raceName),
+    )
     .map((item, index) => ({
       key: `${item.tournamentId || "tournament"}-${item.raceId || "race"}-${index}`,
       tournamentId: item.tournamentId || "N/A",
       tournamentName: item.tournamentName || "",
       raceId: item.raceId || "N/A",
       raceName: item.raceName || "",
-      date: formatRaceDate(item.date || item.raceDate),
+      date: formatRaceDateTime(item.date || item.raceDate),
       rawDate: item.date || item.raceDate || "",
       ownerId: item.horseOwnerId || "",
       ownerName: item.horseOwnerName || "",
@@ -92,8 +105,10 @@ export default function RaceHistoryCard({
     {
       title: participantLabel,
       render: (_, record) => {
-        const name = participantLabel === "Owner" ? record.ownerName : record.jockeyName;
-        const id = participantLabel === "Owner" ? record.ownerId : record.jockeyId;
+        const name =
+          participantLabel === "Owner" ? record.ownerName : record.jockeyName;
+        const id =
+          participantLabel === "Owner" ? record.ownerId : record.jockeyId;
 
         return name || id || "N/A";
       },
@@ -109,7 +124,12 @@ export default function RaceHistoryCard({
       title: "Rank",
       dataIndex: "finalRank",
       width: 96,
-      render: (value) => (value ? <Tag color={Number(value) === 1 ? "gold" : "blue"}>#{value}</Tag> : "N/A"),
+      render: (value) =>
+        value ? (
+          <Tag color={Number(value) === 1 ? "gold" : "blue"}>#{value}</Tag>
+        ) : (
+          "N/A"
+        ),
     },
   ];
 
@@ -130,7 +150,12 @@ export default function RaceHistoryCard({
       title: "Rank",
       dataIndex: "finalRank",
       width: 96,
-      render: (value) => (value ? <Tag color={Number(value) === 1 ? "gold" : "blue"}>#{value}</Tag> : "N/A"),
+      render: (value) =>
+        value ? (
+          <Tag color={Number(value) === 1 ? "gold" : "blue"}>#{value}</Tag>
+        ) : (
+          "N/A"
+        ),
     },
     {
       title: "Date",
@@ -153,7 +178,10 @@ export default function RaceHistoryCard({
 
   return (
     <>
-      <Card title="Race history" extra={<Tag color="gold">{rows.length} races</Tag>}>
+      <Card
+        title="Race history"
+        extra={<Tag color="gold">{rows.length} races</Tag>}
+      >
         <Table
           rowKey="key"
           loading={loading}
@@ -197,14 +225,19 @@ export default function RaceHistoryCard({
               <Descriptions.Item label={participantLabel}>
                 {participantLabel === "Owner"
                   ? displayValue(selectedRace.ownerName || selectedRace.ownerId)
-                  : displayValue(selectedRace.jockeyName || selectedRace.jockeyId)}
+                  : displayValue(
+                      selectedRace.jockeyName || selectedRace.jockeyId,
+                    )}
               </Descriptions.Item>
               <Descriptions.Item label="Horse">
                 {displayValue(selectedRace.horseName)}
               </Descriptions.Item>
             </Descriptions>
           ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Select a race" />
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="Select a race"
+            />
           )}
         </Modal>
       )}

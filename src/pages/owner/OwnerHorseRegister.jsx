@@ -165,11 +165,21 @@ export default function OwnerHorseRegister() {
               <Form.Item
                 label="Height (m)"
                 name="height"
-                rules={[{ required: true, message: "Enter height" }]}
+                rules={[
+                  { required: true, message: "Enter height" },
+                  {
+                    type: "number",
+                    min: 0.5,
+                    max: 2.5,
+                    message: "Height must be between 0.5m and 2.5m",
+                  },
+                ]}
               >
                 <InputNumber
-                  min={0}
+                  min={0.5}
+                  max={2.5}
                   precision={2}
+                  step={0.01}
                   className="owner-input-full"
                   placeholder="1.65"
                 />
@@ -179,11 +189,21 @@ export default function OwnerHorseRegister() {
               <Form.Item
                 label="Weight (kg)"
                 name="weight"
-                rules={[{ required: true, message: "Enter weight" }]}
+                rules={[
+                  { required: true, message: "Enter weight" },
+                  {
+                    type: "number",
+                    min: 50,
+                    max: 1500,
+                    message: "Weight must be between 50kg and 1500kg",
+                  },
+                ]}
               >
                 <InputNumber
-                  min={0}
+                  min={50}
+                  max={1500}
                   precision={1}
+                  step={1}
                   className="owner-input-full"
                   placeholder="450"
                 />
