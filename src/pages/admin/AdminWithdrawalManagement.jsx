@@ -136,16 +136,21 @@ export default function AdminWithdrawalManagement() {
   const [loadingDetailId, setLoadingDetailId] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadWithdrawals() {
+  async function loadWithdrawals({
+    status = selectedStatus,
+    search = searchKey,
+  } = {}) {
     setIsLoading(true);
     try {
-      const response = await getAllWithdrawalRequests();
+      const response = await getAllWithdrawalRequests({
+        status,
+        search: search?.trim(),
+      });
       setRequests(
         resolveList(response)
           .map(normalizeWithdrawal)
           .sort(sortNewestRequestFirst),
       );
-      setSearchKey("");
     } catch (error) {
       message.error(
         error?.message || "Failed to load withdrawal requests list",
@@ -159,17 +164,7 @@ export default function AdminWithdrawalManagement() {
     loadWithdrawals();
   }, []);
 
-  const filteredRequests = useMemo(() => {
-    return requests.filter((req) => {
-      const matchStatus = selectedStatus ? req.status === selectedStatus : true;
-      const matchSearch = searchKey
-        ? req.fullName.toLowerCase().includes(searchKey.toLowerCase()) ||
-          req.email.toLowerCase().includes(searchKey.toLowerCase()) ||
-          req.accountNumber.includes(searchKey)
-        : true;
-      return matchStatus && matchSearch;
-    });
-  }, [requests, selectedStatus, searchKey]);
+  const filteredRequests = useMemo(() => requests, [requests]);
 
   async function openDetailModal(id) {
     setLoadingDetailId(id);
@@ -453,10 +448,19 @@ export default function AdminWithdrawalManagement() {
         </div>
         <div className="withdrawal-management-actions">
           <Select
-            placeholder="Filter by status"
+            placeholder="Status"
             allowClear
+            value={selectedStatus}
             style={{ width: 180 }}
-            onChange={(val) => setSelectedStatus(val)}
+            onChange={(val) => {
+              const nextStatus = val || null;
+              setSelectedStatus(nextStatus);
+              loadWithdrawals({ status: nextStatus, search: searchKey });
+            }}
+            onClear={() => {
+              setSelectedStatus(null);
+              loadWithdrawals({ status: "", search: searchKey });
+            }}
           >
             <Select.Option value="PENDING">PENDING</Select.Option>
             <Select.Option value="APPROVED">APPROVED</Select.Option>
@@ -471,10 +475,17 @@ export default function AdminWithdrawalManagement() {
             size="middle"
             value={searchKey}
             onChange={(e) => setSearchKey(e.target.value)}
+            onSearch={(value) =>
+              loadWithdrawals({ status: selectedStatus, search: value })
+            }
+            onClear={() => {
+              setSearchKey("");
+              loadWithdrawals({ status: selectedStatus, search: "" });
+            }}
           />
           <Button
             className="withdrawal-management-refresh"
-            onClick={loadWithdrawals}
+            onClick={() => loadWithdrawals()}
             loading={isLoading}
           >
             Refresh

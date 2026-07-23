@@ -736,9 +736,10 @@ export default function RefereeTournamentList() {
 
                                 <Descriptions.Item label="Start Time">
                                     {selectedRace.startTime
-                                        ? new Date(
-                                            selectedRace.startTime
-                                        ).toLocaleString()
+                                        ? new Date(selectedRace.startTime).toLocaleString("vi-VN", {
+                                            timeZone: "UTC",
+                                            hour12: false,
+                                        })
                                         : "-"}
                                 </Descriptions.Item>
 

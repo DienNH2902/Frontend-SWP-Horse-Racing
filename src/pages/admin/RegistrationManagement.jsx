@@ -22,6 +22,7 @@ import {
   rejectRegistration,
 } from "../../api/services/registration.service";
 import { getRacesByTournament } from "../../api/services/race.service";
+import { getTournaments } from "../../api/services/tournament.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -160,6 +161,9 @@ function RegistrationManagement() {
 
   const [registrations, setRegistrations] = useState([]);
   const [raceOptions, setRaceOptions] = useState([]);
+  const [filterTournamentId, setFilterTournamentId] = useState("");
+  const [tournamentOptions, setTournamentOptions] = useState([]);
+
   const [filterStatus, setFilterStatus] = useState("");
   const [searchText, setSearchText] = useState("");
 
@@ -172,12 +176,16 @@ function RegistrationManagement() {
   const [rejectingRegistration, setRejectingRegistration] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadRegistrations(status = filterStatus) {
+  async function loadRegistrations(
+    status = filterStatus,
+    tournamentId = filterTournamentId,
+  ) {
     setIsLoading(true);
 
     try {
       const response = await getRegistrations({
         status,
+        tournamentId,
       });
 
       setRegistrations(
@@ -192,8 +200,24 @@ function RegistrationManagement() {
     }
   }
 
+  async function loadTournamentOptions() {
+    try {
+      const tournaments = await getTournaments();
+
+      setTournamentOptions(
+        tournaments.map((item) => ({
+          value: item._id || item.id,
+          label: item.title,
+        })),
+      );
+    } catch (error) {
+      message.error(error?.message || "Unable to load tournaments");
+    }
+  }
+
   useEffect(() => {
     loadRegistrations();
+    loadTournamentOptions();
   }, []);
 
   async function openDetailModal(record) {
@@ -312,27 +336,29 @@ function RegistrationManagement() {
     }
   }
 
-  const filteredRegistrations = useMemo(() => {
-    const normalizedSearchText = searchText.trim().toLowerCase();
+  // const filteredRegistrations = useMemo(() => {
+  //   const normalizedSearchText = searchText.trim().toLowerCase();
 
-    if (!normalizedSearchText) {
-      return registrations;
-    }
+  //   if (!normalizedSearchText) {
+  //     return registrations;
+  //   }
 
-    return registrations.filter((registration) =>
-      [
-        registration.tournamentTitle,
-        registration.horseName,
-        registration.jockeyName,
-        registration.ownerName,
-        registration.status,
-      ]
-        .filter(Boolean)
-        .some((value) =>
-          String(value).toLowerCase().includes(normalizedSearchText),
-        ),
-    );
-  }, [registrations, searchText]);
+  //   return registrations.filter((registration) =>
+  //     [
+  //       registration.tournamentTitle,
+  //       registration.horseName,
+  //       registration.jockeyName,
+  //       registration.ownerName,
+  //       registration.status,
+  //     ]
+  //       .filter(Boolean)
+  //       .some((value) =>
+  //         String(value).toLowerCase().includes(normalizedSearchText),
+  //       ),
+  //   );
+  // }, [registrations, searchText]);
+
+  const filteredRegistrations = useMemo(() => registrations, [registrations]);
 
   const columns = useMemo(
     () => [
@@ -516,17 +542,37 @@ function RegistrationManagement() {
             ]}
             onChange={(value) => {
               setFilterStatus(value);
-              loadRegistrations(value);
+              loadRegistrations(value, filterTournamentId);
             }}
           />
 
-          <Input
+          <Select
+            value={filterTournamentId}
+            placeholder="Tournament"
+            allowClear
+            style={{ width: 260 }}
+            options={[
+              {
+                label: "All Tournaments",
+                value: "",
+              },
+              ...tournamentOptions,
+            ]}
+            onChange={(value) => {
+              const tournamentId = value || "";
+
+              setFilterTournamentId(tournamentId);
+              loadRegistrations(filterStatus, tournamentId);
+            }}
+          />
+
+          {/* <Input
             allowClear
             placeholder="Search by tournament title"
             value={searchText}
             style={{ width: 260 }}
             onChange={(event) => setSearchText(event.target.value)}
-          />
+          /> */}
 
           {/* <Button
             className="registration-management-link-btn"
@@ -539,6 +585,7 @@ function RegistrationManagement() {
             className="registration-management-primary"
             onClick={() => {
               setFilterStatus("");
+              setFilterTournamentId("");
               setSearchText("");
               loadRegistrations("");
             }}

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Button,
-  Input,
   Modal,
   Select,
   Table,
@@ -13,13 +12,14 @@ import {
 import "antd/dist/reset.css";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import utc from "dayjs/plugin/utc";
 import { getAllBets, getBetDetail } from "../../api/services/bet.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 dayjs.extend(customParseFormat);
+dayjs.extend(utc);
 
 const { Text, Title } = Typography;
-const { Search } = Input;
 
 function pick(source, keys, fallback = "") {
   for (const key of keys) {
@@ -115,6 +115,7 @@ function normalizeBet(item, index) {
     pointsWon: item.pointsWon ?? 0,
     result: item.result ?? "PENDING",
     placedAt: item.placedAt ?? "",
+    isInsuranceCardUsed: Boolean(item.isInsuranceCardUsed),
   };
 }
 
@@ -131,18 +132,16 @@ export default function AdminBetManagement() {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [detailData, setDetailData] = useState(null);
-  const [searchKey, setSearchKey] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadBets() {
+  async function loadBets({ result = selectedStatus } = {}) {
     setIsLoading(true);
     try {
-      const response = await getAllBets();
+      const response = await getAllBets({ result });
       setBets(
         resolveList(response).map(normalizeBet).sort(sortNewestRequestFirst),
       );
-      setSearchKey("");
     } catch (error) {
       message.error(
         error?.message || "Failed to load system bet requests list",
@@ -156,23 +155,7 @@ export default function AdminBetManagement() {
     loadBets();
   }, []);
 
-  const filteredBets = useMemo(() => {
-    return bets.filter((bet) => {
-      const matchStatus = selectedStatus ? bet.result === selectedStatus : true;
-
-      const sName = String(bet.spectatorName || "").toLowerCase();
-      const rName = String(bet.raceName || "").toLowerCase();
-      const hName = String(bet.horseName || "").toLowerCase();
-      const query = searchKey.toLowerCase();
-
-      const matchSearch = searchKey
-        ? sName.includes(query) ||
-          rName.includes(query) ||
-          hName.includes(query)
-        : true;
-      return matchStatus && matchSearch;
-    });
-  }, [bets, selectedStatus, searchKey]);
+  const filteredBets = useMemo(() => bets, [bets]);
 
   async function openDetailModal(id) {
     setActiveId(id);
@@ -242,6 +225,16 @@ export default function AdminBetManagement() {
         dataIndex: "result",
         width: 130,
         render: (result) => <Tag color={statusColor(result)}>{result}</Tag>,
+      },
+      {
+        title: "Insurance",
+        dataIndex: "isInsuranceCardUsed",
+        width: 120,
+        render: (value) => (
+          <Tag color={value ? "blue" : "default"}>
+            {value ? "Used" : "No"}
+          </Tag>
+        ),
       },
       {
         title: "Placed At",
@@ -377,27 +370,29 @@ export default function AdminBetManagement() {
         </div>
         <div className="bet-management-actions">
           <Select
-            placeholder="Filter by result"
+            placeholder="Result"
             allowClear
+            value={selectedStatus}
             style={{ width: 180 }}
-            onChange={(val) => setSelectedStatus(val)}
+            onChange={(val) => {
+              const nextResult = val || null;
+              setSelectedStatus(nextResult);
+              loadBets({ result: nextResult });
+            }}
+            onClear={() => {
+              setSelectedStatus(null);
+              loadBets({ result: "" });
+            }}
           >
             <Select.Option value="PENDING">PENDING</Select.Option>
             <Select.Option value="WIN">WIN</Select.Option>
-            <Select.Option value="LOST">LOST</Select.Option>
+            <Select.Option value="LOSE">LOSE</Select.Option>
+            <Select.Option value="REFUNDED">REFUNDED</Select.Option>
           </Select>
 
-          <Search
-            placeholder="Search by Spectator, Race, Horse Name..."
-            allowClear
-            enterButton="Search"
-            size="middle"
-            value={searchKey}
-            onChange={(e) => setSearchKey(e.target.value)}
-          />
           <Button
             className="bet-management-refresh"
-            onClick={loadBets}
+            onClick={() => loadBets()}
             loading={isLoading}
           >
             Refresh
@@ -446,21 +441,21 @@ export default function AdminBetManagement() {
             <Descriptions.Item label="Bet ID">
               {detailData.id}
             </Descriptions.Item>
-            {/* <Descriptions.Item label="Spectator ID">
+            <Descriptions.Item label="Spectator ID">
               {detailData.spectatorId}
-            </Descriptions.Item> */}
+            </Descriptions.Item>
             <Descriptions.Item label="Spectator Name">
               <Text strong>{detailData.spectatorName}</Text>
             </Descriptions.Item>
-            {/* <Descriptions.Item label="Race ID">
+            <Descriptions.Item label="Race ID">
               {detailData.raceId}
-            </Descriptions.Item> */}
+            </Descriptions.Item>
             <Descriptions.Item label="Race Name">
               {detailData.raceName}
             </Descriptions.Item>
-            {/* <Descriptions.Item label="Horse ID">
+            <Descriptions.Item label="Horse ID">
               {detailData.horseId}
-            </Descriptions.Item> */}
+            </Descriptions.Item>
             <Descriptions.Item label="Horse Name">
               {detailData.horseName}
             </Descriptions.Item>
@@ -486,6 +481,9 @@ export default function AdminBetManagement() {
               <Tag color={statusColor(detailData.result)}>
                 {detailData.result}
               </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Insurance Card">
+              {detailData.isInsuranceCardUsed ? "Used" : "No"}
             </Descriptions.Item>
             <Descriptions.Item label="Placed At">
               {formatDate(detailData.placedAt)}
