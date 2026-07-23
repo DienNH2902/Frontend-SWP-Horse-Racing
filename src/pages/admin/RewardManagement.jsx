@@ -91,10 +91,13 @@ function RewardManagement() {
   const [selectedRewardType, setSelectedRewardType] = useState(null);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadRewards() {
+  async function loadRewards(
+    rewardType = selectedRewardType,
+    conditionType = selectedCondition,
+  ) {
     setIsLoading(true);
     try {
-      const response = await getRewards();
+      const response = await getRewards(rewardType, conditionType);
       setRewards(resolveList(response).map(normalizeReward));
     } catch (error) {
       message.error(error?.message || "Failed to load reward configurations");
@@ -103,17 +106,19 @@ function RewardManagement() {
     }
   }
 
-  const filteredRewards = useMemo(() => {
-    return rewards.filter((reward) => {
-      const matchCondition = selectedCondition
-        ? reward.conditionType === selectedCondition
-        : true;
-      const matchType = selectedRewardType
-        ? reward.rewardType === selectedRewardType
-        : true;
-      return matchCondition && matchType;
-    });
-  }, [rewards, selectedCondition, selectedRewardType]);
+  // const filteredRewards = useMemo(() => {
+  //   return rewards.filter((reward) => {
+  //     const matchCondition = selectedCondition
+  //       ? reward.conditionType === selectedCondition
+  //       : true;
+  //     const matchType = selectedRewardType
+  //       ? reward.rewardType === selectedRewardType
+  //       : true;
+  //     return matchCondition && matchType;
+  //   });
+  // }, [rewards, selectedCondition, selectedRewardType]);
+
+  const filteredRewards = useMemo(() => rewards, [rewards]);
 
   useEffect(() => {
     loadRewards();
@@ -160,7 +165,7 @@ function RewardManagement() {
       }
 
       setIsModalOpen(false);
-      loadRewards();
+      loadRewards(selectedRewardType || "", selectedCondition || "");
     } catch (error) {
       message.error(error?.message || "Operation failed");
     } finally {
@@ -341,7 +346,11 @@ function RewardManagement() {
             placeholder="Filter by condition"
             allowClear
             style={{ width: 170 }}
-            onChange={(val) => setSelectedCondition(val)}
+            onChange={(val) => {
+              const condition = val || "";
+              setSelectedCondition(condition);
+              loadRewards(selectedRewardType || "", condition);
+            }}
           >
             <Select.Option value="MILESTONE">MILESTONE</Select.Option>
             <Select.Option value="SHOP">SHOP</Select.Option>
@@ -351,7 +360,11 @@ function RewardManagement() {
             placeholder="Filter by reward type"
             allowClear
             style={{ width: 170 }}
-            onChange={(val) => setSelectedRewardType(val)}
+            onChange={(val) => {
+              const rewardType = val || "";
+              setSelectedRewardType(rewardType);
+              loadRewards(rewardType, selectedCondition || "");
+            }}
           >
             <Select.Option value="POINTS">POINTS</Select.Option>
             {/* <Select.Option value="AVATAR_FRAME">AVATAR FRAME</Select.Option> */}
@@ -362,7 +375,12 @@ function RewardManagement() {
           <Button type="primary" onClick={openCreateModal}>
             Create New Reward
           </Button>
-          <Button className="user-management-refresh" onClick={loadRewards}>
+          <Button
+            className="user-management-refresh"
+            onClick={() =>
+              loadRewards(selectedRewardType || "", selectedCondition || "")
+            }
+          >
             Refresh
           </Button>
         </div>
