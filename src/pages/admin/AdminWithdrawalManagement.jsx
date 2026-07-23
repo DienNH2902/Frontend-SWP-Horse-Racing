@@ -138,13 +138,13 @@ export default function AdminWithdrawalManagement() {
 
   async function loadWithdrawals({
     status = selectedStatus,
-    fullName = searchKey,
+    search = searchKey,
   } = {}) {
     setIsLoading(true);
     try {
       const response = await getAllWithdrawalRequests({
         status,
-        fullName: fullName?.trim(),
+        search: search?.trim(),
       });
       setRequests(
         resolveList(response)
