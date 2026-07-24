@@ -183,7 +183,7 @@ export default function RefereeLayout({
                                 </span>
 
                                 <div className="referee-role-badge">
-                                    REFEREE
+                                    {role.toUpperCase()}
                                 </div>
 
                                 <span className="referee-account-email">

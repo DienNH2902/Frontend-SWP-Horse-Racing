@@ -7,16 +7,17 @@
 
     background:
         radial-gradient(circle at top right,
-            rgba(46, 196, 182, .16),
-            transparent 34%),
+            rgba(46, 196, 182, .18),
+            transparent 35%),
 
         radial-gradient(circle at bottom left,
-            rgba(11, 110, 79, .12),
-            transparent 42%),
+            rgba(11, 110, 79, .18),
+            transparent 40%),
 
-        linear-gradient(180deg,
-            #eefcf8 0%,
-            #f8fffd 100%);
+        linear-gradient(135deg,
+            #052e28 0%,
+            #0b3d37 50%,
+            #0f5048 100%);
 }
 
 
@@ -35,20 +36,17 @@
 ========================================================== */
 
 .referee-sider {
-    background:
-        linear-gradient(180deg,
-            #083b35 0%,
-            #0b4f47 45%,
-            #0d665c 100%) !important;
 
-    border-right: 1px solid rgba(255, 255, 255, .08);
+    background:
+        rgba(6, 40, 36, .82) !important;
+
+    backdrop-filter: blur(18px);
+
+    border-right:
+        1px solid rgba(46, 196, 182, .15);
 
     box-shadow:
-        16px 0 40px rgba(0, 0, 0, .16);
-    border-radius:
-        0 22px 22px 0;
-
-    overflow: hidden;
+        12px 0 45px rgba(0, 0, 0, .35);
 }
 
 .referee-sider-inner {
@@ -59,6 +57,28 @@
     flex-direction: column;
 }
 
+.referee-sider::before {
+
+    content: "";
+
+    position: absolute;
+
+    top: -100px;
+
+    right: -120px;
+
+    width: 260px;
+
+    height: 260px;
+
+    border-radius: 50%;
+
+    background: #2EC4B6;
+
+    opacity: .12;
+
+    filter: blur(80px);
+}
 
 /* ==========================================================
    BRAND
@@ -71,16 +91,16 @@
 
     gap: 14px;
 
-    padding: 28px 22px;
+    padding: 28px 24px;
+
+    border-bottom:
+        1px solid rgba(255, 255, 255, .06);
 
     font-size: 22px;
 
     font-weight: 800;
 
     color: white;
-
-    border-bottom:
-        1px solid rgba(255, 255, 255, .08);
 
     margin-bottom: 14px;
 }
@@ -93,6 +113,24 @@
     object-fit: contain;
 }
 
+.referee-brand::after {
+
+    content: "";
+
+    display: block;
+
+    width: 100%;
+
+    height: 1px;
+
+    margin-top: 20px;
+
+    background:
+        linear-gradient(90deg,
+            transparent,
+            rgba(46, 196, 182, .45),
+            transparent);
+}
 
 /* ==========================================================
    MENU
@@ -124,11 +162,11 @@
 
     background:
         linear-gradient(135deg,
-            #2ec4b6,
-            #13a88c) !important;
+            #2EC4B6,
+            #0B6E4F) !important;
 
     box-shadow:
-        0 8px 20px rgba(46, 196, 182, .35);
+        0 12px 24px rgba(46, 196, 182, .25);
 
     color: white !important;
 }
@@ -176,19 +214,21 @@
 
 .referee-avatar {
 
-    width: 52px !important;
+    width: 52px;
 
-    height: 52px !important;
-
-    font-size: 18px;
+    height: 52px;
 
     background:
         linear-gradient(135deg,
-            #2ec4b6,
-            #14b89b);
+            #2EC4B6,
+            #0B6E4F);
+
+    font-size: 18px;
+
+    font-weight: 700;
 
     box-shadow:
-        0 10px 22px rgba(46, 196, 182, .35);
+        0 10px 24px rgba(46, 196, 182, .35);
 }
 
 .referee-account-copy {
@@ -202,13 +242,15 @@
 
     color: white;
 
-    font-weight: 700;
+    font-size: 15px;
+
+    font-weight: 800;
 }
 
 .referee-account-email {
     display: block;
 
-    color: rgba(255, 255, 255, .72);
+    color: #b8dcd8;
 
     font-size: 12px;
 
@@ -226,7 +268,11 @@
 
 .referee-content {
 
-    padding: 32px;
+    padding: 34px;
+
+    background: transparent;
+
+    min-height: 100vh;
 
     animation:
         refereeFade .35s ease;
@@ -340,22 +386,34 @@
 }
 
 .referee-brand-title {
+
+    color: white;
+
     font-size: 22px;
-    font-weight: 800;
-    color: #fff;
+
+    font-weight: 900;
+
+    letter-spacing: .6px;
 }
 
 .referee-brand-subtitle {
+
     margin-top: 2px;
-    color: rgba(255, 255, 255, .7);
+
+    color: #7BE8DC;
+
     font-size: 12px;
-    letter-spacing: 1px;
+
+    letter-spacing: 1.2px;
+
     text-transform: uppercase;
 }
 
 .referee-menu .ant-menu-item {
 
-    height: 48px;
+    height: 50px;
+
+    line-height: 50px;
 
     display: flex;
 
@@ -364,13 +422,18 @@
     transition: .25s;
 
     border-radius: 14px;
+
+    margin-bottom: 10px;
+
+    transition: .3s;
 }
 
 .referee-menu .ant-menu-item:hover {
 
-    background: rgba(255, 255, 255, .08) !important;
+    background:
+        rgba(46, 196, 182, .12) !important;
 
-    transform: translateX(4px);
+    transform: translateX(5px);
 }
 
 .referee-home-btn {
@@ -385,36 +448,40 @@
 
     background:
         linear-gradient(135deg,
-            #2ec4b6,
-            #0b6e4f) !important;
-
-    font-weight: 700;
+            #0B6E4F,
+            #2EC4B6);
 
     box-shadow:
-        0 10px 24px rgba(46, 196, 182, .3);
+        0 10px 28px rgba(46, 196, 182, .28);
+
+    font-weight: 700;
 }
 
 .referee-home-btn:hover {
 
     transform: translateY(-2px);
 
+    box-shadow:
+        0 18px 35px rgba(46, 196, 182, .4);
+
     filter: brightness(1.05);
 }
 
 .referee-logout-icon {
 
-    background: rgba(255, 255, 255, .08);
-
     border: none;
 
-    color: #fff;
+    background:
+        rgba(255, 255, 255, .08);
+
+    color: white;
 }
 
 .referee-logout-icon:hover {
 
-    background: #ff4d4f !important;
+    background: #ff5b6c !important;
 
-    color: #fff !important;
+    color: white !important;
 }
 
 .referee-role-badge {
