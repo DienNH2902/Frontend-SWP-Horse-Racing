@@ -17,11 +17,15 @@ import {
   getJockeyInvitationContract,
   respondToJockeyInvitation,
 } from "../../api/services/jockey.service";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { getTournamentById } from "../../api/services/tournament.service";
 import { getUserById } from "../../api/services/user.service";
 import { cancelContract } from "../../api/services/contract.service";
 import JockeyContractModal from "../../components/contracts/JockeyContractModal";
 import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
+
+dayjs.extend(utc);
 
 const statusColor = {
   Pending: "gold",
@@ -31,6 +35,12 @@ const statusColor = {
 
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString("vi-VN")} VND`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "N/A";
+  const parsed = dayjs.utc(value);
+  return parsed.isValid() ? parsed.format("DD/MM/YYYY HH:mm:ss") : value;
 }
 
 function pickFirstValue(source, keys, fallback = "") {
@@ -459,7 +469,9 @@ export default function JockeyInvitations() {
               {selectedDetail.jockeyCompensationRate}%
             </Descriptions.Item>
             <Descriptions.Item label="Message">{selectedDetail.message || "N/A"}</Descriptions.Item>
-            <Descriptions.Item label="Sent at">{selectedDetail.sentAt || "N/A"}</Descriptions.Item>
+            <Descriptions.Item label="Sent at">
+              {formatDateTime(selectedDetail.sentAt)}
+            </Descriptions.Item>
           </Descriptions>
         )}
       </Modal>
