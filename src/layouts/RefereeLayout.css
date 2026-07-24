@@ -35,20 +35,18 @@
 ========================================================== */
 
 .referee-sider {
-    background: #083b35 !important;
+    background:
+        linear-gradient(180deg,
+            #083b35 0%,
+            #0b4f47 45%,
+            #0d665c 100%) !important;
 
     border-right: 1px solid rgba(255, 255, 255, .08);
 
     box-shadow:
-        10px 0 30px rgba(0, 0, 0, .08);
-
-    position: sticky !important;
-
-    top: 0;
-
-    left: 0;
-
-    height: 100vh;
+        16px 0 40px rgba(0, 0, 0, .16);
+    border-radius:
+        0 22px 22px 0;
 
     overflow: hidden;
 }
@@ -80,6 +78,11 @@
     font-weight: 800;
 
     color: white;
+
+    border-bottom:
+        1px solid rgba(255, 255, 255, .08);
+
+    margin-bottom: 14px;
 }
 
 .referee-brand-logo {
@@ -118,9 +121,14 @@
 }
 
 .referee-menu .ant-menu-item-selected {
-    background: linear-gradient(135deg,
+
+    background:
+        linear-gradient(135deg,
             #2ec4b6,
-            #0b6e4f) !important;
+            #13a88c) !important;
+
+    box-shadow:
+        0 8px 20px rgba(46, 196, 182, .35);
 
     color: white !important;
 }
@@ -152,21 +160,35 @@
 ========================================================== */
 
 .referee-account {
-    display: flex;
 
-    align-items: center;
+    padding: 14px;
 
-    gap: 12px;
+    border-radius: 16px;
 
-    margin-bottom: 18px;
+    background:
+        rgba(255, 255, 255, .06);
+
+    border:
+        1px solid rgba(255, 255, 255, .08);
+
+    backdrop-filter: blur(10px);
 }
 
 .referee-avatar {
-    background: #2ec4b6;
 
-    color: white;
+    width: 52px !important;
 
-    font-weight: bold;
+    height: 52px !important;
+
+    font-size: 18px;
+
+    background:
+        linear-gradient(135deg,
+            #2ec4b6,
+            #14b89b);
+
+    box-shadow:
+        0 10px 22px rgba(46, 196, 182, .35);
 }
 
 .referee-account-copy {
@@ -203,11 +225,31 @@
 ========================================================== */
 
 .referee-content {
-    background: transparent;
 
-    padding: 28px;
+    padding: 32px;
 
-    min-height: 100vh;
+    animation:
+        refereeFade .35s ease;
+}
+
+@keyframes refereeFade {
+
+    from {
+
+        opacity: 0;
+
+        transform: translateY(12px);
+
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform: none;
+
+    }
+
 }
 
 
@@ -295,4 +337,114 @@
         padding: 20px;
     }
 
+}
+
+.referee-brand-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.referee-brand-subtitle {
+    margin-top: 2px;
+    color: rgba(255, 255, 255, .7);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.referee-menu .ant-menu-item {
+
+    height: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    transition: .25s;
+
+    border-radius: 14px;
+}
+
+.referee-menu .ant-menu-item:hover {
+
+    background: rgba(255, 255, 255, .08) !important;
+
+    transform: translateX(4px);
+}
+
+.referee-home-btn {
+
+    margin-top: 18px;
+
+    height: 46px;
+
+    border: none;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(135deg,
+            #2ec4b6,
+            #0b6e4f) !important;
+
+    font-weight: 700;
+
+    box-shadow:
+        0 10px 24px rgba(46, 196, 182, .3);
+}
+
+.referee-home-btn:hover {
+
+    transform: translateY(-2px);
+
+    filter: brightness(1.05);
+}
+
+.referee-logout-icon {
+
+    background: rgba(255, 255, 255, .08);
+
+    border: none;
+
+    color: #fff;
+}
+
+.referee-logout-icon:hover {
+
+    background: #ff4d4f !important;
+
+    color: #fff !important;
+}
+
+.referee-role-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    margin: 6px 0;
+
+    padding: 3px 10px;
+
+    border-radius: 999px;
+
+    background: linear-gradient(135deg,
+            #2ec4b6,
+            #0b6e4f);
+
+    color: #fff;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 1px;
+
+    text-transform: uppercase;
+
+    box-shadow:
+        0 4px 12px rgba(46, 196, 182, .35);
 }

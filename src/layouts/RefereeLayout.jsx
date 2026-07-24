@@ -136,7 +136,15 @@ export default function RefereeLayout({
                             alt=""
                         />
 
-                        <span>GoldenHoof</span>
+                        <div>
+                            <div className="referee-brand-title">
+                                GoldenHoof
+                            </div>
+
+                            <div className="referee-brand-subtitle">
+                                Referee Portal
+                            </div>
+                        </div>
                     </div>
 
                     <div className="referee-menu-scroll">
@@ -174,6 +182,10 @@ export default function RefereeLayout({
                                     {displayName}
                                 </span>
 
+                                <div className="referee-role-badge">
+                                    REFEREE
+                                </div>
+
                                 <span className="referee-account-email">
                                     {user.email ||
                                         displayName}
@@ -184,10 +196,7 @@ export default function RefereeLayout({
                                 <Button
                                     className="referee-logout-icon"
                                     shape="circle"
-                                    danger
-                                    icon={
-                                        <LogoutOutlined />
-                                    }
+                                    icon={<LogoutOutlined />}
                                     onClick={
                                         handleLogout
                                     }
@@ -196,6 +205,8 @@ export default function RefereeLayout({
                         </div>
 
                         <Button
+                            type="primary"
+                            className="referee-home-btn"
                             block
                             onClick={() =>
                                 navigate("/home")
