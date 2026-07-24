@@ -20,6 +20,40 @@
             #0f5048 100%);
 }
 
+.referee-layout::before {
+
+    content: "";
+
+    position: fixed;
+
+    inset: -30%;
+
+    background:
+        radial-gradient(circle,
+            rgba(46, 196, 182, .08),
+            transparent 55%);
+
+    animation:
+        refereeBackgroundMove 18s linear infinite;
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+@keyframes refereeBackgroundMove {
+
+    0% {
+        transform:
+            translate(-6%, -4%) rotate(0deg);
+    }
+
+    100% {
+        transform:
+            translate(6%, 4%) rotate(360deg);
+    }
+
+}
 
 /* ==========================================================
    RESET ANT LAYOUT
@@ -47,6 +81,15 @@
 
     box-shadow:
         12px 0 45px rgba(0, 0, 0, .35);
+
+    transition: .35s;
+}
+
+.referee-sider:hover {
+
+    box-shadow:
+
+        18px 0 55px rgba(0, 0, 0, .45);
 }
 
 .referee-sider-inner {
@@ -111,6 +154,17 @@
     height: 42px;
 
     object-fit: contain;
+
+    transition: .45s;
+}
+
+.referee-brand:hover .referee-brand-logo {
+
+    transform:
+        rotate(-10deg) scale(1.08);
+
+    filter:
+        drop-shadow(0 0 18px rgba(46, 196, 182, .6));
 }
 
 .referee-brand::after {
@@ -169,6 +223,45 @@
         0 12px 24px rgba(46, 196, 182, .25);
 
     color: white !important;
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+.referee-menu .ant-menu-item-selected::after {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+
+        linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, .28),
+            transparent);
+
+    animation:
+        refereeMenuGlow 2.8s infinite;
+}
+
+@keyframes refereeMenuGlow {
+
+    from {
+
+        transform:
+            translateX(-100%);
+    }
+
+    to {
+
+        transform:
+            translateX(220%);
+    }
+
 }
 
 .referee-link {
@@ -210,6 +303,19 @@
         1px solid rgba(255, 255, 255, .08);
 
     backdrop-filter: blur(10px);
+
+    transition: .3s;
+}
+
+.referee-account:hover {
+
+    transform: translateY(-3px);
+
+    background:
+        rgba(255, 255, 255, .08);
+
+    box-shadow:
+        0 15px 35px rgba(46, 196, 182, .15);
 }
 
 .referee-avatar {
@@ -229,6 +335,16 @@
 
     box-shadow:
         0 10px 24px rgba(46, 196, 182, .35);
+
+    transition: .35s;
+}
+
+.referee-avatar:hover {
+
+    transform: scale(1.08);
+
+    box-shadow:
+        0 0 25px rgba(46, 196, 182, .65);
 }
 
 .referee-account-copy {
@@ -268,14 +384,44 @@
 
 .referee-content {
 
-    padding: 34px;
+    margin: 22px;
 
-    background: transparent;
+    border-radius: 28px;
 
-    min-height: 100vh;
+    background:
+        rgba(255, 255, 255, .04);
+
+    backdrop-filter: blur(16px);
+
+    border:
+        1px solid rgba(255, 255, 255, .06);
+
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, .25);
+
+    overflow: hidden;
 
     animation:
-        refereeFade .35s ease;
+        refereePage .45s ease;
+}
+
+@keyframes refereePage {
+
+    from {
+
+        opacity: 0;
+
+        transform:
+            translateY(18px) scale(.985);
+    }
+
+    to {
+
+        opacity: 1;
+
+        transform: none;
+    }
+
 }
 
 @keyframes refereeFade {
@@ -394,6 +540,16 @@
     font-weight: 900;
 
     letter-spacing: .6px;
+
+    transition: .35s;
+}
+
+.referee-brand:hover .referee-brand-title {
+
+    color: #7BE8DC;
+
+    text-shadow:
+        0 0 15px rgba(46, 196, 182, .45);
 }
 
 .referee-brand-subtitle {
@@ -455,6 +611,10 @@
         0 10px 28px rgba(46, 196, 182, .28);
 
     font-weight: 700;
+
+    position: relative;
+
+    overflow: hidden;
 }
 
 .referee-home-btn:hover {
@@ -465,6 +625,36 @@
         0 18px 35px rgba(46, 196, 182, .4);
 
     filter: brightness(1.05);
+}
+
+.referee-home-btn::before {
+
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+
+    left: -120%;
+
+    width: 70%;
+
+    height: 100%;
+
+    background:
+
+        linear-gradient(120deg,
+            transparent,
+            rgba(255, 255, 255, .35),
+            transparent);
+
+}
+
+.referee-home-btn:hover::before {
+
+    left: 170%;
+
+    transition: .7s;
 }
 
 .referee-logout-icon {
@@ -514,4 +704,131 @@
 
     box-shadow:
         0 4px 12px rgba(46, 196, 182, .35);
+}
+
+.referee-menu-scroll::-webkit-scrollbar {
+
+    width: 6px;
+}
+
+.referee-menu-scroll::-webkit-scrollbar-thumb {
+
+    background:
+        linear-gradient(#2EC4B6,
+            #0B6E4F);
+
+    border-radius: 999px;
+}
+
+.referee-particles {
+
+    position: fixed;
+
+    inset: 0;
+
+    overflow: hidden;
+
+    pointer-events: none;
+
+    z-index: 0;
+}
+
+.referee-particles span {
+
+    position: absolute;
+
+    width: 10px;
+
+    height: 10px;
+
+    border-radius: 50%;
+
+    background: #2EC4B6;
+
+    opacity: .18;
+
+    animation:
+        particleFloat 18s linear infinite;
+}
+
+.referee-particles span:nth-child(1) {
+
+    left: 10%;
+
+    animation-duration: 16s;
+}
+
+.referee-particles span:nth-child(2) {
+
+    left: 28%;
+
+    width: 14px;
+
+    height: 14px;
+
+    animation-duration: 22s;
+}
+
+.referee-particles span:nth-child(3) {
+
+    left: 52%;
+
+    animation-duration: 20s;
+}
+
+.referee-particles span:nth-child(4) {
+
+    left: 75%;
+
+    width: 18px;
+
+    height: 18px;
+
+    animation-duration: 24s;
+}
+
+.referee-particles span:nth-child(5) {
+
+    left: 90%;
+
+    animation-duration: 18s;
+}
+
+@keyframes particleFloat {
+
+    from {
+
+        transform:
+            translateY(110vh);
+
+        opacity: 0;
+    }
+
+    15% {
+
+        opacity: .18;
+    }
+
+    85% {
+
+        opacity: .18;
+    }
+
+    to {
+
+        transform:
+            translateY(-20vh);
+
+        opacity: 0;
+    }
+
+}
+
+.referee-sider,
+.referee-content,
+.referee-mobile-header {
+
+    position: relative;
+
+    z-index: 1;
 }

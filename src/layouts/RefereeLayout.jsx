@@ -117,6 +117,13 @@ export default function RefereeLayout({
                 : ""
                 }`}
         >
+            <div className="referee-particles">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
             <button
                 className="referee-mobile-backdrop"
                 type="button"
