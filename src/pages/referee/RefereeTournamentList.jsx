@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import {
     Card,
     Input,
@@ -31,6 +33,8 @@ import { getHorseById } from "../../api/services/horse.service";
 import { getUserById } from "../../api/services/user.service";
 
 import "./RefereeTournamentList.css";
+
+dayjs.extend(utc);
 
 const { Text } = Typography;
 
@@ -736,17 +740,13 @@ export default function RefereeTournamentList() {
 
                                 <Descriptions.Item label="Start Time">
                                     {selectedRace.startTime
-                                        ? new Date(
-                                            selectedRace.startTime
-                                        ).toLocaleString()
+                                        ? dayjs.utc(selectedRace.startTime).format("HH:mm DD/MM/YYYY")
                                         : "-"}
                                 </Descriptions.Item>
 
                                 <Descriptions.Item label="Date">
                                     {selectedRace.date
-                                        ? new Date(
-                                            selectedRace.date
-                                        ).toLocaleDateString()
+                                        ? dayjs.utc(selectedRace.date).format("DD/MM/YYYY")
                                         : "-"}
                                 </Descriptions.Item>
 

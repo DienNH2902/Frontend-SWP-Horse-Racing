@@ -1,38 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { getFinishedRaceResults } from "../api/services/home.service";
 import Pagination from "../components/ui/Pagination";
 import "./ExploreLists.css";
 
+dayjs.extend(utc);
+
 const PAGE_SIZE = 6;
 
-function formatDate(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : new Intl.DateTimeFormat("vi-VN", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(date);
+function formatRaceDateTime(value, fallback = "-") {
+  if (!value) return fallback;
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm DD/MM/YYYY") : fallback;
 }
 
-function formatRaceDateTime(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  const parts = new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(date);
-  const valueByType = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  );
-
-  return `${valueByType.hour}:${valueByType.minute} ${valueByType.day}/${valueByType.month}/${valueByType.year}`;
+function getDateSortValue(value) {
+  const date = dayjs(value);
+  return date.isValid() ? date.valueOf() : 0;
 }
 
 export default function AllRaceResults() {
@@ -73,11 +59,11 @@ export default function AllRaceResults() {
       )
       .sort((first, second) => {
         if (sort === "date-asc") {
-          return (new Date(first.date).getTime() || 0) - (new Date(second.date).getTime() || 0);
+          return getDateSortValue(first.date) - getDateSortValue(second.date);
         }
         if (sort === "name-asc") return first.race.localeCompare(second.race);
         if (sort === "name-desc") return second.race.localeCompare(first.race);
-        return (new Date(second.date).getTime() || 0) - (new Date(first.date).getTime() || 0);
+        return getDateSortValue(second.date) - getDateSortValue(first.date);
       });
   }, [results, search, sort, surface]);
   const paginatedResults = visibleResults.slice(

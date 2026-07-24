@@ -29,6 +29,8 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
 import RefereeHorseDetailModal from "./RefereeHorseDetailModal";
 import RefereeJockeyDetailModal from "./RefereeJockeyDetailModal";
@@ -74,6 +76,8 @@ import {
 import {
     getTournamentParticipants,
 } from "../../api/services/tournament.service";
+
+dayjs.extend(utc);
 
 function renderResultStatus(status) {
     return (
@@ -445,7 +449,7 @@ export default function RefereeRaceDetail() {
             title: "Finish Time",
             dataIndex: "finishedTime",
             render: (value) =>
-                new Date(value).toLocaleString(),
+                value ? dayjs.utc(value).format("HH:mm DD/MM/YYYY") : "-",
         },
         {
             title: "Result",
@@ -1044,15 +1048,11 @@ export default function RefereeRaceDetail() {
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Date">
-                            {new Date(
-                                race.date
-                            ).toLocaleDateString()}
+                            {race.date ? dayjs.utc(race.date).format("DD/MM/YYYY") : "N/A"}
                         </Descriptions.Item>
 
                         <Descriptions.Item label="Start Time">
-                            {new Date(
-                                race.startTime
-                            ).toLocaleString()}
+                            {race.startTime ? dayjs.utc(race.startTime).format("HH:mm DD/MM/YYYY") : "N/A"}
                         </Descriptions.Item>
                     </Descriptions>
                 </Card>
@@ -1444,9 +1444,7 @@ export default function RefereeRaceDetail() {
                                 {
                                     color: "#14b8a6",
                                     children: `Created: ${race.createdAt
-                                        ? new Date(
-                                            race.createdAt
-                                        ).toLocaleString()
+                                        ? dayjs.utc(race.createdAt).format("HH:mm DD/MM/YYYY")
                                         : "-"
                                         }`,
                                 },
@@ -1456,9 +1454,7 @@ export default function RefereeRaceDetail() {
                                             ? "green"
                                             : "gray",
                                     children: `Referee Confirmed: ${race.refereeConfirmedAt
-                                        ? new Date(
-                                            race.refereeConfirmedAt
-                                        ).toLocaleString()
+                                        ? dayjs.utc(race.refereeConfirmedAt).format("HH:mm DD/MM/YYYY")
                                         : "-"
                                         }`,
                                 },
@@ -1468,9 +1464,7 @@ export default function RefereeRaceDetail() {
                                             ? "green"
                                             : "gray",
                                     children: `Simulated: ${race.simulatedAt
-                                        ? new Date(
-                                            race.simulatedAt
-                                        ).toLocaleString()
+                                        ? dayjs.utc(race.simulatedAt).format("HH:mm DD/MM/YYYY")
                                         : "-"
                                         }`,
                                 },

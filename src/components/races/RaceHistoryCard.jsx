@@ -10,6 +10,10 @@ import {
   Typography,
 } from "antd";
 import { useState } from "react";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 function asArray(value) {
   if (!value) return [];
@@ -18,26 +22,14 @@ function asArray(value) {
 
 function formatRaceDate(value) {
   if (!value) return "N/A";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-
-  return parsed.toLocaleDateString("vi-VN");
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY") : value;
 }
 
 function formatRaceDateTime(value) {
   if (!value) return "N/A";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return String(value);
-
-  return parsed.toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm DD/MM/YYYY") : String(value);
 }
 
 function displayValue(value) {

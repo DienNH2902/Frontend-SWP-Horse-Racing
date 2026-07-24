@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import {
   Alert,
   Button,
@@ -36,6 +38,8 @@ import { getUpcomingSchedule } from "../../api/services/schedule.service";
 import { getAdminTournamentStats } from "../../api/services/tournament.service";
 import { getAdminDashboardStats } from "../../api/services/user.service";
 import { getSystemWalletOverview } from "../../api/services/wallet.service";
+
+dayjs.extend(utc);
 
 const ROLE_ORDER = ["Spectator", "Horse Owner", "Jockey", "Referee"];
 const MONTH_LABELS = [
@@ -115,23 +119,14 @@ function toArray(value) {
 
 function formatDate(value) {
   if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "N/A";
-
-  return date.toLocaleDateString("vi-VN");
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY") : "N/A";
 }
 
 function formatTime(value) {
   if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "N/A";
-
-  return date.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm") : "N/A";
 }
 
 function getRaceStatusColor(status) {

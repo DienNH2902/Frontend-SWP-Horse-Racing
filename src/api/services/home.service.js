@@ -1,6 +1,10 @@
 import { getRacesByTournament } from "./race.service";
 import { getRaceCourses } from "./race-course.service";
 import { getTournamentResults, getTournaments } from "./tournament.service";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
@@ -45,31 +49,20 @@ function formatRaceTime(race) {
     race?.startTime || race?.startAt || race?.scheduledAt || race?.date;
   if (!startTime) return "TBA";
 
-  const date = new Date(startTime);
-  if (!Number.isNaN(date.getTime())) {
-    return date.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  return String(startTime);
+  const date = dayjs.utc(startTime);
+  return date.isValid() ? date.format("HH:mm") : String(startTime);
 }
 
 function formatResultTime(value) {
   if (!value) return "—";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm:ss DD/MM/YYYY") : String(value);
+}
 
-  return new Intl.DateTimeFormat("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
+function getDateSortValue(value, fallback = 0) {
+  const date = dayjs(value);
+  return date.isValid() ? date.valueOf() : fallback;
 }
 
 function normalizeHomeRace(race, tournament, index, raceCourse) {
@@ -331,8 +324,14 @@ async function loadRaceCollections() {
         if (Boolean(first.status) !== Boolean(second.status)) {
           return first.status ? -1 : 1;
         }
-        const firstTime = new Date(first.sortTime).getTime();
-        const secondTime = new Date(second.sortTime).getTime();
+        const firstTime = getDateSortValue(
+          first.sortTime,
+          Number.MAX_SAFE_INTEGER,
+        );
+        const secondTime = getDateSortValue(
+          second.sortTime,
+          Number.MAX_SAFE_INTEGER,
+        );
         return (
           (Number.isNaN(firstTime) ? Number.MAX_SAFE_INTEGER : firstTime) -
           (Number.isNaN(secondTime) ? Number.MAX_SAFE_INTEGER : secondTime)
@@ -344,8 +343,7 @@ async function loadRaceCollections() {
         ).values(),
       ).sort(
         (first, second) =>
-          (new Date(second.date).getTime() || 0) -
-          (new Date(first.date).getTime() || 0),
+          getDateSortValue(second.date) - getDateSortValue(first.date),
       );
 
       return { upcoming: uniqueUpcoming, finished: uniqueFinished };

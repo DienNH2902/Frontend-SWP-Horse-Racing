@@ -31,9 +31,11 @@ import {
 } from "../../api/services/user.service";
 import dayjs from "dayjs";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
+import utc from "dayjs/plugin/utc";
 
 import customParseFormat from "dayjs/plugin/customParseFormat";
 dayjs.extend(customParseFormat);
+dayjs.extend(utc);
 
 const { Text, Title } = Typography;
 const { Search } = Input;
@@ -63,14 +65,8 @@ function formatDate(value) {
     return value;
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY") : value;
 }
 
 function getTimeValue(value) {

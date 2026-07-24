@@ -3,6 +3,10 @@ import { JOCKEY_INVITATION_ENDPOINTS } from "../endpoints/jockeyInvitation.endpo
 import { SCHEDULE_ENDPOINTS } from "../endpoints/schedule.endpoint";
 import { getProfile } from "./auth.service";
 import { getUserById } from "./user.service";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
@@ -154,7 +158,7 @@ function normalizeUpcomingSchedule(schedule = {}, index = 0) {
       pickFirstValue(
         race,
         ["date", "raceDate"],
-        hasValidStartTime ? parsedStartTime.toLocaleDateString("vi-VN") : "N/A",
+        hasValidStartTime ? dayjs.utc(startTime).format("DD/MM/YYYY") : "N/A",
       ),
     ),
     time: pickFirstValue(
@@ -164,10 +168,7 @@ function normalizeUpcomingSchedule(schedule = {}, index = 0) {
         race,
         ["time"],
         hasValidStartTime
-          ? parsedStartTime.toLocaleTimeString("vi-VN", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+          ? dayjs.utc(startTime).format("HH:mm")
           : "N/A",
       ),
     ),
