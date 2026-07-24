@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import RoleLayout from "../layouts/RoleLayout";
+import RefereeLayout from "../layouts/RefereeLayout";
 import Home from "../pages/Home";
 import JockeyProfile from "../pages/JockeyProfile";
 import Landing from "../pages/Landing";
@@ -340,10 +341,7 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute allowedRoles={["Referee"]} />}>
         <Route
           element={
-            <RoleLayout
-              role="Referee"
-              title="Referee workspace"
-              subtitle="Review races and manage results"
+            <RefereeLayout
               navItems={REFEREE_NAV}
             />
           }

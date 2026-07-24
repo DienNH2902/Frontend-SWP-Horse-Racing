@@ -1,0 +1,298 @@
+/* ==========================================================
+   REFEREE LAYOUT
+========================================================== */
+
+.referee-layout {
+    min-height: 100vh;
+
+    background:
+        radial-gradient(circle at top right,
+            rgba(46, 196, 182, .16),
+            transparent 34%),
+
+        radial-gradient(circle at bottom left,
+            rgba(11, 110, 79, .12),
+            transparent 42%),
+
+        linear-gradient(180deg,
+            #eefcf8 0%,
+            #f8fffd 100%);
+}
+
+
+/* ==========================================================
+   RESET ANT LAYOUT
+========================================================== */
+
+.referee-layout>.ant-layout,
+.referee-layout .ant-layout {
+    background: transparent;
+}
+
+
+/* ==========================================================
+   SIDER
+========================================================== */
+
+.referee-sider {
+    background: #083b35 !important;
+
+    border-right: 1px solid rgba(255, 255, 255, .08);
+
+    box-shadow:
+        10px 0 30px rgba(0, 0, 0, .08);
+
+    position: sticky !important;
+
+    top: 0;
+
+    left: 0;
+
+    height: 100vh;
+
+    overflow: hidden;
+}
+
+.referee-sider-inner {
+    height: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+
+/* ==========================================================
+   BRAND
+========================================================== */
+
+.referee-brand {
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 28px 22px;
+
+    font-size: 22px;
+
+    font-weight: 800;
+
+    color: white;
+}
+
+.referee-brand-logo {
+    width: 42px;
+
+    height: 42px;
+
+    object-fit: contain;
+}
+
+
+/* ==========================================================
+   MENU
+========================================================== */
+
+.referee-menu-scroll {
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 0 14px 18px;
+}
+
+.referee-menu {
+    border: none !important;
+
+    background: transparent !important;
+}
+
+.referee-menu .ant-menu-item {
+    border-radius: 12px;
+
+    margin-bottom: 8px;
+
+    font-weight: 600;
+}
+
+.referee-menu .ant-menu-item-selected {
+    background: linear-gradient(135deg,
+            #2ec4b6,
+            #0b6e4f) !important;
+
+    color: white !important;
+}
+
+.referee-link {
+    display: block;
+
+    width: 100%;
+
+    color: inherit;
+
+    text-decoration: none;
+}
+
+
+/* ==========================================================
+   FOOTER
+========================================================== */
+
+.referee-sider-footer {
+    padding: 20px;
+
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+
+/* ==========================================================
+   ACCOUNT
+========================================================== */
+
+.referee-account {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 18px;
+}
+
+.referee-avatar {
+    background: #2ec4b6;
+
+    color: white;
+
+    font-weight: bold;
+}
+
+.referee-account-copy {
+    flex: 1;
+
+    overflow: hidden;
+}
+
+.referee-account-name {
+    display: block;
+
+    color: white;
+
+    font-weight: 700;
+}
+
+.referee-account-email {
+    display: block;
+
+    color: rgba(255, 255, 255, .72);
+
+    font-size: 12px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+
+/* ==========================================================
+   CONTENT
+========================================================== */
+
+.referee-content {
+    background: transparent;
+
+    padding: 28px;
+
+    min-height: 100vh;
+}
+
+
+/* ==========================================================
+   MOBILE HEADER
+========================================================== */
+
+.referee-mobile-header {
+    display: none;
+
+    height: 64px;
+
+    align-items: center;
+
+    padding: 0 18px;
+}
+
+.referee-mobile-menu-btn {
+    font-size: 22px;
+}
+
+
+/* ==========================================================
+   MOBILE DRAWER
+========================================================== */
+
+.referee-mobile-backdrop {
+    display: none;
+}
+
+
+/* ==========================================================
+   RESPONSIVE
+========================================================== */
+
+@media (max-width:992px) {
+
+    .referee-sider {
+
+        position: fixed !important;
+
+        z-index: 1200;
+
+        left: -250px;
+
+        transition: .28s;
+    }
+
+    .referee-layout-menu-open .referee-sider {
+        left: 0;
+    }
+
+    .referee-mobile-header {
+        display: flex;
+    }
+
+    .referee-mobile-backdrop {
+
+        display: block;
+
+        position: fixed;
+
+        inset: 0;
+
+        background: rgba(0, 0, 0, .35);
+
+        border: none;
+
+        opacity: 0;
+
+        visibility: hidden;
+
+        transition: .25s;
+
+        z-index: 1100;
+    }
+
+    .referee-layout-menu-open .referee-mobile-backdrop {
+        opacity: 1;
+
+        visibility: visible;
+    }
+
+    .referee-content {
+        padding: 20px;
+    }
+
+}
