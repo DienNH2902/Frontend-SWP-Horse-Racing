@@ -323,74 +323,6 @@ function AdminLayout({ children }) {
           background: #f6fbfa;
         }
 
-        .admin-layout .ant-select:not(.ant-select-disabled) .ant-select-selector {
-          border-color: #2563eb !important;
-          background: #eff6ff !important;
-          color: #0f172a;
-          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
-          transition: border-color 0.16s ease, box-shadow 0.16s ease;
-        }
-
-        .admin-layout .ant-select:not(.ant-select-disabled):hover .ant-select-selector {
-          border-color: #1d4ed8 !important;
-          background: #dbeafe !important;
-        }
-
-        .admin-layout .ant-select-focused:not(.ant-select-disabled) .ant-select-selector,
-        .admin-layout .ant-select-open:not(.ant-select-disabled) .ant-select-selector {
-          border-color: #1d4ed8 !important;
-          background: #ffffff !important;
-          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22) !important;
-        }
-
-        .admin-layout .ant-select-selection-placeholder {
-          color: #64748b;
-        }
-
-        .admin-layout .ant-select-selection-item {
-          color: #0f172a;
-          font-weight: 750;
-        }
-
-        .admin-layout .ant-select-arrow {
-          color: #1d4ed8;
-        }
-
-        .admin-layout .ant-select-clear {
-          color: #64748b;
-          background: #eff6ff;
-        }
-
-        .ant-select-dropdown,
-        .ant-select-dropdown.ant-slide-up-enter,
-        .ant-select-dropdown.ant-slide-up-appear {
-          border: 1px solid #1d4ed8;
-          border-radius: 8px;
-          background: #dbeafe;
-          box-shadow: 0 18px 48px rgba(30, 64, 175, 0.24);
-          overflow: hidden;
-        }
-
-        .ant-select-dropdown .ant-select-item {
-          color: #0f172a;
-          border-radius: 6px;
-          margin: 2px 4px;
-        }
-
-        .ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
-          background: #bfdbfe !important;
-        }
-
-        .ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
-          color: #ffffff !important;
-          background: #1d4ed8 !important;
-          font-weight: 900;
-        }
-
-        .ant-select-dropdown .ant-select-item-option-selected .ant-select-item-option-content {
-          color: #ffffff !important;
-        }
-
         .admin-mobile-header {
           display: none;
         }
@@ -519,9 +451,7 @@ function AdminLayout({ children }) {
               </Avatar>
               <div className="admin-account-copy">
                 <div className="admin-account-name">{displayName}</div>
-                <div className="admin-account-email">
-                  {accountLabel}
-                </div>
+                <div className="admin-account-email">{accountLabel}</div>
               </div>
               <Button
                 className="admin-logout-btn"
@@ -538,10 +468,7 @@ function AdminLayout({ children }) {
 
             <div className="admin-footer-actions">
               <Tooltip title="Open home">
-                <Button
-                  block
-                  onClick={() => navigate("/home")}
-                >
+                <Button block onClick={() => navigate("/home")}>
                   Home
                 </Button>
               </Tooltip>
