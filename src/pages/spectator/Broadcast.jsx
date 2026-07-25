@@ -12,6 +12,7 @@ const TICK_DURATION_SECONDS = 0.5;
 // v2 only contains results received from the spectator socket's race_finished.
 // The previous cache could contain referee/raw simulation data.
 const RESULT_CACHE_PREFIX = "goldenhoof_broadcast_result_v2_";
+const FINISHED_TRACK_CACHE_PREFIX = "goldenhoof_finished_track_v1_";
 
 const COLORS = [
   "#ef4444",
@@ -244,11 +245,106 @@ function clearCachedResults(raceId) {
   }
 }
 
+function normalizeHorseId(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+
+  return (
+    value.horseId?._id ||
+    value.horseId?.id ||
+    value.horseId?.horseId ||
+    value.horseId ||
+    value.horse?._id ||
+    value.horse?.id ||
+    value.horse?.horseId?._id ||
+    value.horse?.horseId?.id ||
+    value.horse?.horseId ||
+    value._id ||
+    value.id ||
+    ""
+  );
+}
+
+function readCachedFinishedTrack(raceId) {
+  if (!raceId) return [];
+  try {
+    const cached = JSON.parse(
+      window.localStorage.getItem(`${FINISHED_TRACK_CACHE_PREFIX}${raceId}`),
+    );
+    return Array.isArray(cached?.horses) ? cached.horses : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCachedFinishedTrack(raceId, horses) {
+  if (!raceId || !Array.isArray(horses)) return;
+  const finishedHorses = horses
+    .filter((horse) => Number(horse.progress) >= 1)
+    .map((horse) => ({
+      horseId: normalizeHorseId(horse),
+      lane: horse.lane,
+      progress: 1,
+      color: horse.color,
+      icon: horse.icon,
+      instant: true,
+      finished: true,
+    }))
+    .filter((horse) => horse.horseId);
+
+  try {
+    const previous = readCachedFinishedTrack(raceId);
+    const byHorseId = new Map(
+      previous.map((horse) => [String(horse.horseId), horse]),
+    );
+    finishedHorses.forEach((horse) => {
+      byHorseId.set(String(horse.horseId), horse);
+    });
+
+    window.localStorage.setItem(
+      `${FINISHED_TRACK_CACHE_PREFIX}${raceId}`,
+      JSON.stringify({
+        horses: [...byHorseId.values()],
+        savedAt: new Date().toISOString(),
+      }),
+    );
+  } catch {
+    // Track cache is only a UI recovery path.
+  }
+}
+
+function clearCachedFinishedTrack(raceId) {
+  if (!raceId) return;
+  try {
+    window.localStorage.removeItem(`${FINISHED_TRACK_CACHE_PREFIX}${raceId}`);
+  } catch {
+    // A live socket session can continue even when storage is unavailable.
+  }
+}
+
+function mergeTrackHorses(primary, fallback) {
+  const byHorseId = new Map();
+
+  [...fallback, ...primary].forEach((horse) => {
+    const horseId = normalizeHorseId(horse);
+    if (!horseId) return;
+    byHorseId.set(String(horseId), {
+      ...horse,
+      horseId: String(horseId),
+      progress: Math.min(1, Math.max(0, Number(horse.progress) || 0)),
+    });
+  });
+
+  return [...byHorseId.values()].sort(
+    (first, second) => Number(first.lane) - Number(second.lane),
+  );
+}
+
 function createTrack(horses) {
   return [...horses]
     .sort((a, b) => a.lane - b.lane)
     .map((horse, index) => ({
-      horseId: horse.horseId,
+      horseId: normalizeHorseId(horse),
       lane: horse.lane,
       progress: Math.min(1, Math.max(0, Number(horse.progress) || 0)),
       color: COLORS[index % COLORS.length],
@@ -329,8 +425,9 @@ export function BroadcastExperience({ mode = "live" }) {
   const initializeTrack = useCallback((horseList) => {
     if (!Array.isArray(horseList) || !horseList.length) return;
     trackInitializedRef.current = true;
-    setHorses(createTrack(horseList));
-  }, []);
+    const cachedFinished = readCachedFinishedTrack(raceId);
+    setHorses(createTrack(mergeTrackHorses(horseList, cachedFinished)));
+  }, [raceId]);
 
   const updateTrack = useCallback((horseList, instant) => {
     if (!Array.isArray(horseList)) return;
@@ -341,8 +438,8 @@ export function BroadcastExperience({ mode = "live" }) {
       ]),
     );
 
-    setHorses((previous) =>
-      previous.map((horse) =>
+    setHorses((previous) => {
+      const next = previous.map((horse) =>
         progressById.has(horse.horseId)
           ? {
               ...horse,
@@ -350,9 +447,12 @@ export function BroadcastExperience({ mode = "live" }) {
               instant,
             }
           : horse,
-      ),
-    );
-  }, []);
+      );
+
+      saveCachedFinishedTrack(raceId, next);
+      return next;
+    });
+  }, [raceId]);
 
   const disconnect = useCallback(() => {
     const socket = socketRef.current;
@@ -499,6 +599,26 @@ export function BroadcastExperience({ mode = "live" }) {
       setIsCatchUp(false);
       if (data?.tickNumber != null) setCurrentTick(data.tickNumber);
       const sortedResults = normalizeResults(data?.results || data);
+      setHorses((previous) => {
+        const finishedFromResults = sortedResults.map((result, index) => {
+          const previousHorse = previous.find(
+            (horse) => horse.horseId === result.horseId,
+          );
+
+          return {
+            horseId: result.horseId,
+            lane: previousHorse?.lane || index + 1,
+            progress: 1,
+            color: previousHorse?.color,
+            icon: previousHorse?.icon,
+            instant: true,
+            finished: true,
+          };
+        });
+        const next = createTrack(mergeTrackHorses(previous, finishedFromResults));
+        saveCachedFinishedTrack(raceId, next);
+        return next;
+      });
       setResults(sortedResults);
       saveCachedResults(raceId, sortedResults);
       try {
@@ -578,6 +698,7 @@ export function BroadcastExperience({ mode = "live" }) {
 
     try {
       await createReplaySession(cleanRaceId);
+      clearCachedFinishedTrack(cleanRaceId);
       setReplayMessage("Replay started.");
       addLog("Replay started.", "system");
     } catch (error) {
@@ -644,6 +765,11 @@ export function BroadcastExperience({ mode = "live" }) {
     finishedRef.current = false;
 
     const cachedResults = readCachedResults(raceId);
+    const cachedFinishedTrack = readCachedFinishedTrack(raceId);
+    if (cachedFinishedTrack.length) {
+      trackInitializedRef.current = true;
+      setHorses(createTrack(cachedFinishedTrack));
+    }
     if (cachedResults.length) {
       setResults(cachedResults);
       setIsFinished(true);

@@ -89,13 +89,8 @@ function getRaceCourseName(item) {
 
 function formatDate(value) {
   if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-  }).format(date);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY") : value;
 }
 
 // function formatDateTime(value) {

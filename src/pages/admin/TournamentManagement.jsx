@@ -19,6 +19,7 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import utc from "dayjs/plugin/utc";
 import { useNavigate } from "react-router-dom";
 import "antd/dist/reset.css";
 import {
@@ -38,6 +39,7 @@ import {
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
 
 dayjs.extend(customParseFormat);
+dayjs.extend(utc);
 
 const { Title, Text } = Typography;
 
@@ -69,14 +71,8 @@ function buildRaceStartTime(date, time) {
 
 function formatDateTime(value) {
   if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY HH:mm") : value;
 }
 
 function toDatePickerValue(value) {

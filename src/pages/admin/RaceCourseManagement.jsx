@@ -15,6 +15,8 @@ import {
   message,
 } from "antd";
 import "antd/dist/reset.css";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import {
   createRaceCourse,
   deleteRaceCourse,
@@ -23,6 +25,8 @@ import {
   updateRaceCourse,
 } from "../../api/services/race-course.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
+
+dayjs.extend(utc);
 
 const { Text, Title } = Typography;
 
@@ -38,19 +42,10 @@ function resolveList(response) {
 
 function formatDate(value) {
   if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false, // Dùng hệ 24h (HH:mm)
-  }).format(date);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm DD/MM/YYYY") : value;
 }
+
 
 function getTimeValue(value) {
   if (!value) return 0;

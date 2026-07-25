@@ -24,6 +24,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import {
   createReport,
   deleteReport,
@@ -31,21 +32,15 @@ import {
   getReportById,
 } from "../api/services/report.service";
 
+dayjs.extend(utc);
+
 const { Text, Title, Paragraph } = Typography;
 const { TextArea } = Input;
 
 function formatDate(value) {
   if (!value) return "N/A";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(date);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY HH:mm:ss") : value;
 }
 
 export default function ReportPage() {
@@ -277,7 +272,7 @@ export default function ReportPage() {
       width: 180,
       render: (date) => (
         <Text style={{ color: "rgba(244, 255, 251, 0.5)" }}>
-          {date ? dayjs(date).format("YYYY-MM-DD HH:mm:ss") : "N/A"}
+          {date ? dayjs.utc(date).format("YYYY-MM-DD HH:mm:ss") : "N/A"}
         </Text>
       ),
     },

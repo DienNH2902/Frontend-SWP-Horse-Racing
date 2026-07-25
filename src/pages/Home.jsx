@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { getHomePageData } from "../api/services/home.service";
 import { API_BASE_URL } from "../api/client";
 import { getHorses } from "../api/services/horse.service";
@@ -20,6 +22,8 @@ import {
   markNotificationAsRead,
 } from "../api/services/notification.service";
 
+dayjs.extend(utc);
+
 // function formatRaceDateTime(value, fallback = "TBA") {
 //   if (!value) return fallback;
 //   const date = new Date(value);
@@ -36,16 +40,14 @@ function formatRaceDateTime(value) {
   if (typeof value === "string" && value.includes("/")) {
     return value;
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm DD/MM/YYYY") : value;
+}
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+function formatDateTime(value, fallback = "N/A") {
+  if (!value) return fallback;
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm DD/MM/YYYY") : fallback;
 }
 
 function Icon({ name, size = 24 }) {
@@ -2182,9 +2184,7 @@ function Home() {
                           )}
                           {notification.createdAt && (
                             <span className="notification-time">
-                              {new Date(
-                                notification.createdAt,
-                              ).toLocaleString()}
+                              {formatDateTime(notification.createdAt)}
                             </span>
                           )}
                         </Link>
@@ -2686,7 +2686,7 @@ function Home() {
                       </span>
                       <strong>{result.race}</strong>
                       <span>
-                        {result.venue} · {result.distance} · {result.surface}
+                        {result.venue} · {result.distance} · {result.trackType}
                       </span>
                     </div>
                     <div className="winner">

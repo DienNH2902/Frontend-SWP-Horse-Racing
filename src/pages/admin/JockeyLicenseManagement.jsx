@@ -17,6 +17,10 @@ import "antd/dist/reset.css";
 import { getJockeysWithLicenses } from "../../api/services/user.service";
 import { updateJockeyStatus } from "../../api/services/jockeyLicense.service";
 import { useAdminTableFixedColumns } from "../../hooks/useAdminTableFixedColumns";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const { Text, Title } = Typography;
 
@@ -34,14 +38,8 @@ function formatDate(value) {
   if (typeof value === "string" && value.includes("/")) {
     return value;
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY") : value;
 }
 
 function getTimeValue(value) {

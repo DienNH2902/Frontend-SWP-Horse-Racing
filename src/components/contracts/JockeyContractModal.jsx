@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Button, Input, Modal, Tag, Radio, Typography, message } from "antd";
 import html2pdf from "html2pdf.js";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 const statusColor = {
   ACTIVE: "green",
@@ -15,14 +19,8 @@ function formatMoney(value) {
 
 function formatContractDate(value) {
   if (!value) return "N/A";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "long",
-    timeStyle: "short",
-  }).format(date);
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("DD/MM/YYYY HH:mm") : value;
 }
 
 function getInitial(value) {
