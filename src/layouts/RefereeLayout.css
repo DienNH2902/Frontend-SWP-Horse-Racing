@@ -210,6 +210,8 @@
     margin-bottom: 8px;
 
     font-weight: 600;
+
+    color: #ffffff !important;
 }
 
 .referee-menu .ant-menu-item-selected {
