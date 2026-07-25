@@ -20,12 +20,19 @@ function unwrapCollection(response) {
     return [];
 }
 
-export async function getTournaments(status) {
+export async function getTournaments(filters = {}) {
+    const normalizedFilters =
+        typeof filters === "string" ? { status: filters } : filters;
+    const { status, search } = normalizedFilters || {};
+
     const response = await apiClient.get(
         TOURNAMENT_ENDPOINTS.ROOT,
         {
             includeAuth: true,
-            params: status ? { status } : undefined,
+            params: {
+                ...(status ? { status } : {}),
+                ...(search ? { search } : {}),
+            },
         }
     );
 

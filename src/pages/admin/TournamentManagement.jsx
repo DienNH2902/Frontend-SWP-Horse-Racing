@@ -42,6 +42,7 @@ dayjs.extend(customParseFormat);
 dayjs.extend(utc);
 
 const { Title, Text } = Typography;
+const { Search } = Input;
 
 const TOURNAMENT_STATUSES = [
   "Preparing",
@@ -233,6 +234,7 @@ function TournamentManagement() {
 
   const [tournaments, setTournaments] = useState([]);
   const [filterStatus, setFilterStatus] = useState("");
+  const [searchText, setSearchText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
@@ -253,11 +255,19 @@ function TournamentManagement() {
   const [isAdvancementsLoading, setIsAdvancementsLoading] = useState(false);
   const shouldFixColumns = useAdminTableFixedColumns();
 
-  async function loadTournaments(status = filterStatus) {
+  async function loadTournaments(filters = {}) {
+    const normalizedFilters =
+      typeof filters === "string" ? { status: filters } : filters;
+    const status = normalizedFilters.status ?? filterStatus;
+    const search = normalizedFilters.search ?? searchText;
+
     setIsLoading(true);
 
     try {
-      const response = await getTournaments(status);
+      const response = await getTournaments({
+        status,
+        search: search?.trim(),
+      });
       setTournaments(resolveList(response).map(normalizeTournament));
     } catch (error) {
       message.error(error?.message || "Unable to load tournaments");
@@ -835,12 +845,28 @@ function TournamentManagement() {
           <Title level={1}>Tournament Management</Title>
         </div>
 
-        <Space>
+        <Space wrap>
+          <Search
+            placeholder="Search tournament"
+            allowClear
+            enterButton="Search"
+            value={searchText}
+            style={{ width: 260 }}
+            onChange={(event) => setSearchText(event.target.value)}
+            onSearch={(value) =>
+              loadTournaments({ status: filterStatus, search: value })
+            }
+            onClear={() => {
+              setSearchText("");
+              loadTournaments({ status: filterStatus, search: "" });
+            }}
+          />
+
           <Select
             value={filterStatus}
             style={{ width: 170 }}
             options={[
-              { label: "Filter by Status", value: "" },
+              { label: "Status", value: "" },
               ...TOURNAMENT_STATUSES.map((status) => ({
                 label: status,
                 value: status,
@@ -848,7 +874,7 @@ function TournamentManagement() {
             ]}
             onChange={(value) => {
               setFilterStatus(value);
-              loadTournaments(value);
+              loadTournaments({ status: value, search: searchText });
             }}
           />
 
