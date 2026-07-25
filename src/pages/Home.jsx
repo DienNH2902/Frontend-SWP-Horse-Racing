@@ -1488,6 +1488,12 @@ function Home() {
           box-shadow: 0 10px 24px rgba(6, 51, 46, 0.12);
         }
 
+        .race-preview.upcoming-preview {
+          border-color: rgba(6, 103, 85, 0.1);
+          background: #edf9f6;
+          box-shadow: 0 8px 20px rgba(6, 51, 46, 0.07);
+        }
+
         .race-preview::after {
           position: absolute;
           inset: 0;
@@ -1496,6 +1502,12 @@ function Home() {
           background:
             linear-gradient(180deg, transparent 58%, rgba(1, 31, 28, 0.28)),
             linear-gradient(90deg, rgba(9, 78, 68, 0.08), transparent 45%);
+        }
+
+        .race-preview.upcoming-preview::after {
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.34)),
+            linear-gradient(90deg, rgba(9, 78, 68, 0.06), transparent 48%);
         }
 
         .race-preview img {
@@ -1508,9 +1520,19 @@ function Home() {
           transition: transform 280ms ease, filter 280ms ease;
         }
 
+        .race-preview.upcoming-preview img {
+          opacity: 0.72;
+          filter: saturate(0.72) contrast(0.9) brightness(1.08);
+        }
+
         .race-card:hover .race-preview img {
           filter: saturate(1.06) contrast(1.03);
           transform: scale(1.045);
+        }
+
+        .race-card:hover .race-preview.upcoming-preview img {
+          opacity: 0.82;
+          filter: saturate(0.82) contrast(0.94) brightness(1.05);
         }
 
         .card-action {
@@ -2354,7 +2376,10 @@ function Home() {
             ) : (
               <div className="race-grid">
                 {homeData.races.map((race) => (
-                  <article className="race-card" key={race.id}>
+                  <article
+                    className={`race-card ${race.status ? "live-race-card" : "upcoming-race-card"}`}
+                    key={race.id}
+                  >
                     <div className="race-meta">
                       <span
                         className={`pill ${race.status ? "pill-live" : ""}`}
@@ -2370,11 +2395,11 @@ function Home() {
                       <Icon name="clock" size={16} />
                       {formatRaceDateTime(race.date || race.sortTime)}
                     </span>
-                    {race.status && (
-                      <div className="race-preview">
+                    <div
+                      className={`race-preview ${race.status ? "live-preview" : "upcoming-preview"}`}
+                    >
                         <img src={race.image} alt={`${race.name} race`} />
-                      </div>
-                    )}
+                    </div>
                     {race.status ? (
                       <Link
                         className="card-action live-action"
