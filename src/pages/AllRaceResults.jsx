@@ -102,28 +102,28 @@ export default function AllRaceResults() {
             <span className="explore-eyebrow">GOLDEN HOOF</span>
             <h1>All Race Results</h1>
           </div>
-          <span className="explore-count">{visibleResults.length} kết quả</span>
+          <span className="explore-count">{visibleResults.length} results</span>
         </header>
         <div className="explore-toolbar">
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm race, tournament, địa điểm hoặc người thắng…"
+            placeholder="Search race, tournament, venue or winner…"
           />
           <select value={surface} onChange={(event) => setSurface(event.target.value)}>
-            <option value="all">Tất cả mặt đường</option>
+            <option value="all">All Surfaces</option>
             {surfaces.map((item) => <option value={item} key={item}>{item}</option>)}
           </select>
           <select value={sort} onChange={(event) => setSort(event.target.value)}>
-            <option value="date-desc">Ngày đua mới nhất</option>
-            <option value="date-asc">Ngày đua cũ nhất</option>
-            <option value="name-asc">Tên race A → Z</option>
-            <option value="name-desc">Tên race Z → A</option>
+            <option value="date-desc">Newest Race</option>
+            <option value="date-asc">Oldest Race</option>
+            <option value="name-asc">Race Name A → Z</option>
+            <option value="name-desc">Race Name Z → A</option>
           </select>
-          <Link className="explore-back explore-toolbar-home" to="/home">← Về Home</Link>
+          <Link className="explore-back explore-toolbar-home" to="/home">Home</Link>
         </div>
         {loading ? (
-          <div className="explore-state">Đang tải kết quả race…</div>
+          <div className="explore-state">Loading race result…</div>
         ) : visibleResults.length ? (
           <section className="result-records">
             {paginatedResults.map((result) => (
@@ -144,7 +144,7 @@ export default function AllRaceResults() {
               </article>
             ))}
           </section>
-        ) : <div className="explore-state">Không tìm thấy kết quả phù hợp.</div>}
+        ) : <div className="explore-state">No result.</div>}
         <Pagination
           page={page}
           totalItems={visibleResults.length}
