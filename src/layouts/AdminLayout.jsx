@@ -451,9 +451,7 @@ function AdminLayout({ children }) {
               </Avatar>
               <div className="admin-account-copy">
                 <div className="admin-account-name">{displayName}</div>
-                <div className="admin-account-email">
-                  {accountLabel}
-                </div>
+                <div className="admin-account-email">{accountLabel}</div>
               </div>
               <Button
                 className="admin-logout-btn"
@@ -470,10 +468,7 @@ function AdminLayout({ children }) {
 
             <div className="admin-footer-actions">
               <Tooltip title="Open home">
-                <Button
-                  block
-                  onClick={() => navigate("/home")}
-                >
+                <Button block onClick={() => navigate("/home")}>
                   Home
                 </Button>
               </Tooltip>
