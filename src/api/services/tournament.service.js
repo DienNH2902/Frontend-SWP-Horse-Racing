@@ -21,26 +21,31 @@ function unwrapCollection(response) {
 }
 
 export async function getTournaments(filters = {}) {
-    const normalizedFilters =
-        typeof filters === "string" ? { status: filters } : filters;
-    const { status, search } = normalizedFilters || {};
+    const {
+        status,
+        search,
+    } = filters;
 
     const response = await apiClient.get(
         TOURNAMENT_ENDPOINTS.ROOT,
         {
             includeAuth: true,
             params: {
-                ...(status ? { status } : {}),
-                ...(search ? { search } : {}),
+                ...(search?.trim()
+                    ? { search: search.trim() }
+                    : {}),
+
+                ...(status
+                    ? { status }
+                    : {}),
             },
         }
     );
 
-    return unwrapCollection(response).filter((tournament) => {
-        const status = String(tournament?.status || "").toLowerCase();
-
-        return status !== "canceled";
-    });
+    return unwrapCollection(response).filter(
+        (tournament) =>
+            tournament.status !== "Canceled"
+    );
 }
 
 export async function getAdminTournamentStats() {
@@ -130,25 +135,25 @@ export async function getTournamentById(id) {
 }
 
 export async function getTournamentAdvancements(id) {
-  const response = await apiClient.get(
-    TOURNAMENT_ENDPOINTS.ADVANCEMENTS(id),
-    {
-      includeAuth: true,
-    }
-  );
+    const response = await apiClient.get(
+        TOURNAMENT_ENDPOINTS.ADVANCEMENTS(id),
+        {
+            includeAuth: true,
+        }
+    );
 
-  return unwrapCollection(response);
+    return unwrapCollection(response);
 }
 
 export async function getTournamentResults(id) {
-  const response = await apiClient.get(
-    TOURNAMENT_ENDPOINTS.RESULTS(id),
-    {
-      includeAuth: true,
-    }
-  );
+    const response = await apiClient.get(
+        TOURNAMENT_ENDPOINTS.RESULTS(id),
+        {
+            includeAuth: true,
+        }
+    );
 
-  return unwrapCollection(response);
+    return unwrapCollection(response);
 }
 
 export async function getTournamentParticipants(tournamentId) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   Input,
@@ -61,8 +61,13 @@ export default function RefereeTournamentList() {
   const [raceLoading, setRaceLoading] = useState(false);
 
   useEffect(() => {
-    loadTournaments(statusFilter);
-  }, [statusFilter]);
+    const timeout = setTimeout(() => {
+      loadTournaments();
+    }, 400);
+
+    return () => clearTimeout(timeout);
+
+  }, [searchText, statusFilter]);
 
   async function handleViewTournament(tournament) {
     try {
@@ -84,17 +89,16 @@ export default function RefereeTournamentList() {
     }
   }
 
-  async function loadTournaments(status = statusFilter) {
+  async function loadTournaments() {
     setLoading(true);
 
     try {
-      const response = await getTournaments(status);
+      const response = await getTournaments({
+        search: searchText,
+        status: statusFilter,
+      });
 
-      const tournamentList = Array.isArray(response)
-        ? response
-        : response?.data || [];
-
-      setTournaments(tournamentList);
+      setTournaments(response);
     } catch (error) {
       console.error(error);
       message.error("Failed to load tournaments");
@@ -182,12 +186,6 @@ export default function RefereeTournamentList() {
     Completed: "purple",
     Canceled: "red",
   };
-
-  const filteredData = useMemo(() => {
-    return tournaments.filter((item) =>
-      (item?.title || "").toLowerCase().includes(searchText.toLowerCase()),
-    );
-  }, [tournaments, searchText]);
 
   const columns = [
     {
@@ -302,7 +300,7 @@ export default function RefereeTournamentList() {
             extra={
               <Space>
                 <Tag className="dashboard-total-tag">
-                  {filteredData.length} tournaments
+                  {tournaments.length} tournaments
                 </Tag>
               </Space>
             }
@@ -329,12 +327,13 @@ export default function RefereeTournamentList() {
                 <div className="dashboard-filter-bar">
                   <Input.Search
                     size="large"
-                    style={{
-                      width: "100%",
-                    }}
                     placeholder="Search tournament"
                     allowClear
-                    onChange={(e) => setSearchText(e.target.value)}
+                    value={searchText}
+                    onChange={(e) =>
+                      setSearchText(e.target.value)
+                    }
+                    onSearch={() => loadTournaments()}
                   />
 
                   <ConfigProvider
@@ -395,7 +394,7 @@ export default function RefereeTournamentList() {
                   rowKey="_id"
                   loading={loading}
                   columns={columns}
-                  dataSource={filteredData}
+                  dataSource={tournaments}
                   pagination={{
                     pageSize: 10,
                     showSizeChanger: true,
@@ -554,9 +553,9 @@ export default function RefereeTournamentList() {
                 <Descriptions.Item label="Start Time">
                   {selectedRace.startTime
                     ? new Date(selectedRace.startTime).toLocaleString("vi-VN", {
-                        timeZone: "UTC",
-                        hour12: false,
-                      })
+                      timeZone: "UTC",
+                      hour12: false,
+                    })
                     : "-"}
                 </Descriptions.Item>
 
