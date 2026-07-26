@@ -2115,7 +2115,7 @@ function Home() {
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {["Races", "Horses", "Jockeys", "Results", "Predictions"].map(
+            {["Races", "Horses", "Jockeys", "Results"].map(
               (item) => (
                 <a href={`#${item.toLowerCase()}`} key={item}>
                   {item}
