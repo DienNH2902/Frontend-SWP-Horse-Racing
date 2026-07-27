@@ -574,10 +574,10 @@ function UserManagement() {
                 value: "Active",
                 label: <span style={{ color: "white" }}>Active</span>,
               },
-              {
-                value: "Inactive",
-                label: <span style={{ color: "white" }}>Inactive</span>,
-              },
+              // {
+              //   value: "Inactive",
+              //   label: <span style={{ color: "white" }}>Inactive</span>,
+              // },
               {
                 value: "Banned",
                 label: <span style={{ color: "white" }}>Banned</span>,
@@ -792,7 +792,7 @@ function UserManagement() {
             }}
           >
             <Select.Option value="Active">Active</Select.Option>
-            <Select.Option value="Inactive">Inactive</Select.Option>
+            {/* <Select.Option value="Inactive">Inactive</Select.Option> */}
             <Select.Option value="Banned">Banned</Select.Option>
           </Select>
           <Search
