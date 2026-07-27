@@ -633,10 +633,10 @@ function UserManagement() {
               )}
 
               <Popconfirm
-                title="Disable tài khoản?"
+                title="Delete this account?"
                 description="Are you sure want to delete this user from the system"
-                okText="Disable"
-                cancelText="Hủy"
+                okText="Delete"
+                cancelText="Cancel"
                 onConfirm={() => handleDisable(record)}
               >
                 <Button danger size="small">
