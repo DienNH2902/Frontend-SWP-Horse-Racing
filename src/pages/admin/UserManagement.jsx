@@ -632,17 +632,17 @@ function UserManagement() {
                 </Button>
               )}
 
-              {/* <Popconfirm
+              <Popconfirm
                 title="Disable tài khoản?"
-                description="Action này sẽ gọi API delete user."
+                description="Are you sure want to delete this user from the system"
                 okText="Disable"
                 cancelText="Hủy"
                 onConfirm={() => handleDisable(record)}
               >
                 <Button danger size="small">
-                  Disable
+                  Delete
                 </Button>
-              </Popconfirm> */}
+              </Popconfirm>
             </Space>
           );
         },
