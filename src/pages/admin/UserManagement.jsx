@@ -39,35 +39,6 @@ dayjs.extend(utc);
 
 const { Text, Title } = Typography;
 const { Search } = Input;
-const USER_MANAGEMENT_FILTERS_KEY = "goldenhoof:user-management-filters";
-
-function getStoredUserManagementFilters() {
-  if (typeof window === "undefined") {
-    return {
-      role: null,
-      status: null,
-      jockeyStatus: null,
-    };
-  }
-
-  try {
-    const storedFilters = JSON.parse(
-      window.sessionStorage.getItem(USER_MANAGEMENT_FILTERS_KEY) || "{}",
-    );
-
-    return {
-      role: storedFilters.role || null,
-      status: storedFilters.status || null,
-      jockeyStatus: storedFilters.jockeyStatus || null,
-    };
-  } catch {
-    return {
-      role: null,
-      status: null,
-      jockeyStatus: null,
-    };
-  }
-}
 
 function pick(source, keys, fallback = "") {
   for (const key of keys) {
@@ -204,20 +175,17 @@ function statusColor(status) {
 
 function UserManagement() {
   const [form] = Form.useForm();
-  const initialFilters = useMemo(() => getStoredUserManagementFilters(), []);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchKey, setSearchKey] = useState("");
   const [statusChangingId, setStatusChangingId] = useState(null);
-  const [selectedRole, setSelectedRole] = useState(initialFilters.role);
-  const [selectedStatus, setSelectedStatus] = useState(initialFilters.status);
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(null);
   const [detailUser, setDetailUser] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [selectedJockeyStatus, setSelectedJockeyStatus] = useState(
-    initialFilters.jockeyStatus,
-  );
+  const [selectedJockeyStatus, setSelectedJockeyStatus] = useState(null);
   // --- States cho Modal Adjust Points ---
   const [adjustPointsForm] = Form.useForm();
   const [adjustModalUser, setAdjustModalUser] = useState(null);
@@ -346,24 +314,8 @@ function UserManagement() {
   }
 
   useEffect(() => {
-    handleFilterChange(
-      initialFilters.role,
-      initialFilters.jockeyStatus,
-      initialFilters.status,
-    );
+    loadUsers();
   }, []);
-
-  useEffect(() => {
-    window.sessionStorage.setItem(
-      USER_MANAGEMENT_FILTERS_KEY,
-      JSON.stringify({
-        role: selectedRole,
-        status: selectedStatus,
-        jockeyStatus:
-          selectedRole === "Jockey" ? selectedJockeyStatus : null,
-      }),
-    );
-  }, [selectedRole, selectedStatus, selectedJockeyStatus]);
 
   function openEditModal(user) {
     setEditingUser(user);
