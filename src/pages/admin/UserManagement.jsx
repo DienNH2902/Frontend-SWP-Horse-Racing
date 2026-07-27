@@ -566,7 +566,7 @@ function UserManagement() {
           <Select
             value={status}
             size="small"
-            style={{ width: 110, backgroundColor: "#0b6e4f" }}
+            style={{ width: 110, backgroundColor: "#0b6e4f", color: "white" }}
             loading={statusChangingId === record.id}
             onChange={(nextValue) => handleStatusChange(record.id, nextValue)}
             options={[
