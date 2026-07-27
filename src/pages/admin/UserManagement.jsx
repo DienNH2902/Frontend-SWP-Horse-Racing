@@ -39,6 +39,35 @@ dayjs.extend(utc);
 
 const { Text, Title } = Typography;
 const { Search } = Input;
+const USER_MANAGEMENT_FILTERS_KEY = "goldenhoof:user-management-filters";
+
+function getStoredUserManagementFilters() {
+  if (typeof window === "undefined") {
+    return {
+      role: null,
+      status: null,
+      jockeyStatus: null,
+    };
+  }
+
+  try {
+    const storedFilters = JSON.parse(
+      window.sessionStorage.getItem(USER_MANAGEMENT_FILTERS_KEY) || "{}",
+    );
+
+    return {
+      role: storedFilters.role || null,
+      status: storedFilters.status || null,
+      jockeyStatus: storedFilters.jockeyStatus || null,
+    };
+  } catch {
+    return {
+      role: null,
+      status: null,
+      jockeyStatus: null,
+    };
+  }
+}
 
 function pick(source, keys, fallback = "") {
   for (const key of keys) {
@@ -175,17 +204,20 @@ function statusColor(status) {
 
 function UserManagement() {
   const [form] = Form.useForm();
+  const initialFilters = useMemo(() => getStoredUserManagementFilters(), []);
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [searchKey, setSearchKey] = useState("");
   const [statusChangingId, setStatusChangingId] = useState(null);
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [selectedRole, setSelectedRole] = useState(initialFilters.role);
+  const [selectedStatus, setSelectedStatus] = useState(initialFilters.status);
   const [detailUser, setDetailUser] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [selectedJockeyStatus, setSelectedJockeyStatus] = useState(null);
+  const [selectedJockeyStatus, setSelectedJockeyStatus] = useState(
+    initialFilters.jockeyStatus,
+  );
   // --- States cho Modal Adjust Points ---
   const [adjustPointsForm] = Form.useForm();
   const [adjustModalUser, setAdjustModalUser] = useState(null);
@@ -212,9 +244,13 @@ function UserManagement() {
   async function handleSearch(value) {
     setSearchKey(value);
 
-    // Nếu thanh tìm kiếm bị xóa trống, tự động quay về tải lại toàn bộ data gốc
+    // Khi xóa nội dung tìm kiếm, tải lại dữ liệu theo bộ lọc đang chọn.
     if (!value || value.trim() === "") {
-      return loadUsers();
+      return handleFilterChange(
+        selectedRole,
+        selectedJockeyStatus,
+        selectedStatus,
+      );
     }
 
     setIsLoading(true);
@@ -258,7 +294,11 @@ function UserManagement() {
 
       setAdjustModalUser(null);
       adjustPointsForm.resetFields();
-      loadUsers(); // Tải lại danh sách sau khi điều chỉnh điểm
+      await handleFilterChange(
+        selectedRole,
+        selectedJockeyStatus,
+        selectedStatus,
+      );
     } catch (error) {
       message.error(error?.message || "Cập nhật điểm thất bại");
     } finally {
@@ -306,8 +346,24 @@ function UserManagement() {
   }
 
   useEffect(() => {
-    loadUsers();
+    handleFilterChange(
+      initialFilters.role,
+      initialFilters.jockeyStatus,
+      initialFilters.status,
+    );
   }, []);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(
+      USER_MANAGEMENT_FILTERS_KEY,
+      JSON.stringify({
+        role: selectedRole,
+        status: selectedStatus,
+        jockeyStatus:
+          selectedRole === "Jockey" ? selectedJockeyStatus : null,
+      }),
+    );
+  }, [selectedRole, selectedStatus, selectedJockeyStatus]);
 
   function openEditModal(user) {
     setEditingUser(user);
@@ -762,7 +818,9 @@ function UserManagement() {
             placeholder="Filter by Role"
             allowClear
             style={{ width: 140 }}
+            value={selectedRole}
             onChange={(val) => {
+              setSearchKey("");
               setSelectedRole(val);
 
               if (val !== "Jockey") {
@@ -786,7 +844,9 @@ function UserManagement() {
             placeholder="Filter by Status"
             allowClear
             style={{ width: 140 }}
+            value={selectedStatus}
             onChange={(val) => {
+              setSearchKey("");
               setSelectedStatus(val);
               handleFilterChange(selectedRole, selectedJockeyStatus, val);
             }}
@@ -806,7 +866,17 @@ function UserManagement() {
             onSearch={handleSearch}
             loading={isLoading}
           />
-          <Button className="user-management-refresh" onClick={loadUsers}>
+          <Button
+            className="user-management-refresh"
+            onClick={() => {
+              setSearchKey("");
+              handleFilterChange(
+                selectedRole,
+                selectedJockeyStatus,
+                selectedStatus,
+              );
+            }}
+          >
             Refresh
           </Button>
         </div>
