@@ -574,10 +574,10 @@ function UserManagement() {
                 value: "Active",
                 label: <span style={{ color: "white" }}>Active</span>,
               },
-              {
-                value: "Inactive",
-                label: <span style={{ color: "white" }}>Inactive</span>,
-              },
+              // {
+              //   value: "Inactive",
+              //   label: <span style={{ color: "white" }}>Inactive</span>,
+              // },
               {
                 value: "Banned",
                 label: <span style={{ color: "white" }}>Banned</span>,
@@ -632,17 +632,17 @@ function UserManagement() {
                 </Button>
               )}
 
-              {/* <Popconfirm
+              <Popconfirm
                 title="Disable tài khoản?"
-                description="Action này sẽ gọi API delete user."
+                description="Are you sure want to delete this user from the system"
                 okText="Disable"
                 cancelText="Hủy"
                 onConfirm={() => handleDisable(record)}
               >
                 <Button danger size="small">
-                  Disable
+                  Delete
                 </Button>
-              </Popconfirm> */}
+              </Popconfirm>
             </Space>
           );
         },
@@ -792,7 +792,7 @@ function UserManagement() {
             }}
           >
             <Select.Option value="Active">Active</Select.Option>
-            <Select.Option value="Inactive">Inactive</Select.Option>
+            {/* <Select.Option value="Inactive">Inactive</Select.Option> */}
             <Select.Option value="Banned">Banned</Select.Option>
           </Select>
           <Search
