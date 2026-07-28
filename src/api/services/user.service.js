@@ -200,6 +200,7 @@ export async function updateUserAccount(id, role, payload) {
 
   switch (userRole) {
     case "spectator":
+    case "admin":
       endpoint = USER_ENDPOINTS.UPDATE_SPECTATOR(id);
       break;
     case "jockey":
