@@ -1525,11 +1525,13 @@ function TournamentManagement() {
               width: 180,
               render: formatDateTime,
             },
+            /*
             {
               title: "Color",
               dataIndex: "horseColor",
               width: 140,
             },
+            */
           ]}
         />
 
