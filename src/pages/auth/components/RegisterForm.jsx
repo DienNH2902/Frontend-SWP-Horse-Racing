@@ -842,7 +842,7 @@ export default function RegisterForm() {
                     name="height"
                     rules={[{ required: true, message: "Height is required" }]}
                   >
-                    <InputNumber className="gr-input-number" min={0} placeholder="Enter height" prefix={<Icon name="ruler" size={20} />} step="0.01" />
+                    <InputNumber className="gr-input-number" min={100} max={220} placeholder="Enter height" prefix={<Icon name="ruler" size={20} />} step="0.01" />
                   </Form.Item>
 
                   <Form.Item
@@ -851,7 +851,7 @@ export default function RegisterForm() {
                     name="weight"
                     rules={[{ required: true, message: "Weight is required" }]}
                   >
-                    <InputNumber className="gr-input-number" min={0} placeholder="Enter weight" prefix={<Icon name="scale" size={20} />} step="0.01" />
+                    <InputNumber className="gr-input-number" min={30} max={120} placeholder="Enter weight" prefix={<Icon name="scale" size={20} />} step="0.01" />
                   </Form.Item>
                 </>
               ) : null}
