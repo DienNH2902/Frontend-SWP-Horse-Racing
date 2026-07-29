@@ -761,7 +761,7 @@ function RegistrationManagement() {
             name="gateNumber"
             rules={[{ required: true, message: "Gate number is required" }]}
           >
-            <InputNumber min={1} style={{ width: "100%" }} />
+            <InputNumber min={1} max={10} style={{ width: "100%" }} />
           </Form.Item>
         </Form>
       </Modal>
