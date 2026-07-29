@@ -1478,6 +1478,7 @@ function TournamentManagement() {
           loading={isAdvancementsLoading}
           dataSource={advancements}
           pagination={false}
+          tableLayout="fixed"
           locale={{ emptyText: "No qualified horses for the final yet" }}
           columns={[
             /*
@@ -1491,6 +1492,7 @@ function TournamentManagement() {
             {
               title: "Horse",
               dataIndex: "horseName",
+              width: 220,
               render: (value) => <Text strong>{value}</Text>,
             },
             /*
@@ -1504,6 +1506,7 @@ function TournamentManagement() {
             {
               title: "Qualified From",
               dataIndex: "fromRaceName",
+              width: 400,
             },
             /*
             {
@@ -1522,7 +1525,7 @@ function TournamentManagement() {
             {
               title: "Qualified At",
               dataIndex: "advancedAt",
-              width: 180,
+              width: 220,
               render: formatDateTime,
             },
             /*
@@ -1548,20 +1551,24 @@ function TournamentManagement() {
           loading={isAdvancementsLoading}
           dataSource={champions}
           pagination={false}
+          tableLayout="fixed"
           locale={{ emptyText: "No champion available yet" }}
           columns={[
             {
               title: "Horse",
               dataIndex: "horseName",
+              width: 220,
               render: (value) => <Text strong>{value}</Text>,
             },
             {
               title: "Jockey",
               dataIndex: "jockeyName",
+              width: 400,
             },
             {
               title: "Finished Time",
               dataIndex: "finishedTime",
+              width: 220,
               render: formatDateTime,
             },
           ]}
