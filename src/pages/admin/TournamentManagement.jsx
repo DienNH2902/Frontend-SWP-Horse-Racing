@@ -27,6 +27,7 @@ import {
   deleteTournament,
   getTournamentAdvancements,
   getTournamentById,
+  getTournamentResults,
   getTournaments,
   uploadTournamentBanner,
   updateTournament,
@@ -170,6 +171,25 @@ function normalizeAdvancement(item, index) {
   };
 }
 
+function normalizeTournamentChampions(response) {
+  return resolveList(response)
+    .filter((race) => Number(race?.roundNumber) === 2)
+    .flatMap((race, raceIndex) =>
+      resolveList(race?.results)
+        .filter((result) => Number(result?.finalRank) === 1)
+        .map((result, resultIndex) => ({
+          key:
+            result?.resultId ||
+            result?._id ||
+            result?.id ||
+            `champion-${raceIndex}-${resultIndex}`,
+          horseName: result?.horseName || "N/A",
+          jockeyName: result?.jockeyName || "N/A",
+          finishedTime: result?.finishedTime || "",
+        })),
+    );
+}
+
 function statusColor(status) {
   switch (status) {
     case "Preparing":
@@ -252,6 +272,7 @@ function TournamentManagement() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [advancementTournament, setAdvancementTournament] = useState(null);
   const [advancements, setAdvancements] = useState([]);
+  const [champions, setChampions] = useState([]);
   const [isAdvancementsLoading, setIsAdvancementsLoading] = useState(false);
   const shouldFixColumns = useAdminTableFixedColumns();
 
@@ -542,11 +563,15 @@ function TournamentManagement() {
   async function openAdvancementsModal(record) {
     setAdvancementTournament(record);
     setAdvancements([]);
+    setChampions([]);
     setIsAdvancementsLoading(true);
 
     try {
-      const response = await getTournamentAdvancements(record.id);
-      const nextAdvancements = resolveList(response)
+      const [advancementsResponse, resultsResponse] = await Promise.all([
+        getTournamentAdvancements(record.id),
+        getTournamentResults(record.id),
+      ]);
+      const nextAdvancements = resolveList(advancementsResponse)
         .map(normalizeAdvancement)
         .sort(
           (a, b) =>
@@ -554,8 +579,11 @@ function TournamentManagement() {
         );
 
       setAdvancements(nextAdvancements);
+      setChampions(normalizeTournamentChampions(resultsResponse));
     } catch (error) {
-      message.error(error?.message || "Unable to load advancements");
+      message.error(
+        error?.message || "Unable to load qualified horses and race results",
+      );
     } finally {
       setIsAdvancementsLoading(false);
     }
@@ -1424,6 +1452,7 @@ function TournamentManagement() {
         onCancel={() => {
           setAdvancementTournament(null);
           setAdvancements([]);
+          setChampions([]);
         }}
         destroyOnClose
       >
@@ -1436,7 +1465,7 @@ function TournamentManagement() {
             background: "#f6fffc",
           }}
         >
-          <Text strong>Final qualification list</Text>
+          <Text strong>Qualified horses</Text>
           <br />
           <Text type="secondary">
             Horses shown here have advanced from Round 1 races into the final
@@ -1449,35 +1478,34 @@ function TournamentManagement() {
           loading={isAdvancementsLoading}
           dataSource={advancements}
           pagination={false}
-          scroll={{ x: 1180 }}
           locale={{ emptyText: "No qualified horses for the final yet" }}
           columns={[
+            /*
             {
               title: "Qualified Record ID",
               dataIndex: "id",
               width: 190,
               render: (value) => <Text code>{value}</Text>,
             },
+            */
             {
               title: "Horse",
               dataIndex: "horseName",
               render: (value) => <Text strong>{value}</Text>,
             },
+            /*
             {
               title: "Horse ID",
               dataIndex: "horseId",
               width: 190,
               render: (value) => <Text code>{value}</Text>,
             },
-            {
-              title: "Color",
-              dataIndex: "horseColor",
-              width: 140,
-            },
+            */
             {
               title: "Qualified From",
               dataIndex: "fromRaceName",
             },
+            /*
             {
               title: "Source Race ID",
               dataIndex: "fromRaceId",
@@ -1490,10 +1518,48 @@ function TournamentManagement() {
               width: 190,
               render: (value) => <Text code>{value}</Text>,
             },
+            */
             {
               title: "Qualified At",
               dataIndex: "advancedAt",
               width: 180,
+              render: formatDateTime,
+            },
+            {
+              title: "Color",
+              dataIndex: "horseColor",
+              width: 140,
+            },
+          ]}
+        />
+
+        <div style={{ marginTop: 24, marginBottom: 12 }}>
+          <Text strong>Tournament champion</Text>
+          <br />
+          <Text type="secondary">
+            The horse finishing first in the Round 2 final.
+          </Text>
+        </div>
+
+        <Table
+          rowKey="key"
+          loading={isAdvancementsLoading}
+          dataSource={champions}
+          pagination={false}
+          locale={{ emptyText: "No champion available yet" }}
+          columns={[
+            {
+              title: "Horse",
+              dataIndex: "horseName",
+              render: (value) => <Text strong>{value}</Text>,
+            },
+            {
+              title: "Jockey",
+              dataIndex: "jockeyName",
+            },
+            {
+              title: "Finished Time",
+              dataIndex: "finishedTime",
               render: formatDateTime,
             },
           ]}
