@@ -12,6 +12,42 @@ function formatMoney(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
+function hasStatValue(value) {
+  return value !== undefined && value !== null && value !== "";
+}
+
+function normalizeStatus(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function collectFinalRanks(history) {
+  const ranks = [];
+
+  function visit(value) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const rank = Number(value.finalRank);
+    if (Number.isFinite(rank)) {
+      ranks.push(rank);
+    }
+
+    ["historyRaceJockey", "historyRace", "rounds", "races"].forEach((key) => {
+      if (Array.isArray(value[key])) visit(value[key]);
+    });
+  }
+
+  visit(history);
+
+  return ranks;
+}
+
 function formatAssignmentSchedule(record) {
   const date = String(record?.date || "").trim();
   const time = String(record?.time || "").trim();
@@ -46,13 +82,25 @@ export default function JockeyDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const pendingInvitations = data.invitations.filter((item) => item.status === "Pending").length;
+  const pendingInvitations = data.invitations.filter((item) =>
+    ["pending", "waiting", "requested"].includes(
+      normalizeStatus(item.status || item.invitationStatus),
+    ),
+  ).length;
   const upcomingAssignments = data.schedules.filter((item) => item.assignmentStatus !== "Finished").length;
   const finishedAssignments = data.schedules.filter((item) => item.result);
+  const winRate = data.profile.winRate;
+  const seasonPrize = data.profile.seasonPrize;
   const bestFinish = useMemo(() => {
-    const ranks = finishedAssignments.map((item) => item.result?.rank || 99);
+    const historyRanks = collectFinalRanks(data.profile.historyRaceJockey);
+    const scheduleRanks = finishedAssignments
+      .map((item) => Number(item.result?.rank))
+      .filter((rank) => Number.isFinite(rank));
+    const ranks = historyRanks.length ? historyRanks : scheduleRanks;
+
     return ranks.length ? Math.min(...ranks) : null;
-  }, [finishedAssignments]);
+  }, [data.profile.historyRaceJockey, finishedAssignments]);
+  const seasonRank = data.profile.rank ?? bestFinish;
 
   const columns = [
     {
@@ -88,12 +136,20 @@ export default function JockeyDashboard() {
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} xl={6}>
           <Card>
-            <Statistic title="Season rank" value={data.profile.rank || 0} prefix="#" />
+            <Statistic
+              title="Season rank"
+              value={hasStatValue(seasonRank) ? seasonRank : "-"}
+              prefix={hasStatValue(seasonRank) ? "#" : undefined}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <Card>
-            <Statistic title="Win rate" value={data.profile.winRate || 0} suffix="%" />
+            <Statistic
+              title="Win rate"
+              value={hasStatValue(winRate) ? winRate : "-"}
+              suffix={hasStatValue(winRate) ? "%" : undefined}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} xl={6}>
@@ -103,7 +159,11 @@ export default function JockeyDashboard() {
         </Col>
         <Col xs={24} sm={12} xl={6}>
           <Card>
-            <Statistic title="Season prize" value={data.profile.seasonPrize || 0} prefix="$" />
+            <Statistic
+              title="Season prize"
+              value={hasStatValue(seasonPrize) ? seasonPrize : 0}
+              prefix="$"
+            />
           </Card>
         </Col>
       </Row>
