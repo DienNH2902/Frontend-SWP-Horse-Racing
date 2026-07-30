@@ -717,7 +717,7 @@ export default function OwnerJockeyRaceWorkspace() {
                 proposeJockeyShareRate: 40,
                 ownerCompensationRate: 60,
                 jockeyCompensationRate: 40,
-                message: "Mời bạn tham gia giải đua tháng 6",
+                message: "Mời bạn tham gia giải đua ",
               }}
             >
               <Form.Item

@@ -246,7 +246,7 @@ export default function OwnerDashboard() {
         title="Stable overview"
         extra={
           <div className="owner-stable-actions">
-            <Link to="/owner/horses">
+            {/* <Link to="/owner/horses">
               <Button>Manage horses</Button>
             </Link>
             <Link to="/owner/horses/register">
@@ -254,7 +254,7 @@ export default function OwnerDashboard() {
             </Link>
             <Link to="/owner/tournaments">
               <Button>Tournaments</Button>
-            </Link>
+            </Link> */}
             <Button onClick={loadDashboard}>Refresh</Button>
           </div>
         }

@@ -540,14 +540,14 @@ export default function OwnerHorses() {
             Manage your stable, horse profiles, and registration readiness
           </Typography.Text>
         </div>
-        <Button
+        {/* <Button
           className="owner-workspace-refresh"
           icon={<ReloadOutlined />}
           loading={loading}
           onClick={() => loadHorses(keyword, statusFilter)}
         >
           Refresh
-        </Button>
+        </Button> */}
       </header>
 
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
