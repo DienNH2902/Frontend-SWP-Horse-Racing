@@ -212,9 +212,13 @@ function UserManagement() {
   async function handleSearch(value) {
     setSearchKey(value);
 
-    // Nếu thanh tìm kiếm bị xóa trống, tự động quay về tải lại toàn bộ data gốc
+    // Khi xóa nội dung tìm kiếm, tải lại dữ liệu theo bộ lọc đang chọn.
     if (!value || value.trim() === "") {
-      return loadUsers();
+      return handleFilterChange(
+        selectedRole,
+        selectedJockeyStatus,
+        selectedStatus,
+      );
     }
 
     setIsLoading(true);
@@ -258,7 +262,11 @@ function UserManagement() {
 
       setAdjustModalUser(null);
       adjustPointsForm.resetFields();
-      loadUsers(); // Tải lại danh sách sau khi điều chỉnh điểm
+      await handleFilterChange(
+        selectedRole,
+        selectedJockeyStatus,
+        selectedStatus,
+      );
     } catch (error) {
       message.error(error?.message || "Cập nhật điểm thất bại");
     } finally {
@@ -566,7 +574,7 @@ function UserManagement() {
           <Select
             value={status}
             size="small"
-            style={{ width: 110, backgroundColor: "#0b6e4f" }}
+            style={{ width: 110, backgroundColor: "#0b6e4f", color: "white" }}
             loading={statusChangingId === record.id}
             onChange={(nextValue) => handleStatusChange(record.id, nextValue)}
             options={[
@@ -574,10 +582,10 @@ function UserManagement() {
                 value: "Active",
                 label: <span style={{ color: "white" }}>Active</span>,
               },
-              {
-                value: "Inactive",
-                label: <span style={{ color: "white" }}>Inactive</span>,
-              },
+              // {
+              //   value: "Inactive",
+              //   label: <span style={{ color: "white" }}>Inactive</span>,
+              // },
               {
                 value: "Banned",
                 label: <span style={{ color: "white" }}>Banned</span>,
@@ -632,17 +640,17 @@ function UserManagement() {
                 </Button>
               )}
 
-              {/* <Popconfirm
-                title="Disable tài khoản?"
-                description="Action này sẽ gọi API delete user."
-                okText="Disable"
-                cancelText="Hủy"
+              <Popconfirm
+                title="Delete this account?"
+                description="Are you sure want to delete this user from the system"
+                okText="Delete"
+                cancelText="Cancel"
                 onConfirm={() => handleDisable(record)}
               >
                 <Button danger size="small">
-                  Disable
+                  Delete
                 </Button>
-              </Popconfirm> */}
+              </Popconfirm>
             </Space>
           );
         },
@@ -762,7 +770,9 @@ function UserManagement() {
             placeholder="Filter by Role"
             allowClear
             style={{ width: 140 }}
+            value={selectedRole}
             onChange={(val) => {
+              setSearchKey("");
               setSelectedRole(val);
 
               if (val !== "Jockey") {
@@ -786,13 +796,15 @@ function UserManagement() {
             placeholder="Filter by Status"
             allowClear
             style={{ width: 140 }}
+            value={selectedStatus}
             onChange={(val) => {
+              setSearchKey("");
               setSelectedStatus(val);
               handleFilterChange(selectedRole, selectedJockeyStatus, val);
             }}
           >
             <Select.Option value="Active">Active</Select.Option>
-            <Select.Option value="Inactive">Inactive</Select.Option>
+            {/* <Select.Option value="Inactive">Inactive</Select.Option> */}
             <Select.Option value="Banned">Banned</Select.Option>
           </Select>
           <Search
@@ -806,7 +818,17 @@ function UserManagement() {
             onSearch={handleSearch}
             loading={isLoading}
           />
-          <Button className="user-management-refresh" onClick={loadUsers}>
+          <Button
+            className="user-management-refresh"
+            onClick={() => {
+              setSearchKey("");
+              handleFilterChange(
+                selectedRole,
+                selectedJockeyStatus,
+                selectedStatus,
+              );
+            }}
+          >
             Refresh
           </Button>
         </div>

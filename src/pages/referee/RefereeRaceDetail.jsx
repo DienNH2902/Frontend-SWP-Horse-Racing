@@ -671,24 +671,24 @@ export default function RefereeRaceDetail() {
                 setSavingCondition(true);
 
                 const formattedValues = {
-                  ...values,
-                  windSpeed:
-                    values.windSpeed !== undefined && values.windSpeed !== null
-                      ? Number(values.windSpeed)
-                      : 0,
+                    ...values,
+                    windSpeed:
+                        values.windSpeed !== undefined && values.windSpeed !== null
+                            ? Number(values.windSpeed)
+                            : 0,
                 };
 
                 if (condition?._id) {
                     const updated = await updateRaceCondition(
-                      id,
-                      formattedValues,
+                        id,
+                        formattedValues,
                     );
 
                     setCondition(updated);
                 } else {
                     const created = await createRaceCondition({
-                      raceId: id,
-                      ...formattedValues,
+                        raceId: id,
+                        ...formattedValues,
                     });
 
                     setCondition(created);
@@ -1359,7 +1359,7 @@ export default function RefereeRaceDetail() {
                                 <InputNumber
                                     className="race-input-number"
                                     min={0}
-                                    max={100}
+                                    max={30}
                                     style={{ width: "100%" }}
                                 />
                                 <Button

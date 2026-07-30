@@ -61,6 +61,12 @@ const statusColor = {
   Expired: "darkred",
 };
 
+const genderMap = {
+  0: "Female",
+  1: "Male",
+  2: "Other",
+};
+
 function pickFirstValue(source, keys, fallback = "") {
   for (const key of keys) {
     const value = source?.[key];
@@ -980,6 +986,46 @@ export default function OwnerJockeyRaceWorkspace() {
             </Space>
 
             <div style={{ display: "grid", gap: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 2fr) minmax(0, 8fr)",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Gender</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
+                  >
+                    {/* {detailJockey.gender} */}
+                    {genderMap[detailJockey.gender] || "N/A"}
+                  </Typography.Text>
+                </div>
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Address</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
+                  >
+                    {detailJockey.address}
+                  </Typography.Text>
+                </div>
+              </div>
+
               <div
                 style={{
                   display: "grid",
