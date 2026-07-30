@@ -33,6 +33,7 @@ export const TransactionTypeEnum = {
   REFUND: "Refund",
   PENALTY: "Penalty",
   HOLD_BALANCE: "Hold_balance",
+  CONTRACT_COMPLETED: "Contract_completed",
 };
 
 export default function MoneyTransactionHistory() {
@@ -67,6 +68,12 @@ export default function MoneyTransactionHistory() {
     },
     [TransactionTypeEnum.PRIZE_PAYOUT]: {
       label: "Prize Payout",
+      isInflow: true,
+      color: "#69f8dd",
+      bg: "rgba(105, 248, 221, 0.15)",
+    },
+    [TransactionTypeEnum.CONTRACT_COMPLETED]: {
+      label: "Contract Completed",
       isInflow: true,
       color: "#69f8dd",
       bg: "rgba(105, 248, 221, 0.15)",
@@ -158,7 +165,8 @@ export default function MoneyTransactionHistory() {
         const isPositive =
           record.type === "Deposit" ||
           record.type === "Prize_payout" ||
-          record.type === "Refund";
+          record.type === "Refund" ||
+          record.type === "Contract_completed";
         return (
           <Text
             style={{
