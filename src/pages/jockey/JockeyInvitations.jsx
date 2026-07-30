@@ -22,6 +22,7 @@ import utc from "dayjs/plugin/utc";
 import { getTournamentById } from "../../api/services/tournament.service";
 import { getUserById } from "../../api/services/user.service";
 import { cancelContract } from "../../api/services/contract.service";
+import { getHorseById } from "../../api/services/horse.service";
 import JockeyContractModal from "../../components/contracts/JockeyContractModal";
 import WorkspaceHeader from "../../components/ui/WorkspaceHeader";
 
@@ -79,8 +80,7 @@ function normalizeInvitation(invitation = {}) {
     invitation.ownerId ||
     invitation.horseOwnerId ||
     {};
-  const owner =
-    typeof ownerReference === "object" ? ownerReference : {};
+  const owner = typeof ownerReference === "object" ? ownerReference : {};
   const horse = invitation.horse || invitation.horseInfo || {};
   const tournamentReference =
     invitation.tournament ||
@@ -89,6 +89,8 @@ function normalizeInvitation(invitation = {}) {
     {};
   const tournament =
     typeof tournamentReference === "object" ? tournamentReference : {};
+
+  const horseReference = invitation.horse || invitation.horseInfo || {};
 
   return {
     ...invitation,
@@ -104,21 +106,105 @@ function normalizeInvitation(invitation = {}) {
       ["ownerName", "horseOwnerName", "ownerFullName", "horseOwnerFullName"],
       pickFirstValue(owner, ["fullName", "name", "displayName"], "N/A"),
     ),
-    horse: pickFirstValue(invitation, ["horseName"], pickFirstValue(horse, ["name", "horseName"], "N/A")),
+    // horse: pickFirstValue(invitation, ["horseName"], pickFirstValue(horse, ["name", "horseName"], "N/A")),
+    horseId:
+      getReferenceId(horseReference) ||
+      pickFirstValue(invitation, ["horseId"], ""),
+    horse: pickFirstValue(
+      invitation,
+      ["horseName"],
+      pickFirstValue(horseReference, ["name", "horseName"], "N/A"),
+    ),
     tournament: pickFirstValue(
       invitation,
       ["tournamentTitle", "tournamentName"],
       pickFirstValue(tournament, ["title", "name"], "N/A"),
     ),
-    location: pickFirstValue(invitation, ["location"], pickFirstValue(tournament, ["location"], "N/A")),
-    status: pickFirstValue(invitation, ["status", "invitationStatus"], "Pending"),
+    location: pickFirstValue(
+      invitation,
+      ["location"],
+      pickFirstValue(tournament, ["location"], "N/A"),
+    ),
+    status: pickFirstValue(
+      invitation,
+      ["status", "invitationStatus"],
+      "Pending",
+    ),
     message: pickFirstValue(invitation, ["message"], ""),
-    proposeContractAmount: pickFirstValue(invitation, ["proposeContractAmount", "contractAmount", "fee"], 0),
-    proposeOwnerShareRate: pickFirstValue(invitation, ["proposeOwnerShareRate", "ownerShareRate"], 0),
-    proposeJockeyShareRate: pickFirstValue(invitation, ["proposeJockeyShareRate", "jockeyShareRate"], 0),
-    ownerCompensationRate: pickFirstValue(invitation, ["ownerCompensationRate"], 0),
-    jockeyCompensationRate: pickFirstValue(invitation, ["jockeyCompensationRate"], 0),
-    sentAt: pickFirstValue(invitation, ["sentAt", "createdAt", "createdDate"], ""),
+    proposeContractAmount: pickFirstValue(
+      invitation,
+      ["proposeContractAmount", "contractAmount", "fee"],
+      0,
+    ),
+    proposeOwnerShareRate: pickFirstValue(
+      invitation,
+      ["proposeOwnerShareRate", "ownerShareRate"],
+      0,
+    ),
+    proposeJockeyShareRate: pickFirstValue(
+      invitation,
+      ["proposeJockeyShareRate", "jockeyShareRate"],
+      0,
+    ),
+    ownerCompensationRate: pickFirstValue(
+      invitation,
+      ["ownerCompensationRate"],
+      0,
+    ),
+    jockeyCompensationRate: pickFirstValue(
+      invitation,
+      ["jockeyCompensationRate"],
+      0,
+    ),
+    sentAt: pickFirstValue(
+      invitation,
+      ["sentAt", "createdAt", "createdDate"],
+      "",
+    ),
+  };
+}
+
+export function normalizeHorse(horse = {}) {
+  const historyRace = Array.isArray(horse.historyRace) ? horse.historyRace : [];
+  const totalRace = historyRace.length;
+  const totalWin = historyRace.filter(
+    (race) => Number(race?.finalRank) === 1,
+  ).length;
+  const calculatedWinRate = totalRace ? (totalWin / totalRace) * 100 : 0;
+
+  return {
+    id: horse.id ?? horse._id ?? "",
+    name: horse.name ?? "",
+    breed: horse.breed ?? "",
+    color: horse.color ?? "",
+    height: horse.height ?? 0,
+    weight: horse.weight ?? 0,
+    status: horse.horseStatus ?? horse.status ?? "IDLE",
+    totalWin: totalRace
+      ? totalWin
+      : (horse.stats?.totalWin ?? horse.totalWin ?? 0),
+    totalRace:
+      totalRace ||
+      horse.stats?.totalRace ||
+      horse.totalRace ||
+      horse.starts ||
+      0,
+    winRate: totalRace
+      ? Number(calculatedWinRate.toFixed(2))
+      : (horse.stats?.winRate ?? horse.winRate ?? 0),
+    starts: totalRace || horse.starts || horse.stats?.totalRace || 0,
+    podiums: horse.podiums ?? 0,
+    rating: horse.rating ?? 0,
+    lastRace: horse.lastRace ?? "",
+    ownerName: horse.ownerName ?? "",
+    ownerEmail: horse.ownerEmail ?? "",
+    userId: horse.userId ?? "",
+    stable: horse.stable ?? "",
+    description: horse.description ?? "",
+    imageUrl:
+      horse.imageUrl ?? horse.avatar ?? horse.avatarUrl ?? horse.photoUrl ?? "",
+    historyRace,
+    raw: horse,
   };
 }
 
@@ -197,7 +283,8 @@ function normalizeStatus(status) {
   const value = String(status || "").toLowerCase();
 
   if (value === "accepted" || value === "accept") return "Accepted";
-  if (value === "rejected" || value === "denied" || value === "deny") return "Rejected";
+  if (value === "rejected" || value === "denied" || value === "deny")
+    return "Rejected";
   if (value === "pending") return "Pending";
 
   return status || "Pending";
@@ -220,6 +307,8 @@ export default function JockeyInvitations() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [contractLoading, setContractLoading] = useState(false);
+  const [selectedHorseDetail, setSelectedHorseDetail] = useState(null);
+  const [horseLoading, setHorseLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -249,9 +338,14 @@ export default function JockeyInvitations() {
     setSaving(true);
 
     try {
-      await respondToJockeyInvitation(selectedAction.invitation.id, selectedAction.status);
+      await respondToJockeyInvitation(
+        selectedAction.invitation.id,
+        selectedAction.status,
+      );
       messageApi.success(
-        selectedAction.status === "Accepted" ? "Invitation accepted" : "Invitation declined",
+        selectedAction.status === "Accepted"
+          ? "Invitation accepted"
+          : "Invitation declined",
       );
       setSelectedAction(null);
       await loadInvitations();
@@ -264,6 +358,7 @@ export default function JockeyInvitations() {
 
   async function openInvitationDetail(invitation) {
     setDetailLoading(true);
+    setSelectedHorseDetail(null);
 
     try {
       const detail = await getJockeyInvitationById(invitation.id);
@@ -273,6 +368,18 @@ export default function JockeyInvitations() {
       const [resolvedDetail] =
         await resolveInvitationTournamentData(detailsWithOwners);
       setSelectedDetail(resolvedDetail);
+
+      if (resolvedDetail?.horseId) {
+        setHorseLoading(true);
+        try {
+          const horseData = await getHorseById(resolvedDetail.horseId);
+          setSelectedHorseDetail(normalizeHorse(horseData));
+        } catch (horseError) {
+          console.error("Could not load horse details:", horseError);
+        } finally {
+          setHorseLoading(false);
+        }
+      }
     } catch (error) {
       messageApi.error(error.message || "Could not load invitation detail.");
     } finally {
@@ -321,9 +428,7 @@ export default function JockeyInvitations() {
       render: (value, record) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{record.owner}</Typography.Text>
-          <Typography.Text type="secondary">
-            {record.message}
-          </Typography.Text>
+          <Typography.Text type="secondary">{record.message}</Typography.Text>
         </Space>
       ),
     },
@@ -359,7 +464,9 @@ export default function JockeyInvitations() {
             size="small"
             type="primary"
             disabled={!isPending(record.status)}
-            onClick={() => setSelectedAction({ invitation: record, status: "Accepted" })}
+            onClick={() =>
+              setSelectedAction({ invitation: record, status: "Accepted" })
+            }
           >
             Accept
           </Button>
@@ -367,7 +474,9 @@ export default function JockeyInvitations() {
             size="small"
             danger
             disabled={!isPending(record.status)}
-            onClick={() => setSelectedAction({ invitation: record, status: "Rejected" })}
+            onClick={() =>
+              setSelectedAction({ invitation: record, status: "Rejected" })
+            }
           >
             Deny
           </Button>
@@ -409,7 +518,11 @@ export default function JockeyInvitations() {
       </Card>
 
       <Modal
-        title={selectedAction?.status === "Accepted" ? "Accept invitation?" : "Deny invitation?"}
+        title={
+          selectedAction?.status === "Accepted"
+            ? "Accept invitation?"
+            : "Deny invitation?"
+        }
         open={Boolean(selectedAction)}
         onCancel={() => setSelectedAction(null)}
         onOk={handleConfirmResponse}
@@ -420,11 +533,21 @@ export default function JockeyInvitations() {
       >
         {selectedInvitation && (
           <Descriptions bordered column={1} size="small">
-            <Descriptions.Item label="Race">{selectedInvitation.race}</Descriptions.Item>
-            <Descriptions.Item label="Tournament">{selectedInvitation.tournament}</Descriptions.Item>
-            <Descriptions.Item label="Owner">{selectedInvitation.owner}</Descriptions.Item>
-            <Descriptions.Item label="Horse">{selectedInvitation.horse}</Descriptions.Item>
-            <Descriptions.Item label="Location">{selectedInvitation.location}</Descriptions.Item>
+            <Descriptions.Item label="Race">
+              {selectedInvitation.race}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tournament">
+              {selectedInvitation.tournament}
+            </Descriptions.Item>
+            <Descriptions.Item label="Owner">
+              {selectedInvitation.owner}
+            </Descriptions.Item>
+            <Descriptions.Item label="Horse">
+              {selectedInvitation.horse}
+            </Descriptions.Item>
+            <Descriptions.Item label="Location">
+              {selectedInvitation.location}
+            </Descriptions.Item>
             <Descriptions.Item label="Amount">
               {formatMoney(selectedInvitation.proposeContractAmount)}
             </Descriptions.Item>
@@ -434,7 +557,9 @@ export default function JockeyInvitations() {
             <Descriptions.Item label="Jockey share">
               {selectedInvitation.proposeJockeyShareRate}%
             </Descriptions.Item>
-            <Descriptions.Item label="Message">{selectedInvitation.message || "N/A"}</Descriptions.Item>
+            <Descriptions.Item label="Message">
+              {selectedInvitation.message || "N/A"}
+            </Descriptions.Item>
           </Descriptions>
         )}
       </Modal>
@@ -443,36 +568,100 @@ export default function JockeyInvitations() {
         title="Invitation detail"
         open={Boolean(selectedDetail)}
         footer={null}
-        onCancel={() => setSelectedDetail(null)}
+        onCancel={() => {
+          setSelectedDetail(null);
+          setSelectedHorseDetail(null);
+        }}
         destroyOnHidden
+        width={600}
       >
         {selectedDetail && (
-          <Descriptions bordered column={1} size="small">
-            <Descriptions.Item label="Tournament">{selectedDetail.tournament}</Descriptions.Item>
-            <Descriptions.Item label="Owner">{selectedDetail.owner}</Descriptions.Item>
-            <Descriptions.Item label="Horse">{selectedDetail.horse}</Descriptions.Item>
-            <Descriptions.Item label="Location">{selectedDetail.location}</Descriptions.Item>
-            <Descriptions.Item label="Status">
-              <Tag color={statusColor[normalizeStatus(selectedDetail.status)] || "default"}>
-                {normalizeStatus(selectedDetail.status)}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Contract amount">
-              {formatMoney(selectedDetail.proposeContractAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Owner share">{selectedDetail.proposeOwnerShareRate}%</Descriptions.Item>
-            <Descriptions.Item label="Jockey share">{selectedDetail.proposeJockeyShareRate}%</Descriptions.Item>
-            <Descriptions.Item label="Owner compensation">
-              {selectedDetail.ownerCompensationRate}%
-            </Descriptions.Item>
-            <Descriptions.Item label="Jockey compensation">
-              {selectedDetail.jockeyCompensationRate}%
-            </Descriptions.Item>
-            <Descriptions.Item label="Message">{selectedDetail.message || "N/A"}</Descriptions.Item>
-            <Descriptions.Item label="Sent at">
-              {formatDateTime(selectedDetail.sentAt)}
-            </Descriptions.Item>
-          </Descriptions>
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Tournament">
+                {selectedDetail.tournament}
+              </Descriptions.Item>
+              <Descriptions.Item label="Owner">
+                {selectedDetail.owner}
+              </Descriptions.Item>
+              <Descriptions.Item label="Horse">
+                {selectedDetail.horse}
+              </Descriptions.Item>
+              <Descriptions.Item label="Location">
+                {selectedDetail.location}
+              </Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag
+                  color={
+                    statusColor[normalizeStatus(selectedDetail.status)] ||
+                    "default"
+                  }
+                >
+                  {normalizeStatus(selectedDetail.status)}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Contract amount">
+                {formatMoney(selectedDetail.proposeContractAmount)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Owner share">
+                {selectedDetail.proposeOwnerShareRate}%
+              </Descriptions.Item>
+              <Descriptions.Item label="Jockey share">
+                {selectedDetail.proposeJockeyShareRate}%
+              </Descriptions.Item>
+              <Descriptions.Item label="Owner compensation">
+                {selectedDetail.ownerCompensationRate}%
+              </Descriptions.Item>
+              <Descriptions.Item label="Jockey compensation">
+                {selectedDetail.jockeyCompensationRate}%
+              </Descriptions.Item>
+              <Descriptions.Item label="Message">
+                {selectedDetail.message || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Sent at">
+                {formatDateTime(selectedDetail.sentAt)}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* Phần thông số chi tiết của Ngựa */}
+            <Card title="Horse Information" size="small" loading={horseLoading}>
+              {selectedHorseDetail ? (
+                <Descriptions bordered column={2} size="small">
+                  <Descriptions.Item label="Tên ngựa">
+                    {selectedHorseDetail.name}
+                  </Descriptions.Item>
+                  {/* <Descriptions.Item label="Giống">
+                    {selectedHorseDetail.breed || "N/A"}
+                  </Descriptions.Item> */}
+                  <Descriptions.Item label="Màu sắc">
+                    {selectedHorseDetail.color || "N/A"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Chiều cao">
+                    {selectedHorseDetail.height} cm
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Cân nặng">
+                    {selectedHorseDetail.weight} kg
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số trận tham gia">
+                    {selectedHorseDetail.totalRace}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số trận thắng">
+                    {selectedHorseDetail.totalWin}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Tỷ lệ thắng">
+                    {selectedHorseDetail.winRate}%
+                  </Descriptions.Item>
+                  {/* <Descriptions.Item label="Mô tả" span={2}>
+                    {selectedHorseDetail.description || "N/A"}
+                  </Descriptions.Item> */}
+                </Descriptions>
+              ) : (
+                <Typography.Text type="secondary">
+                  No horse information
+                </Typography.Text>
+              )}
+            </Card>
+          </Space>
         )}
       </Modal>
 
