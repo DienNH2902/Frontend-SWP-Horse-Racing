@@ -99,7 +99,7 @@ export default function NotificationHistory() {
     Contract_cancelled: { text: "Hợp đồng bị hủy", color: "red" },
     Contract_breached: { text: "Vi phạm hợp đồng", color: "red" },
     Contract_completed: { text: "Hợp đồng hoàn thành", color: "lime" },
-
+    Invitation_sent: { text: "Lời mời đã gửi", color: "green" },
     // --- Hệ thống giải đấu / Vận hành (Tournament) ---
     Tournament_registered: { text: "Đăng ký giải đấu", color: "green" },
     Tournament_waitlist: { text: "Hàng chờ giải đấu", color: "warning" },
