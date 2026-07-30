@@ -305,7 +305,7 @@ export default function JockeyInvitations() {
   const [selectedDetail, setSelectedDetail] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoadingId, setDetailLoadingId] = useState(null);
   const [contractLoading, setContractLoading] = useState(false);
   const [selectedHorseDetail, setSelectedHorseDetail] = useState(null);
   const [horseLoading, setHorseLoading] = useState(false);
@@ -357,7 +357,7 @@ export default function JockeyInvitations() {
   }
 
   async function openInvitationDetail(invitation) {
-    setDetailLoading(true);
+    setDetailLoadingId(invitation.id);
     setSelectedHorseDetail(null);
 
     try {
@@ -383,7 +383,7 @@ export default function JockeyInvitations() {
     } catch (error) {
       messageApi.error(error.message || "Could not load invitation detail.");
     } finally {
-      setDetailLoading(false);
+      setDetailLoadingId(null);
     }
   }
 
@@ -455,7 +455,7 @@ export default function JockeyInvitations() {
         <Space wrap>
           <Button
             size="small"
-            loading={detailLoading}
+            loading={detailLoadingId === record.id}
             onClick={() => openInvitationDetail(record)}
           >
             Detail
