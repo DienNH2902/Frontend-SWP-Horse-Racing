@@ -198,7 +198,7 @@ export default function RefereeResultReviewModal({
                                                     size="large"
                                                     icon={<CheckCircleOutlined />}
                                                     loading={reportLoading}
-                                                    disabled={reportLocked}
+                                                    disabled={reportLocked || finalLocked}
                                                     onClick={handleSubmitReport}
                                                 >
                                                     Submit Report
