@@ -88,7 +88,7 @@ export default function OwnerRaceResults() {
 
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
 
-      <Row gutter={[16, 16]}>
+      {/* <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
           <Card>
             <Statistic title="Upcoming races" value={data.races.length} />
@@ -104,7 +104,7 @@ export default function OwnerRaceResults() {
             <Statistic title="Available slots" value={availableSlots} />
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
       <Card title="Upcoming races">
         <Table
