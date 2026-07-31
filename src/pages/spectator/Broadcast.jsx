@@ -839,13 +839,18 @@ export function BroadcastExperience({ mode = "live" }) {
         <header className="broadcast-header">
           <div>
             <p className="broadcast-eyebrow">GOLDEN HOOF · LIVE</p>
-            <h1>🏇 Race Broadcast</h1>
+            <h1>
+              <Link className="broadcast-home-logo" to="/home" aria-label="Go to home">
+                <img src="/goldenhoof-logo.png" alt="" />
+              </Link>
+              <span>Race Broadcast</span>
+            </h1>
             <p>Watch the race progress in real time.</p>
           </div>
-          <span className={`broadcast-status ${connection.state}`}>
+          {/* <span className={`broadcast-status ${connection.state}`}>
             <i aria-hidden="true" />
             {connection.message}
-          </span>
+          </span> */}
         </header>
 
         <section className="broadcast-controls" aria-label="Socket controls">
