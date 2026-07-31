@@ -839,13 +839,18 @@ export function BroadcastExperience({ mode = "live" }) {
         <header className="broadcast-header">
           <div>
             <p className="broadcast-eyebrow">GOLDEN HOOF · LIVE</p>
-            <h1>🏇 Race Broadcast</h1>
+            <h1>
+              <Link className="broadcast-home-logo" to="/home" aria-label="Go to home">
+                <img src="/goldenhoof-logo.png" alt="" />
+              </Link>
+              <span>Race Broadcast</span>
+            </h1>
             <p>Watch the race progress in real time.</p>
           </div>
-          <span className={`broadcast-status ${connection.state}`}>
+          {/* <span className={`broadcast-status ${connection.state}`}>
             <i aria-hidden="true" />
             {connection.message}
-          </span>
+          </span> */}
         </header>
 
         <section className="broadcast-controls" aria-label="Socket controls">
@@ -921,7 +926,6 @@ export function BroadcastExperience({ mode = "live" }) {
           <div className="broadcast-card leaderboard-card">
             <div className="card-heading">
               <div>
-                <span>Real-Time Leaderboard</span>
                 <strong>🏆 Live leaderboard</strong>
               </div>
               <span>{liveLeaderboard.length} horses</span>
@@ -974,7 +978,7 @@ export function BroadcastExperience({ mode = "live" }) {
                 <thead>
                   <tr>
                     <th>Rank</th>
-                    <th>Horse ID</th>
+                    <th>Horse</th>
                     <th>Finish Time</th>
                   </tr>
                 </thead>
@@ -998,7 +1002,7 @@ export function BroadcastExperience({ mode = "live" }) {
                         </td>
                         <td title={result.horseId}>
                           {allHorsesMap.get(result.horseId)
-                            ? `${allHorsesMap.get(result.horseId)} (${shortId(result.horseId, 6)})`
+                            ? `${allHorsesMap.get(result.horseId)} `
                             : result.horseId}
                         </td>
                         <td>

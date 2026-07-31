@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { getRacesByTournament } from "../../api/services/race.service";
+import { getRaceCourseById } from "../../api/services/race-course.service";
 import { getTournaments } from "../../api/services/tournament.service";
 import "./LiveRaceChannels.css";
 
@@ -33,6 +34,14 @@ function getId(item) {
   return typeof value === "object" ? value?._id || value?.id : value;
 }
 
+function getRaceCourseId(race) {
+  const value = race?.raceCourseId || race?.raceCourse;
+  if (!value) return "";
+  if (typeof value === "string") return value;
+
+  return getId(value) || "";
+}
+
 function getTournamentName(tournament) {
   return (
     tournament?.title ||
@@ -42,7 +51,7 @@ function getTournamentName(tournament) {
   );
 }
 
-function normalizeRace(race, tournament, index) {
+function normalizeRace(race, tournament, index, raceCourseName = "") {
   const id = getId(race);
   const horses = Array.isArray(race?.horses)
     ? race.horses
@@ -62,14 +71,10 @@ function normalizeRace(race, tournament, index) {
       race?.tournamentName ||
       getTournamentName(tournament),
     course:
-      race?.raceCourseName ||
-      race?.courseName ||
-      race?.raceCourseId?.name ||
+      race?.raceCourse?.name ||
+      raceCourseName ||
       "Race course",
     startAt:
-      race?.startAt ||
-      race?.startDateTime ||
-      race?.scheduledAt ||
       race?.startTime ||
       race?.date,
     finishedAt:
@@ -164,13 +169,34 @@ export default function LiveRaceChannels() {
 
     try {
       const tournaments = resolveList(await getTournaments());
+      const raceCourseNameCache = new Map();
+      const resolveRaceCourseName = async (raceCourseId) => {
+        if (!raceCourseId) return "";
+        const key = String(raceCourseId);
+
+        if (!raceCourseNameCache.has(key)) {
+          raceCourseNameCache.set(
+            key,
+            getRaceCourseById(key)
+              .then((raceCourse) => raceCourse?.name || "")
+              .catch(() => ""),
+          );
+        }
+
+        return raceCourseNameCache.get(key);
+      };
       const raceResponses = await Promise.allSettled(
         tournaments.map(async (tournament) => {
           const tournamentId = getId(tournament);
           if (!tournamentId) return [];
           const response = await getRacesByTournament(tournamentId);
-          return resolveList(response).map((race, index) =>
-            normalizeRace(race, tournament, index),
+          const raceList = resolveList(response);
+          const raceCourseNames = await Promise.all(
+            raceList.map((race) => resolveRaceCourseName(getRaceCourseId(race))),
+          );
+
+          return raceList.map((race, index) =>
+            normalizeRace(race, tournament, index, raceCourseNames[index]),
           );
         }),
       );
