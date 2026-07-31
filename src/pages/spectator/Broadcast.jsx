@@ -926,7 +926,6 @@ export function BroadcastExperience({ mode = "live" }) {
           <div className="broadcast-card leaderboard-card">
             <div className="card-heading">
               <div>
-                <span>Real-Time Leaderboard</span>
                 <strong>🏆 Live leaderboard</strong>
               </div>
               <span>{liveLeaderboard.length} horses</span>
@@ -979,7 +978,7 @@ export function BroadcastExperience({ mode = "live" }) {
                 <thead>
                   <tr>
                     <th>Rank</th>
-                    <th>Horse ID</th>
+                    <th>Horse</th>
                     <th>Finish Time</th>
                   </tr>
                 </thead>
@@ -1003,7 +1002,7 @@ export function BroadcastExperience({ mode = "live" }) {
                         </td>
                         <td title={result.horseId}>
                           {allHorsesMap.get(result.horseId)
-                            ? `${allHorsesMap.get(result.horseId)} (${shortId(result.horseId, 6)})`
+                            ? `${allHorsesMap.get(result.horseId)} `
                             : result.horseId}
                         </td>
                         <td>
