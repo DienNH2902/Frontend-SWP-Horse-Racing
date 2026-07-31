@@ -175,7 +175,7 @@ export default function RefereeResultReviewModal({
                                                     color: "#fff",
                                                 }}
                                             >
-                                                {reportReason || "-"}
+                                                {reportReason || ""}
                                             </div>
                                         ) : (
                                             <Input.TextArea
