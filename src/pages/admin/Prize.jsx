@@ -299,6 +299,17 @@ function Prize() {
         key: "actions",
         width: 190,
         render: (_, record) => {
+          const matchingPrize =
+            prizes.find((p) => p.raceId === record.id) || prizes[0];
+
+          const isPrizeDistributed = Boolean(matchingPrize?.isDistributed);
+
+          // 1. Đã trao giải -> Ẩn nút "Distribute", thay bằng Tag thông báo
+          if (isPrizeDistributed) {
+            return <Tag color="blue">Distributed</Tag>;
+          }
+
+          // 2. Chưa sẵn sàng -> Hiện nút Disabled kèm Tooltip giải thích
           const isReady = prizes.length > 0 && record.status === "Finished";
 
           if (!isReady) {
@@ -310,14 +321,13 @@ function Prize() {
             return (
               <Tooltip title={reason}>
                 <span>
-                  <Button disabled>
-                    Distribute
-                  </Button>
+                  <Button disabled>Distribute</Button>
                 </span>
               </Tooltip>
             );
           }
 
+          // 3. Đủ điều kiện và chưa trao giải -> Trả về Popconfirm + Button
           return (
             <Popconfirm
               title="Distribute tournament prize?"
@@ -429,10 +439,7 @@ function Prize() {
           <Title level={1}>Prize</Title>
         </div>
 
-        <Button
-          className="prize-primary"
-          onClick={openCreatePrizeModal}
-        >
+        <Button className="prize-primary" onClick={openCreatePrizeModal}>
           Create Prize
         </Button>
       </div>
