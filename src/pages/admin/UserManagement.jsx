@@ -117,7 +117,8 @@ function normalizeUser(user, index) {
   if (lowerRole.includes("jockey")) normalizedRole = "Jockey";
   else if (lowerRole.includes("referee")) normalizedRole = "Referee";
   else if (lowerRole.includes("owner") || lowerRole.includes("horse"))
-    normalizedRole = "Horse-Owner";
+    normalizedRole = "Horse Owner";
+  else if (lowerRole.includes("admin")) normalizedRole = "Admin";
 
   return {
     key: id,
@@ -207,7 +208,9 @@ function UserManagement() {
     }
   }
 
-  const filteredUsers = useMemo(() => users, [users]);
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => String(user.role).toLowerCase() !== "admin");
+  }, [users]);
 
   async function handleSearch(value) {
     setSearchKey(value);
