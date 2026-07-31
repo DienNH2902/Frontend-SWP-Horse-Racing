@@ -168,7 +168,7 @@ export default function RefereeResultReviewModal({
                                             style={{
                                                 marginTop: 10,
                                             }}
-                                            disabled={reportLocked}
+                                            disabled={reportLocked || finalLocked}
                                             placeholder="Enter violation reason (optional)"
                                             value={reportReason}
                                             onChange={(e) =>
