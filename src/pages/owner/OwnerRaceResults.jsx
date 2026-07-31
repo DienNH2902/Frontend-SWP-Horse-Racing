@@ -120,6 +120,7 @@ export default function OwnerRaceResults() {
         history={data.historyRaceOwner}
         loading={loading}
         participantLabel="Jockey"
+        compact
       />
     </Space>
   );
