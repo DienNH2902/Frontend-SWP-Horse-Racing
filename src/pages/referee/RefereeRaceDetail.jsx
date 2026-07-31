@@ -105,6 +105,8 @@ export default function RefereeRaceDetail() {
     const [selectedJockeyId, setSelectedJockeyId] = useState(null);
     const [selectedHorseId, setSelectedHorseId] = useState(null);
 
+
+
     const [condition, setCondition] = useState(null);
 
     const [reviewOpen, setReviewOpen] = useState(false);
@@ -116,6 +118,13 @@ export default function RefereeRaceDetail() {
     const [referee, setReferee] = useState(null);
 
     const [raceCourse, setRaceCourse] = useState(null);
+
+    const conditionLocked = [
+        "Ready",
+        "Simulated",
+        "Completed",
+        "Finished",
+    ].includes(race?.status);
 
     const [removingHorse, setRemovingHorse] =
         useState(false);
@@ -667,6 +676,12 @@ export default function RefereeRaceDetail() {
 
     const handleSaveCondition =
         async (values) => {
+            if (conditionLocked) {
+                message.warning(
+                    "Race Condition can no longer be modified."
+                );
+                return;
+            }
             try {
                 setSavingCondition(true);
 
@@ -706,6 +721,8 @@ export default function RefereeRaceDetail() {
             } finally {
                 setSavingCondition(false);
             }
+
+            await loadData();
         };
 
     const handleConfirmReady = async () => {
@@ -1319,6 +1336,7 @@ export default function RefereeRaceDetail() {
                             }
                         >
                             <Select
+                                disabled={conditionLocked}
                                 className="race-select race-condition-select"
                                 popupClassName="dark-select"
                                 classNames={{
@@ -1357,6 +1375,7 @@ export default function RefereeRaceDetail() {
                         >
                             <Space.Compact style={{ width: "100%" }}>
                                 <InputNumber
+                                    disabled={conditionLocked}
                                     className="race-input-number"
                                     min={0}
                                     max={30}
@@ -1380,6 +1399,7 @@ export default function RefereeRaceDetail() {
                             name="trackCondition"
                         >
                             <Select
+                                disabled={conditionLocked}
                                 className="race-select race-condition-select"
                                 popupClassName="dark-select"
                                 classNames={{
@@ -1415,6 +1435,7 @@ export default function RefereeRaceDetail() {
                             htmlType="submit"
                             loading={savingCondition}
                             size="large"
+                            disabled={conditionLocked}
                         >
                             Save Condition
                         </Button>
