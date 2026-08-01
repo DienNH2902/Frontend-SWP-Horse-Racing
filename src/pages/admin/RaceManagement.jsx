@@ -322,7 +322,7 @@ function RaceManagement() {
         const location = course?.location ? ` - ${course.location}` : "";
 
         return {
-          label: `${name}${location}`,
+          label: `${name}`,
           value: id,
         };
       });
@@ -1065,10 +1065,7 @@ function RaceManagement() {
             <div className="race-round-title">Qualifying Races</div>
           </div>
 
-          <Button
-            className="race-management-primary"
-            onClick={openBatchModal}
-          >
+          <Button className="race-management-primary" onClick={openBatchModal}>
             Create Round 1 Races
           </Button>
         </section>
