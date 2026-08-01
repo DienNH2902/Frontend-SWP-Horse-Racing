@@ -23,6 +23,7 @@ import { useEffect, useState } from "react";
 
 import { getHorseById } from "../../api/services/horse.service";
 import { getUserById } from "../../api/services/user.service";
+import "./RefereeOwnerDetailModal.css";
 
 const { Title, Text } = Typography;
 
@@ -56,6 +57,26 @@ export default function RefereeOwnerDetailModal({
         }
     }, [open, horseId]);
 
+    function horseStatusColor(status) {
+        switch (status) {
+            case "READY":
+            case "Ready":
+                return "green";
+
+            case "IDLE":
+                return "blue";
+
+            case "RACING":
+                return "processing";
+
+            case "INACTIVE":
+                return "red";
+
+            default:
+                return "default";
+        }
+    }
+
     async function loadOwner() {
         try {
             setLoading(true);
@@ -74,84 +95,102 @@ export default function RefereeOwnerDetailModal({
 
     return (
         <Modal
+            className="owner-modal"
             title="👤 Owner Profile"
             open={open}
             onCancel={onClose}
             footer={null}
-            width={950}
+            width={1000}
+            centered
             destroyOnClose
         >
             {loading ? (
-                <div
-                    style={{
-                        textAlign: "center",
-                        padding: 80,
-                    }}
-                >
+                <div className="owner-loading">
                     <Spin size="large" />
                 </div>
             ) : !owner ? (
-                <Empty description="Owner not found" />
+                <div className="owner-empty">
+                    <Empty description="Owner not found" />
+                </div>
             ) : (
                 <>
                     <Card
                         bordered={false}
-                        style={{
-                            borderRadius: 16,
-                            marginBottom: 20,
-                        }}
+                        className="owner-hero-card"
                     >
-                        <Row gutter={32} align="middle">
-                            <Col>
+                        <Row
+                            gutter={[32, 24]}
+                            align="middle"
+                        >
+                            <Col
+                                xs={24}
+                                md={6}
+                                style={{ textAlign: "center" }}
+                            >
                                 <Avatar
-                                    size={150}
+                                    className="owner-avatar"
+                                    size={170}
                                     src={owner.avatar}
                                     icon={<UserOutlined />}
                                 />
                             </Col>
 
-                            <Col flex="auto">
+                            <Col
+                                xs={24}
+                                md={18}
+                                className="owner-content"
+                            >
                                 <Title
                                     level={2}
-                                    style={{ marginBottom: 8 }}
+                                    className="owner-name"
                                 >
                                     {owner.fullName}
                                 </Title>
 
+                                <Text className="owner-id">
+                                    ID: {owner._id}
+                                </Text>
+
+                                <Text className="owner-subtitle">
+                                    Horse Owner Account
+                                </Text>
+
                                 <Space wrap>
-                                    <Tag color="blue">
+                                    <Tag className="role-tag">
                                         {owner.role}
                                     </Tag>
 
                                     <Tag
-                                        color={statusColor(
-                                            owner.status
-                                        )}
+                                        className="status-tag"
+                                        color={statusColor(owner.status)}
                                     >
                                         {owner.status}
                                     </Tag>
                                 </Space>
 
-                                <Divider />
+                                <Divider className="owner-divider" />
 
-                                <Row gutter={16}>
-                                    <Col span={8}>
+                                <Row gutter={[16, 16]}>
+                                    <Col xs={24} sm={8}>
                                         <Statistic
+                                            className="owner-statistic"
                                             title="Owned Horse"
                                             value={horse?.name}
                                         />
                                     </Col>
 
-                                    <Col span={8}>
+                                    <Col xs={24} sm={8}>
                                         <Statistic
+                                            className="owner-statistic"
                                             title="Horse Weight"
                                             value={horse?.weight}
                                             suffix="kg"
                                         />
                                     </Col>
 
-                                    <Col span={8}>
+                                    <Col xs={24} sm={8}>
                                         <Statistic
+                                            className="owner-statistic"
                                             title="Horse Height"
                                             value={horse?.height}
                                             suffix="cm"
@@ -162,17 +201,17 @@ export default function RefereeOwnerDetailModal({
                         </Row>
                     </Card>
 
-                    <Row gutter={16}>
-                        <Col span={12}>
+                    <Row gutter={[16, 16]}>
+                        <Col xs={24} lg={12}>
                             <Card
+                                className="owner-info-card"
                                 title="Owner Information"
                                 bordered={false}
-                                style={{
-                                    borderRadius: 16,
-                                }}
                             >
                                 <Descriptions
+                                    className="owner-description"
                                     column={1}
+                                    bordered
                                     size="middle"
                                 >
                                     <Descriptions.Item
@@ -226,16 +265,16 @@ export default function RefereeOwnerDetailModal({
                             </Card>
                         </Col>
 
-                        <Col span={12}>
+                        <Col xs={24} lg={12}>
                             <Card
+                                className="owner-info-card"
                                 title="Owned Horse"
                                 bordered={false}
-                                style={{
-                                    borderRadius: 16,
-                                }}
                             >
                                 <Descriptions
+                                    className="owner-description"
                                     column={1}
+                                    bordered
                                     size="middle"
                                 >
                                     <Descriptions.Item label="Horse Name">
@@ -243,7 +282,10 @@ export default function RefereeOwnerDetailModal({
                                     </Descriptions.Item>
 
                                     <Descriptions.Item label="Horse Status">
-                                        <Tag color="green">
+                                        <Tag
+                                            className="horse-status-tag"
+                                            color={horseStatusColor(horse?.horseStatus)}
+                                        >
                                             {horse?.horseStatus}
                                         </Tag>
                                     </Descriptions.Item>
