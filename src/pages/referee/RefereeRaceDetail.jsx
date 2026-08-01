@@ -1366,12 +1366,20 @@ export default function RefereeRaceDetail() {
                             />
                         </Form.Item>
                         <Form.Item
-                            label={
-                                <span className="race-white-text">
-                                    Wind Speed
-                                </span>
-                            }
+                            label={<span className="race-white-text">Wind Speed</span>}
                             name="windSpeed"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please enter wind speed",
+                                },
+                                {
+                                    type: "number",
+                                    min: 0,
+                                    max: 30,
+                                    message: "Wind speed must be between 0 and 30 km/h",
+                                },
+                            ]}
                         >
                             <Space.Compact style={{ width: "100%" }}>
                                 <InputNumber
