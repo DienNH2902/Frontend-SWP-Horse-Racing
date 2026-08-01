@@ -120,7 +120,7 @@ export default function RefereeJockeyDetailModal({
                                     {jockey.fullName}
                                 </Title>
 
-                                <Text className="profile-id">
+                                <Text className="profile-id" copyable>
                                     ID: {jockey._id}
                                 </Text>
 

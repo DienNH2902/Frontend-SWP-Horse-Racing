@@ -118,10 +118,9 @@ export default function RefereeHorseDetailModal({
                                 style={{ textAlign: "center" }}
                             >
                                 <Avatar
-                                    icon={<UserOutlined />}
-                                    size={300}
-                                    shape="square"
+                                    size={220}
                                     src={horse.imageUrl}
+                                    icon={<UserOutlined />}
                                     className="horse-avatar-referee"
                                 />
                             </Col>
