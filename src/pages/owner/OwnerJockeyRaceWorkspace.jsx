@@ -160,6 +160,11 @@ function normalizeInvitation(invitation) {
       ["sentAt", "createdAt", "createdDate"],
       "",
     ),
+    isAdminResponse: pickFirstValue(
+      invitation,
+      ["isAdminResponse", "isAdminResponse"],
+      false,
+    ),
   };
 }
 
@@ -167,6 +172,12 @@ function isAcceptedInvitation(invitation) {
   const status = String(invitation?.status || "").toLowerCase();
 
   return status === "accepted" || status === "accept";
+}
+
+function isAdminResponseInvitation(invitation) {
+  const isAdminResponse = Boolean(invitation?.isAdminResponse || false);
+
+  return isAdminResponse === false;
 }
 
 async function resolveInvitationTournamentTitles(invitations) {
@@ -412,6 +423,17 @@ export default function OwnerJockeyRaceWorkspace() {
         value: invitation.id,
         label: `${invitation.tournament} - ${invitation.horse} / ${invitation.jockey}`,
       })),
+    [workspace.invitations],
+  );
+
+  const isAdminResponseInvitationOptions = useMemo(
+    () =>
+      workspace.invitations
+        .filter(isAdminResponseInvitation)
+        .map((invitation) => ({
+          value: invitation.id,
+          label: `${invitation.tournament} - ${invitation.horse} / ${invitation.jockey}`,
+        })),
     [workspace.invitations],
   );
 
@@ -913,7 +935,7 @@ export default function OwnerJockeyRaceWorkspace() {
           >
             <Select
               loading={invitationLoading}
-              options={acceptedInvitationOptions}
+              options={isAdminResponseInvitationOptions}
               placeholder="Select accepted invitation"
               showSearch
               optionFilterProp="label"
