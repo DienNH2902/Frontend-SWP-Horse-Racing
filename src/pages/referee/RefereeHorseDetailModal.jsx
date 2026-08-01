@@ -119,10 +119,10 @@ export default function RefereeHorseDetailModal({
                             >
                                 <Avatar
                                     icon={<UserOutlined />}
-                                    size={190}
+                                    size={300}
                                     shape="square"
                                     src={horse.imageUrl}
-                                    className="horse-avatar"
+                                    className="horse-avatar-referee"
                                 />
                             </Col>
 
