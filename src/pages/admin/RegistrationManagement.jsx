@@ -243,7 +243,13 @@ function RegistrationManagement() {
 
     try {
       const response = await getRacesByTournament(tournamentId);
-      const options = resolveList(response).map(normalizeRaceOption);
+      // const options = resolveList(response).map(normalizeRaceOption);
+      // Lọc chỉ lấy các race có roundNumber === 1
+      const roundOneRaces = resolveList(response).filter(
+        (race) => race.roundNumber === 1,
+      );
+
+      const options = roundOneRaces.map(normalizeRaceOption);
 
       if (
         currentRaceId &&
