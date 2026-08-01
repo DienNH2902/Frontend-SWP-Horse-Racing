@@ -68,19 +68,28 @@
     width: 220px !important;
     height: 220px !important;
 
-    border-radius: 24px !important;
+    border-radius: 50% !important;
+
+    overflow: hidden;
 
     border: 4px solid #2ec4b6;
-
-    transition: .35s;
-
-    object-fit: cover;
+    transition: .25s;
 
 }
 
 .horse-avatar-referee:hover {
 
     transform: scale(1.04);
+
+}
+
+.horse-avatar-referee img {
+
+    width: 100%;
+
+    height: 100%;
+
+    object-fit: cover;
 
 }
 
