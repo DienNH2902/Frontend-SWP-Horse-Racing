@@ -367,6 +367,14 @@
     }
 }
 
+.dashboard-table-title {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .dashboard-table-title,
 .dashboard-table-title.ant-typography {
 
@@ -945,7 +953,7 @@
     background-color: #104941 !important;
 
     border:
-            1px solid rgba(46, 196, 182, .15);
+        1px solid rgba(46, 196, 182, .15);
 }
 
 @media(max-width:768px) {

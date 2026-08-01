@@ -1414,7 +1414,7 @@ export default function RefereeRaceDetail() {
                             rules={[
                                 {
                                     required: true,
-                                    message: "Please enter track type",
+                                    message: "Please enter track condition",
                                 },
                             ]}
                         >
