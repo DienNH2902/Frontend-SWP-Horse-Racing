@@ -613,6 +613,17 @@ function TournamentManagement() {
         render: (value) => <Text strong>{value}</Text>,
       },
       {
+        title: "Status",
+        dataIndex: "status",
+        width: 50,
+        render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
+      },
+      {
+        title: "Available Slot",
+        dataIndex: "availableSlot",
+        width: 50,
+      },
+      {
         title: "Start Date",
         dataIndex: "startDate",
         width: 50,
@@ -628,17 +639,6 @@ function TournamentManagement() {
       //   width: 260,
       //   ellipsis: true,
       // },
-      {
-        title: "Status",
-        dataIndex: "status",
-        width: 50,
-        render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
-      },
-      {
-        title: "Available Slot",
-        dataIndex: "availableSlot",
-        width: 50,
-      },
       {
         title: "Actions",
         key: "actions",
