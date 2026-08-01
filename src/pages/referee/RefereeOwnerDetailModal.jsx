@@ -147,7 +147,7 @@ export default function RefereeOwnerDetailModal({
                                     {owner.fullName}
                                 </Title>
 
-                                <Text className="owner-id">
+                                <Text className="owner-id" copyable>
                                     ID: {owner._id}
                                 </Text>
 
@@ -300,12 +300,6 @@ export default function RefereeOwnerDetailModal({
 
                                     <Descriptions.Item label="Height">
                                         {horse?.height} cm
-                                    </Descriptions.Item>
-
-                                    <Descriptions.Item label="Owner Email">
-                                        <Text copyable>
-                                            {horse?.ownerEmail}
-                                        </Text>
                                     </Descriptions.Item>
                                 </Descriptions>
                             </Card>
