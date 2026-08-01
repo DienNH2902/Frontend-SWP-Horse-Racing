@@ -1379,12 +1379,12 @@ export default function RefereeRaceDetail() {
                                     required: true,
                                     message: "Please enter wind speed",
                                 },
-                                {
-                                    type: "number",
-                                    min: 0,
-                                    max: 30,
-                                    message: "Wind speed must be between 0 and 30 km/h",
-                                },
+                                // {
+                                //     type: "number",
+                                //     min: 0,
+                                //     max: 30,
+                                //     message: "Wind speed must be between 0 and 30 km/h",
+                                // },
                             ]}
                         >
                             <Space.Compact style={{ width: "100%" }}>
