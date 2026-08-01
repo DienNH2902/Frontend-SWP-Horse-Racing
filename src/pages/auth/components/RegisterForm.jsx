@@ -311,7 +311,7 @@ export default function RegisterForm() {
         .gr-role-group {
           width: 100%;
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 8px;
         }
 
@@ -726,9 +726,9 @@ export default function RegisterForm() {
                 <Radio.Button value="Spectator">Spectator</Radio.Button>
                 <Radio.Button value="HorseOwner">Horse Owner</Radio.Button>
                 <Radio.Button value="Jockey">Jockey</Radio.Button>
-                <Radio.Button value="Referee" disabled>
+                {/* <Radio.Button value="Referee" disabled>
                   Referee
-                </Radio.Button>
+                </Radio.Button> */}
               </Radio.Group>
             </Form.Item>
 
@@ -856,7 +856,7 @@ export default function RegisterForm() {
                 </>
               ) : null}
 
-              {role === "Referee" ? (
+              {/* {role === "Referee" ? (
                 <>
                   <div className="gr-section-title">Referee information</div>
 
@@ -887,7 +887,7 @@ export default function RegisterForm() {
                     />
                   </Form.Item>
                 </>
-              ) : null}
+              ) : null} */}
             </div>
 
             <div className="gr-form-actions">
