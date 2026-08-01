@@ -976,8 +976,8 @@
 .race-detail-page .reject-btn:disabled,
 .race-detail-page .reject-btn.ant-btn:disabled,
 .race-detail-page .reject-btn.ant-btn-dangerous:disabled {
-    background: #991b1b !important;
-    border-color: #991b1b !important;
+    background: #3c3434 !important;
+    border-color: #3c3434 !important;
     color: rgba(255, 255, 255, .88) !important;
     opacity: .95;
     box-shadow: none;
