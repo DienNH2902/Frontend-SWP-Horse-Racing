@@ -1334,6 +1334,12 @@ export default function RefereeRaceDetail() {
                                     Weather
                                 </span>
                             }
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please enter weather condition",
+                                },
+                            ]}
                         >
                             <Select
                                 disabled={conditionLocked}
@@ -1405,6 +1411,12 @@ export default function RefereeRaceDetail() {
                                 </span>
                             }
                             name="trackCondition"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please enter track type",
+                                },
+                            ]}
                         >
                             <Select
                                 disabled={conditionLocked}
