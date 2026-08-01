@@ -193,15 +193,15 @@ export default function OwnerHorseRegister() {
                   { required: true, message: "Enter weight" },
                   {
                     type: "number",
-                    min: 50,
-                    max: 1500,
+                    min: 300,
+                    max: 700,
                     message: "Weight must be between 50kg and 1500kg",
                   },
                 ]}
               >
                 <InputNumber
-                  min={50}
-                  max={1500}
+                  min={300}
+                  max={700}
                   precision={1}
                   step={1}
                   className="owner-input-full"
