@@ -396,7 +396,7 @@ export default function RefereeTournamentList() {
                   columns={columns}
                   dataSource={tournaments}
                   pagination={{
-                    pageSize: 10,
+                    pageSize: 5,
                     showSizeChanger: true,
                   }}
                 />
