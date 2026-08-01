@@ -1058,6 +1058,14 @@ function TournamentManagement() {
                     format="DD/MM/YYYY"
                     placeholder="DD/MM/YYYY"
                     style={{ width: "100%" }}
+                    disabledDate={(date) => {
+                      if (!date) return false;
+
+                      // Chặn ngày quá khứ
+                      const isPast = date.isBefore(dayjs().endOf("day"));
+
+                      return isPast;
+                    }}
                   />
                 </Form.Item>
 
@@ -1070,6 +1078,14 @@ function TournamentManagement() {
                     format="DD/MM/YYYY"
                     placeholder="DD/MM/YYYY"
                     style={{ width: "100%" }}
+                    disabledDate={(date) => {
+                      if (!date) return false;
+
+                      // Chặn ngày quá khứ
+                      const isPast = date.isBefore(dayjs().endOf("day"));
+
+                      return isPast;
+                    }}
                   />
                 </Form.Item>
 
