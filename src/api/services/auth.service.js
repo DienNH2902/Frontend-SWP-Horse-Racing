@@ -1,5 +1,10 @@
 import { apiClient } from "../client";
 import { AUTH_ENDPOINTS } from "../endpoints/auth.endpoint";
+import { getAccessToken, getAuthSession } from "../../utils/storage";
+
+let profileCache = null;
+let profileCacheToken = null;
+let profileRequest = null;
 
 function pickFirstValue(source, keys) {
   if (!source || typeof source !== "object") {
@@ -22,11 +27,11 @@ function normalizeLoginResponse(response) {
     typeof authData === "string"
       ? authData
       : pickFirstValue(authData, [
-          "accessToken",
-          "access_token",
-          "token",
-          "jwt",
-        ]);
+        "accessToken",
+        "access_token",
+        "token",
+        "jwt",
+      ]);
   const refreshToken = pickFirstValue(authData, [
     "refreshToken",
     "refresh_token",
@@ -44,21 +49,71 @@ function normalizeLoginResponse(response) {
 }
 
 export async function login(credentials) {
-  const response = await apiClient.post(AUTH_ENDPOINTS.LOGIN, credentials);
+  profileCache = null;
+  profileCacheToken = null;
+  profileRequest = null;
+
+  console.log(
+    "BASE URL TRONG LOGIN:",
+    apiClient.defaults.baseURL
+  );
+
+  console.log(
+    "FULL URL:",
+    apiClient.defaults.baseURL +
+    AUTH_ENDPOINTS.LOGIN
+  );
+
+  const response = await apiClient.post(
+    AUTH_ENDPOINTS.LOGIN,
+    credentials
+  );
 
   return normalizeLoginResponse(response.data);
 }
 
 export async function getProfile() {
-  const response = await apiClient.get(AUTH_ENDPOINTS.PROFILE, {
-    includeAuth: true,
-    includeRefreshToken: true,
-  });
+  const accessToken = getAccessToken();
 
-  return (
-    pickFirstValue(response.data, ["data", "result", "user", "profile"]) ||
-    response.data
-  );
+  if (profileCache && profileCacheToken === accessToken) {
+    return profileCache;
+  }
+
+  if (profileRequest && profileCacheToken === accessToken) {
+    return profileRequest;
+  }
+
+  profileCacheToken = accessToken;
+
+  try {
+    profileRequest = apiClient
+      .get(AUTH_ENDPOINTS.PROFILE, {
+        includeAuth: true,
+        includeRefreshToken: true,
+      })
+      .then((response) => (
+        pickFirstValue(response.data, ["data", "result", "user", "profile"]) ||
+        response.data
+      ))
+      .then((profile) => {
+        profileCache = profile;
+        return profile;
+      })
+      .finally(() => {
+        profileRequest = null;
+      });
+
+    return await profileRequest;
+  } catch (error) {
+    const sessionUser = getAuthSession()?.user;
+
+    if (sessionUser) {
+      profileCache = sessionUser;
+      return sessionUser;
+    }
+
+    throw error;
+  }
 }
 
 export async function registerSpectator(payload) {
@@ -73,5 +128,10 @@ export async function registerHorseOwner(payload) {
 
 export async function registerJockey(payload) {
   const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_JOCKEY, payload);
+  return response.data;
+}
+
+export async function registerReferee(payload) {
+  const response = await apiClient.post(AUTH_ENDPOINTS.REGISTER_REFEREE, payload);
   return response.data;
 }

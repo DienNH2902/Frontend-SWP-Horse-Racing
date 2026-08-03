@@ -1,67 +1,121 @@
+import { getRacesByTournament } from "./race.service";
+import { getRaceCourses } from "./race-course.service";
+import { getTournamentResults, getTournaments } from "./tournament.service";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
+
 const delay = (value, ms = 180) =>
   new Promise((resolve) => {
     window.setTimeout(() => resolve(value), ms);
   });
 
-const raceImages = [
-  "/goldenhoof-hero.png",
-  "/goldenhoof-hero.png",
-  "/goldenhoof-hero.png",
-  "/goldenhoof-hero.png",
-];
+function resolveList(response) {
+  if (Array.isArray(response)) return response;
+  if (!response || typeof response !== "object") return [];
 
-const upcomingRaces = [
-  {
-    id: 4,
-    status: "LIVE",
-    time: null,
-    name: "Emerald Stakes",
-    venue: "Royal Turf Club",
-    distance: "1,600m",
-    surface: "Turf",
-    image: raceImages[0],
-  },
-  {
-    id: 5,
-    status: null,
-    time: "15:15",
-    name: "Golden Mile Cup",
-    venue: "Sunshine Racecourse",
-    distance: "1,600m",
-    surface: "Turf",
-    image: raceImages[1],
-  },
-  {
-    id: 6,
-    status: null,
-    time: "16:00",
-    name: "Thunderbolt Sprint",
-    venue: "Valley Racecourse",
-    distance: "1,200m",
-    surface: "Dirt",
-    image: raceImages[2],
-  },
-  {
-    id: 7,
-    status: null,
-    time: "16:45",
-    name: "Champion's Cup",
-    venue: "Royal Turf Club",
-    distance: "2,400m",
-    surface: "Turf",
-    image: raceImages[3],
-  },
-  {
-    id: 8,
-    status: null,
-    time: "17:30",
-    name: "Victory Purse",
-    venue: "Sunshine Racecourse",
-    distance: "1,800m",
-    surface: "Turf",
-    image: raceImages[0],
-  },
-];
+  for (const key of ["data", "items", "races", "content", "records", "result"]) {
+    if (Array.isArray(response[key])) return response[key];
+    const nested = resolveList(response[key]);
+    if (nested.length) return nested;
+  }
+
+  return [];
+}
+
+function getId(item) {
+  const value = item?._id || item?.id;
+  return typeof value === "object" ? value?._id || value?.id : value;
+}
+
+function resolveRaceCourse(race, raceCoursesById) {
+  const populatedCourse =
+    [race?.raceCourse, race?.raceCourseId].find(
+      (value) => value && typeof value === "object",
+    ) || {};
+  const courseId =
+    getId(race?.raceCourseId) ||
+    getId(race?.raceCourse) ||
+    race?.raceCourseId ||
+    race?.raceCourse;
+  const fetchedCourse = raceCoursesById.get(String(courseId || "")) || {};
+
+  return { ...fetchedCourse, ...populatedCourse };
+}
+
+function formatRaceTime(race) {
+  const startTime =
+    race?.startTime || race?.startAt || race?.scheduledAt || race?.date;
+  if (!startTime) return "TBA";
+
+  const date = dayjs.utc(startTime);
+  return date.isValid() ? date.format("HH:mm") : String(startTime);
+}
+
+function formatResultTime(value) {
+  if (!value) return "—";
+
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm:ss DD/MM/YYYY") : String(value);
+}
+
+function getDateSortValue(value, fallback = 0) {
+  const date = dayjs(value);
+  return date.isValid() ? date.valueOf() : fallback;
+}
+
+function normalizeHomeRace(race, tournament, index, raceCourse) {
+  const status = String(race?.status || "");
+  const isOngoing = ["ongoing", "live", "in progress", "in_progress"].includes(
+    status.trim().toLowerCase(),
+  );
+  const course = raceCourse || {};
+  const scheduleTime =
+    race?.startAt || race?.scheduledAt || race?.startTime || race?.date || "";
+  const distance = race?.distance ?? course?.distance;
+  const distanceLabel = distance
+    ? /(?:m|km)$/i.test(String(distance))
+      ? String(distance)
+      : `${distance}m`
+    : "Distance TBA";
+
+  return {
+    id: getId(race),
+    status: isOngoing ? "LIVE" : null,
+    rawStatus: status,
+    time: isOngoing ? null : formatRaceTime(race),
+    name:
+      race?.name ||
+      race?.title ||
+      `Race ${race?.raceOrder || race?.roundNumber || index + 1}`,
+    venue:
+      race?.raceCourseName ||
+      race?.courseName ||
+      course?.name ||
+      tournament?.title ||
+      tournament?.name ||
+      "GoldenHoof Racecourse",
+    distance: distanceLabel,
+    surface: race?.surface || course?.surface || course?.trackType || "Track",
+    image: race?.image || course?.image || "/goldenhoof-hero.png",
+    date: scheduleTime,
+    tournament:
+      race?.tournamentTitle ||
+      race?.tournamentName ||
+      tournament?.title ||
+      tournament?.name ||
+      "GoldenHoof Tournament",
+    round: race?.roundNumber ?? "—",
+    raceOrder: race?.raceOrder ?? "—",
+    horseCount:
+      race?.horseCount ??
+      race?.totalHorses ??
+      race?.filledSlots ??
+      (Array.isArray(race?.horses) ? race.horses.length : 0),
+    sortTime: scheduleTime,
+  };
+}
 
 const topHorses = [
   {
@@ -118,73 +172,8 @@ const topJockeys = [
   { id: 5, rank: 5, name: "Ethan Walker", wins: 65, winRate: "17%" },
 ];
 
-const leaderboard = [
-  { id: 1, horse: "Silver Bullet", rating: 98, wins: 12, places: 5, points: 1250 },
-  { id: 2, horse: "Emerald Dream", rating: 96, wins: 10, places: 4, points: 1080 },
-  { id: 3, horse: "Midnight Runner", rating: 95, wins: 14, places: 3, points: 1075 },
-  { id: 4, horse: "Thunder King", rating: 94, wins: 9, places: 6, points: 980 },
-  { id: 5, horse: "Royal Phantom", rating: 93, wins: 8, places: 4, points: 870 },
-];
-
-const latestResults = [
-  {
-    id: 1,
-    status: "LIVE",
-    race: "Race 4 - Emerald Stakes",
-    venue: "Royal Turf Club",
-    distance: "1,600m",
-    surface: "Turf",
-    winner: "Silver Bullet",
-    jockey: "L. O'Connor",
-    time: "1:34.25",
-    image: "/goldenhoof-hero.png",
-  },
-  {
-    id: 2,
-    status: "Finished",
-    race: "Race 3 - Sunshine Cup",
-    venue: "Sunshine Racecourse",
-    distance: "1,800m",
-    surface: "Turf",
-    winner: "Emerald Dream",
-    jockey: "S. Martinez",
-    time: "1:48.63",
-    image: "/goldenhoof-hero.png",
-  },
-  {
-    id: 3,
-    status: "Finished",
-    race: "Race 2 - Rapid Dash",
-    venue: "Valley Racecourse",
-    distance: "1,200m",
-    surface: "Dirt",
-    winner: "Thunder King",
-    jockey: "N. Henderson",
-    time: "1:12.45",
-    image: "/goldenhoof-hero.png",
-  },
-  {
-    id: 4,
-    status: "Finished",
-    race: "Race 1 - Morning Sprint",
-    venue: "Royal Turf Club",
-    distance: "1,000m",
-    surface: "Turf",
-    winner: "Speed Demon",
-    jockey: "E. Walker",
-    time: "0:58.34",
-    image: "/goldenhoof-hero.png",
-  },
-];
-
-const topPredictors = [
-  { id: 1, name: "RacingFan88", points: 2450 },
-  { id: 2, name: "TurfMaster", points: 2150 },
-  { id: 3, name: "SpeedKing", points: 1980 },
-];
-
 export async function getUpcomingRaces() {
-  return delay(upcomingRaces);
+  return (await loadRaceCollections()).upcoming.slice(0, 5);
 }
 
 export async function getTopHorses() {
@@ -195,35 +184,194 @@ export async function getTopJockeys() {
   return delay(topJockeys);
 }
 
-export async function getLeaderboard() {
-  return delay(leaderboard);
+function normalizeFinishedRace(race, tournament, index, raceCourse) {
+  const course = raceCourse || {};
+  const results =
+    race?.results ||
+    race?.rankings ||
+    race?.officialResults ||
+    (Array.isArray(race?.result) ? race.result : []);
+  const winnerResult = Array.isArray(results)
+    ? [...results].sort(
+        (first, second) =>
+          Number(first.finalRank ?? first.rawRank ?? first.rank ?? 999) -
+          Number(second.finalRank ?? second.rawRank ?? second.rank ?? 999),
+      )[0]
+    : null;
+  const winnerHorse = winnerResult?.horseId || winnerResult?.horse || {};
+  const winnerJockey = winnerResult?.jockeyId || winnerResult?.jockey || {};
+  const distance = race?.distance ?? course?.distance;
+  const date = race?.date || "";
+
+  return {
+    id: getId(race) || race?.raceId || `${getId(tournament)}-result-${index}`,
+    status: race?.status || "Finished",
+    race:
+      race?.raceName ||
+      race?.name ||
+      race?.title ||
+      `Race ${race?.raceOrder || race?.roundNumber || index + 1}`,
+    tournament:
+      race?.tournamentTitle ||
+      race?.tournamentName ||
+      tournament?.title ||
+      tournament?.name ||
+      "GoldenHoof Tournament",
+    venue:
+      race?.raceCourseName ||
+      race?.courseName ||
+      course?.name ||
+      "GoldenHoof Racecourse",
+    distance: distance
+      ? /(?:m|km)$/i.test(String(distance))
+        ? String(distance)
+        : `${distance}m`
+      : "Distance TBA",
+    trackType: race?.trackType || "Track",
+    winner: winnerResult?.horseName || "Awaiting confirmation",
+    jockey: winnerResult?.jockeyName || "—",
+    time: formatResultTime(race?.startTime),
+    date,
+    image: race?.image || course?.image || "/goldenhoof-hero.png",
+    results: Array.isArray(results) ? results : [],
+  };
+}
+
+const HOME_RACE_CACHE_MS = 30_000;
+let raceCollectionsPromise = null;
+let raceCollectionsExpiresAt = 0;
+
+async function loadRaceCollections() {
+  if (raceCollectionsPromise && Date.now() < raceCollectionsExpiresAt) {
+    return raceCollectionsPromise;
+  }
+
+  raceCollectionsExpiresAt = Date.now() + HOME_RACE_CACHE_MS;
+  raceCollectionsPromise = (async () => {
+    try {
+      const [tournamentResponse, raceCourseResponse] = await Promise.all([
+        getTournaments(),
+        getRaceCourses().catch(() => []),
+      ]);
+      const tournaments = resolveList(tournamentResponse);
+      const raceCoursesById = new Map(
+        resolveList(raceCourseResponse)
+          .filter((course) => getId(course))
+          .map((course) => [String(getId(course)), course]),
+      );
+      const responses = await Promise.allSettled(
+        tournaments.map(async (tournament) => {
+          const tournamentId = getId(tournament);
+          if (!tournamentId) return { tournament, races: [], resultRaces: [] };
+
+          const [raceResponse, resultResponse] = await Promise.all([
+            getRacesByTournament(tournamentId).catch(() => []),
+            getTournamentResults(tournamentId).catch(() => []),
+          ]);
+
+          return {
+            tournament,
+            races: resolveList(raceResponse),
+            resultRaces: resolveList(resultResponse),
+          };
+        }),
+      );
+      const groups = responses.flatMap((response) =>
+        response.status === "fulfilled" ? [response.value] : [],
+      );
+      const upcomingStatuses = new Set([
+        "ongoing",
+        "live",
+        "in progress",
+        "in_progress",
+        "scheduled",
+        "ready",
+      ]);
+      const upcoming = groups.flatMap(({ tournament, races }) =>
+        races
+          .filter((race) =>
+            upcomingStatuses.has(
+              String(race?.status || "").trim().toLowerCase(),
+            ),
+          )
+          .map((race, index) =>
+            normalizeHomeRace(
+              race,
+              tournament,
+              index,
+              resolveRaceCourse(race, raceCoursesById),
+            ),
+          ),
+      );
+      const finished = groups.flatMap(({ tournament, resultRaces }) =>
+        resultRaces
+          .filter((race) => Array.isArray(race?.results) && race.results.length)
+          .map((race, index) =>
+            normalizeFinishedRace(
+              race,
+              tournament,
+              index,
+              resolveRaceCourse(race, raceCoursesById),
+            ),
+          ),
+      );
+
+      const uniqueUpcoming = Array.from(
+        new Map(
+          upcoming.filter((race) => race.id).map((race) => [race.id, race]),
+        ).values(),
+      ).sort((first, second) => {
+        if (Boolean(first.status) !== Boolean(second.status)) {
+          return first.status ? -1 : 1;
+        }
+        const firstTime = getDateSortValue(
+          first.sortTime,
+          Number.MAX_SAFE_INTEGER,
+        );
+        const secondTime = getDateSortValue(
+          second.sortTime,
+          Number.MAX_SAFE_INTEGER,
+        );
+        return (
+          (Number.isNaN(firstTime) ? Number.MAX_SAFE_INTEGER : firstTime) -
+          (Number.isNaN(secondTime) ? Number.MAX_SAFE_INTEGER : secondTime)
+        );
+      });
+      const uniqueFinished = Array.from(
+        new Map(
+          finished.filter((race) => race.id).map((race) => [race.id, race]),
+        ).values(),
+      ).sort(
+        (first, second) =>
+          getDateSortValue(second.date) - getDateSortValue(first.date),
+      );
+
+      return { upcoming: uniqueUpcoming, finished: uniqueFinished };
+    } catch {
+      return { upcoming: [], finished: [] };
+    }
+  })();
+
+  return raceCollectionsPromise;
+}
+
+export async function getFinishedRaceResults() {
+  return (await loadRaceCollections()).finished;
 }
 
 export async function getLatestResults() {
-  return delay(latestResults);
-}
-
-export async function getTopPredictors() {
-  return delay(topPredictors);
+  return (await getFinishedRaceResults()).slice(0, 4);
 }
 
 export async function getHomePageData() {
-  const [races, horses, jockeys, standings, results, predictors] =
+  const [races, results] =
     await Promise.all([
       getUpcomingRaces(),
-      getTopHorses(),
-      getTopJockeys(),
-      getLeaderboard(),
       getLatestResults(),
-      getTopPredictors(),
     ]);
 
   return {
     races,
-    horses,
-    jockeys,
-    standings,
     results,
-    predictors,
   };
 }

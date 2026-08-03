@@ -1,0 +1,457 @@
+.live-channels-page {
+  min-height: 100vh;
+  padding: 42px 28px;
+  color: #0d2321;
+  background:
+    radial-gradient(circle at 10% 0%, rgb(105 248 221 / 22%), transparent 36rem),
+    radial-gradient(circle at 95% 12%, rgb(24 185 158 / 12%), transparent 30rem),
+    #f7fffd;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.live-channels-shell {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.live-channels-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 28px;
+}
+
+.live-channels-header h1 {
+  margin: 4px 0 9px;
+  color: #06332e;
+  font-size: clamp(34px, 5vw, 58px);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.live-channels-header p {
+  max-width: 680px;
+  margin: 0;
+  color: #53706c;
+  line-height: 1.6;
+}
+
+.live-channels-header .live-channels-eyebrow {
+  color: #007a68;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.live-channels-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.live-channels-actions span {
+  color: #6a817e;
+  font-size: 12px;
+}
+
+.live-channels-page button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #bfece5;
+  border-radius: 9px;
+  color: #006755;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.live-channels-page button:hover:not(:disabled) {
+  border-color: #18b99e;
+  color: #004d42;
+}
+
+.live-channels-page button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.live-channel-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 16px;
+  margin-bottom: 18px;
+  border: 1px solid #cdeee8;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgb(0 72 62 / 7%);
+}
+
+.live-channel-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.live-channel-summary strong {
+  color: #06332e;
+  font-size: 20px;
+}
+
+.live-channel-summary span,
+.live-channel-summary a {
+  color: #6a817e;
+  font-size: 13px;
+}
+
+.live-channel-summary a {
+  color: #007a68;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  align-self: center;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 13px #ef4444;
+  animation: live-channel-pulse 0.9s infinite alternate;
+}
+
+.live-channel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.channel-sections {
+  display: grid;
+  gap: 38px;
+}
+
+.channel-section {
+  min-width: 0;
+}
+
+.channel-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+
+.channel-section-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.channel-section-heading h2 {
+  margin: 0;
+  color: #06332e;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.channel-section-heading > span {
+  color: #6a817e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.replay-icon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 50%;
+  color: #006755;
+  background: #d9fbf4;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.channel-section-empty {
+  display: grid;
+  min-height: 110px;
+  place-items: center;
+  border: 1px dashed #bfece5;
+  border-radius: 14px;
+  color: #6a817e;
+  background: #fff;
+  font-size: 13px;
+}
+
+.live-channel-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #cdeee8;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 22px 58px rgb(0 72 62 / 10%);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.live-channel-card:hover {
+  border-color: #69f8dd;
+  transform: translateY(-3px);
+}
+
+.channel-preview {
+  position: relative;
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(14.285% - 1px),
+      rgb(255 255 255 / 5%) 14.285%
+    ),
+    linear-gradient(145deg, #00695d, #002d28);
+}
+
+.channel-preview::after {
+  position: absolute;
+  right: 24px;
+  bottom: 0;
+  width: 10px;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    #fff 0 6px,
+    #17243a 6px 12px
+  );
+  content: "";
+  opacity: 0.6;
+}
+
+.channel-number {
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  color: rgb(255 255 255 / 36%);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.channel-live-badge {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #fff;
+  background: #dc2626;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.channel-live-badge i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  animation: live-channel-pulse 0.9s infinite alternate;
+}
+
+.channel-live-badge.finished {
+  color: #06332e;
+  background: #69f8dd;
+}
+
+.live-channel-card.finished .channel-preview {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(14.285% - 1px),
+      rgb(255 255 255 / 5%) 14.285%
+    ),
+    linear-gradient(145deg, #52726e, #183b37);
+}
+
+.channel-horses {
+  display: flex;
+  gap: 12px;
+  font-size: 34px;
+  transform: skewX(-6deg);
+}
+
+.channel-horses span:nth-child(2) {
+  transform: translateY(-20px);
+}
+
+.channel-horses span:nth-child(3) {
+  transform: translateY(15px);
+}
+
+.channel-content {
+  padding: 18px;
+}
+
+.channel-content p {
+  margin: 0 0 6px;
+  color: #007a68;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.channel-content h2 {
+  min-height: 48px;
+  margin: 0 0 14px;
+  color: #06332e;
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.channel-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-height: 62px;
+  margin-bottom: 17px;
+}
+
+.channel-meta span {
+  overflow: hidden;
+  color: #6a817e;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-channel-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 43px;
+  padding: 0 14px;
+  border-radius: 9px;
+  color: #06332e;
+  background: #69f8dd;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.watch-channel-button:hover {
+  background: #75ffe6;
+}
+
+.live-channel-state {
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 28px;
+  border: 1px dashed #bfece5;
+  border-radius: 17px;
+  color: #6a817e;
+  background: #fff;
+  text-align: center;
+}
+
+.live-channel-state strong {
+  color: #06332e;
+  font-size: 20px;
+}
+
+.live-channel-state .empty-icon {
+  font-size: 42px;
+}
+
+.live-channel-state.error {
+  border-color: rgb(239 68 68 / 42%);
+}
+
+.live-channel-card.skeleton {
+  min-height: 330px;
+  padding: 18px;
+}
+
+.live-channel-card.skeleton div,
+.live-channel-card.skeleton span {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e6f5f2, #f7fffd, #e6f5f2);
+  background-size: 200% 100%;
+  animation: live-channel-loading 1.2s linear infinite;
+}
+
+.live-channel-card.skeleton div {
+  height: 160px;
+  margin-bottom: 20px;
+}
+
+.live-channel-card.skeleton span {
+  width: 80%;
+  height: 15px;
+  margin-top: 12px;
+}
+
+.live-channel-card.skeleton span:last-child {
+  width: 55%;
+}
+
+@keyframes live-channel-pulse {
+  to {
+    opacity: 0.35;
+  }
+}
+
+@keyframes live-channel-loading {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 980px) {
+  .live-channel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .live-channels-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .live-channels-page {
+    padding: 26px 12px;
+  }
+
+  .live-channel-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .live-channels-actions,
+  .live-channel-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

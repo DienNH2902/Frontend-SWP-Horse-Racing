@@ -1,6 +1,6 @@
 import { Button, Checkbox, Form, Input, message } from "antd";
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { login } from "../../../api/services/auth.service";
 import { saveAuthSession } from "../../../utils/storage";
 import { getRoleHomePath } from "../../../utils/roles";
@@ -68,7 +68,21 @@ function GoogleLogo() {
 
 export default function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Bắt lỗi Redirect từ Google Login gửi về URL Query Parameter
+  useEffect(() => {
+    const errorMsg = searchParams.get("error");
+    if (errorMsg) {
+      // Hiển thị thông báo lỗi bằng Antd Message
+      message.error(errorMsg);
+
+      // Xóa tham số error khỏi URL để tránh lặp lại thông báo khi người dùng F5 trang
+      searchParams.delete("error");
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   async function handleFinish(values) {
     setIsSubmitting(true);
@@ -134,9 +148,9 @@ export default function LoginForm() {
         <Form.Item name="remember" noStyle valuePropName="checked">
           <Checkbox className="gh-ant-checkbox">Remember me</Checkbox>
         </Form.Item>
-        <a className="gh-link" href="#forgot-password">
+        <Link className="gh-link" to="/forgot-password">
           Forgot password?
-        </a>
+        </Link>
       </div>
 
       <Form.Item shouldUpdate noStyle>

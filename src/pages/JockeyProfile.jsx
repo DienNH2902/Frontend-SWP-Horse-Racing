@@ -105,14 +105,14 @@ export default function JockeyProfile() {
   }
 
   if (user.role !== "Jockey") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   const displayName = user.fullName || user.name || user.email || "GoldenHoof Jockey";
 
   function handleLogout() {
     clearAuthSession();
-    navigate("/", { replace: true });
+    navigate("/home", { replace: true });
   }
 
   return (
@@ -442,8 +442,8 @@ export default function JockeyProfile() {
 
       <div className="jockey-profile-shell">
         <header className="jockey-profile-topbar">
-          <Link className="jockey-profile-brand" to="/">
-            <Icon name="logo" size={32} />
+          <Link className="jockey-profile-brand" to="/home">
+            <img className="jockey-profile-brand-logo" src="/goldenhoof-logo.png" alt="" />
             <span>GoldenHoof</span>
           </Link>
           <nav className="jockey-profile-nav" aria-label="Jockey profile navigation">

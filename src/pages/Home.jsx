@@ -1,7 +1,54 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 import { getHomePageData } from "../api/services/home.service";
-import { clearAuthSession, getAccessToken, getAuthSession } from "../utils/storage";
+import { API_BASE_URL } from "../api/client";
+import { getHorses } from "../api/services/horse.service";
+import { getUsersByRole, searchJockeys } from "../api/services/user.service";
+import { getRoleHomePath } from "../utils/roles";
+import {
+  clearAuthSession,
+  getAccessToken,
+  getAuthSession,
+} from "../utils/storage";
+import {
+  BellOutlined,
+  FileTextOutlined,
+  WalletOutlined,
+} from "@ant-design/icons";
+import {
+  getMyNotifications,
+  markNotificationAsRead,
+} from "../api/services/notification.service";
+
+dayjs.extend(utc);
+
+// function formatRaceDateTime(value, fallback = "TBA") {
+//   if (!value) return fallback;
+//   const date = new Date(value);
+//   if (Number.isNaN(date.getTime())) return fallback;
+
+//   return new Intl.DateTimeFormat("vi-VN", {
+//     dateStyle: "medium",
+//     timeStyle: "short",
+//   }).format(date);
+// }
+
+function formatRaceDateTime(value) {
+  if (!value) return "N/A";
+  if (typeof value === "string" && value.includes("/")) {
+    return value;
+  }
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm DD/MM/YYYY") : value;
+}
+
+function formatDateTime(value, fallback = "N/A") {
+  if (!value) return fallback;
+  const date = dayjs.utc(value);
+  return date.isValid() ? date.format("HH:mm DD/MM/YYYY") : fallback;
+}
 
 function Icon({ name, size = 24 }) {
   const common = {
@@ -118,6 +165,13 @@ function Icon({ name, size = 24 }) {
         <rect x="3" y="15" width="7" height="6" rx="1" />
       </>
     ),
+    home: (
+      <>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10" />
+        <path d="M10 20v-6h4v6" />
+      </>
+    ),
   };
 
   return <svg {...common}>{paths[name]}</svg>;
@@ -127,12 +181,17 @@ function SectionTitle({ title, action }) {
   return (
     <div className="home-section-title">
       <h2>{title}</h2>
-      {action && (
+      {action?.onClick ? (
+        <button type="button" onClick={action.onClick}>
+          {action.label}
+          <Icon name="arrow" size={16} />
+        </button>
+      ) : action ? (
         <a href={action.href}>
           {action.label}
           <Icon name="arrow" size={16} />
         </a>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -171,13 +230,13 @@ function decodeJwtClaims(token) {
     const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
     const paddedPayload = normalizedPayload.padEnd(
       normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
-      "="
+      "=",
     );
     const json = decodeURIComponent(
       atob(paddedPayload)
         .split("")
         .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
-        .join("")
+        .join(""),
     );
 
     return JSON.parse(json);
@@ -196,58 +255,360 @@ function pickFirstValue(source, keys) {
   return null;
 }
 
+function normalizeNotification(notification = {}) {
+  return {
+    id:
+      notification._id || notification.id || notification.notificationId || "",
+    title: notification.title || notification.type || "Notification",
+    content: notification.content || notification.message || "",
+    isRead: Boolean(notification.isRead ?? notification.read),
+    createdAt:
+      notification.createdAt ||
+      notification.created_at ||
+      notification.date ||
+      "",
+  };
+}
+
+function toNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatWinRate(value) {
+  return toNumber(value).toFixed(2);
+}
+
+function resolveImageUrl(path) {
+  if (!path) return "/goldenhoof-hero.png";
+
+  const value = String(path);
+  if (value.startsWith("http")) return value;
+
+  const base = API_BASE_URL || "";
+  const cleanBase = base.endsWith("/") ? base : `${base}/`;
+  const cleanPath = value.replace(/^\//, "");
+
+  return `${cleanBase}${cleanPath}`;
+}
+
+function normalizeHomeHorse(horse = {}, index = 0) {
+  const totalWin = toNumber(horse.totalWin ?? horse.wins);
+  const winRate = toNumber(horse.winRate);
+
+  return {
+    raw: horse,
+    id: horse.id || horse._id || horse.horseId || `${horse.name}-${index}`,
+    rank: index + 1,
+    name: horse.name || horse.horseName || "Unnamed horse",
+    breed: horse.breed || "Horse",
+    color: horse.color || "",
+    height: horse.height || "",
+    weight: horse.weight || "",
+    status: horse.horseStatus || horse.status || "",
+    description: horse.description || "",
+    owner:
+      horse.ownerName ||
+      horse.owner?.fullName ||
+      horse.owner?.name ||
+      horse.stable ||
+      "N/A",
+    rating: toNumber(horse.rating),
+    totalWin,
+    winRate,
+    image: resolveImageUrl(
+      horse.imageUrl || horse.avatar || horse.avatarUrl || horse.photoUrl,
+    ),
+  };
+}
+
+const ALLOWED_JOCKEY_STATUSES = new Set([
+  "available",
+  "contracted",
+  "busy",
+  "resting",
+  "injured",
+]);
+
+function normalizeHomeJockey(jockey = {}, index = 0) {
+  const profile = jockey.jockeyProfile || jockey.profile || {};
+  const winRate = toNumber(jockey.winRate ?? profile.winRate);
+  const wins = toNumber(
+    jockey.totalWin ??
+      jockey.totalWins ??
+      jockey.careerWins ??
+      jockey.wins ??
+      profile.totalWin ??
+      profile.careerWins ??
+      profile.wins,
+  );
+  const status =
+    jockey.jockeyStatus || profile.jockeyStatus || jockey.status || "";
+
+  return {
+    id:
+      jockey.id ||
+      jockey._id ||
+      jockey.userId ||
+      profile.id ||
+      `${jockey.fullName}-${index}`,
+    rank: index + 1,
+    name:
+      jockey.fullName ||
+      jockey.name ||
+      profile.fullName ||
+      profile.name ||
+      "Unnamed jockey",
+    wins,
+    winRate,
+    status,
+  };
+}
+
+const HOME_DIRECTORY_CACHE_MS = 30_000;
+let homeDirectoryPromise = null;
+let homeDirectoryExpiresAt = 0;
+
+function loadHomeDirectories() {
+  if (homeDirectoryPromise && Date.now() < homeDirectoryExpiresAt) {
+    return homeDirectoryPromise;
+  }
+
+  homeDirectoryExpiresAt = Date.now() + HOME_DIRECTORY_CACHE_MS;
+  homeDirectoryPromise = Promise.allSettled([
+    getHorses(),
+    getUsersByRole("Jockey"),
+  ]);
+  return homeDirectoryPromise;
+}
+
 function Home() {
   const [authSession, setAuthSession] = useState(() => getAuthSession());
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+  const [selectedHorse, setSelectedHorse] = useState(null);
+  const [selectedRace, setSelectedRace] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [horseSortOrder, setHorseSortOrder] = useState("desc");
+  const [horseSearch, setHorseSearch] = useState("");
+  const [jockeySearch, setJockeySearch] = useState("");
+  const [jockeySortWinRate, setJockeySortWinRate] = useState("");
+  const [jockeySortTotalWin, setJockeySortTotalWin] = useState("");
   const [homeData, setHomeData] = useState({
     races: [],
     horses: [],
     jockeys: [],
-    standings: [],
     results: [],
     predictors: [],
   });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const params = {
+          search: horseSearch,
+          sortWinRate: horseSortOrder,
+        };
+
+        const horses = await getHorses(params);
+
+        setHomeData((current) => ({
+          ...current,
+          horses: Array.isArray(horses) ? horses.map(normalizeHomeHorse) : [],
+        }));
+      } catch (error) {
+        console.error(error);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [horseSearch, horseSortOrder]);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const params = {
+          fullName: jockeySearch || undefined,
+          sortWinRate: jockeySortWinRate || undefined,
+          sortTotalWin: jockeySortTotalWin || undefined,
+        };
+
+        const jockeys = await searchJockeys(params);
+
+        setHomeData((current) => ({
+          ...current,
+          jockeys: Array.isArray(jockeys)
+            ? jockeys.map(normalizeHomeJockey)
+            : [],
+        }));
+      } catch (error) {
+        console.error(error);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [jockeySearch, jockeySortWinRate, jockeySortTotalWin]);
+
+  useEffect(() => {
     let isMounted = true;
 
     getHomePageData()
       .then((data) => {
-        if (isMounted) {
-          setHomeData(data);
-        }
+        if (!isMounted) return;
+        setHomeData((current) => ({ ...current, ...data }));
+      })
+      .catch(() => {
+        // Each directory below still renders independently when race data fails.
       })
       .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       });
+
+    loadHomeDirectories().then(([horsesResult, jockeysResult]) => {
+      if (!isMounted) return;
+      const horses =
+        horsesResult.status === "fulfilled" && Array.isArray(horsesResult.value)
+          ? horsesResult.value.map(normalizeHomeHorse)
+          : [];
+      const jockeys =
+        jockeysResult.status === "fulfilled" &&
+        Array.isArray(jockeysResult.value)
+          ? jockeysResult.value
+              .map(normalizeHomeJockey)
+              .filter((jockey) =>
+                ALLOWED_JOCKEY_STATUSES.has(
+                  String(jockey.status).toLowerCase(),
+                ),
+              )
+          : [];
+
+      setHomeData((current) => ({
+        ...current,
+        horses: horses.map((horse, index) => ({ ...horse, rank: index + 1 })),
+        jockeys: jockeys.map((jockey, index) => ({
+          ...jockey,
+          rank: index + 1,
+        })),
+      }));
+    });
 
     return () => {
       isMounted = false;
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!authSession) {
+      return undefined;
+    }
+
+    getMyNotifications()
+      .then((data) => {
+        if (isMounted) {
+          setNotifications(
+            Array.isArray(data) ? data.map(normalizeNotification) : [],
+          );
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setNotifications([]);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authSession]);
+
   function handleLogout() {
     clearAuthSession();
     setAuthSession(null);
     setIsAccountMenuOpen(false);
+    setIsNotificationMenuOpen(false);
+  }
+
+  async function handleNotificationClick(notification) {
+    setIsNotificationMenuOpen(false);
+
+    if (!notification?.id || notification.isRead) {
+      return;
+    }
+
+    setNotifications((current) =>
+      current.map((item) =>
+        item.id === notification.id ? { ...item, isRead: true } : item,
+      ),
+    );
+
+    try {
+      await markNotificationAsRead(notification.id);
+    } catch {
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, isRead: false } : item,
+        ),
+      );
+    }
   }
 
   const tokenClaims = decodeJwtClaims(getAccessToken());
   const currentUser = authSession?.user || {};
   const accountName =
-    pickFirstValue(currentUser, ["fullName", "name", "displayName", "username", "email"]) ||
-    pickFirstValue(tokenClaims, ["fullName", "name", "displayName", "username", "email", "sub"]) ||
+    pickFirstValue(currentUser, [
+      "fullName",
+      "name",
+      "displayName",
+      "username",
+      "email",
+    ]) ||
+    pickFirstValue(tokenClaims, [
+      "fullName",
+      "name",
+      "displayName",
+      "username",
+      "email",
+      "sub",
+    ]) ||
     "Account";
   const accountRole =
     pickFirstValue(currentUser, ["role", "roleName"]) ||
     pickFirstValue(tokenClaims, ["role", "roleName", "roles", "authorities"]) ||
     "";
+  const primaryRole = Array.isArray(accountRole) ? accountRole[0] : accountRole;
+  const dashboardPath = getRoleHomePath(primaryRole);
   const isAdmin = Array.isArray(accountRole)
     ? accountRole.some((role) => String(role).toLowerCase().includes("admin"))
     : String(accountRole).toLowerCase().includes("admin");
+
+  // Chuẩn hóa chuỗi role để kiểm tra điều kiện chính xác hơn
+  const roleString = String(primaryRole).toLowerCase();
+  const isSpectator = roleString.includes("spectator");
+  const isOwnerOrJockey =
+    roleString.includes("owner") || roleString.includes("jockey");
+  const unreadNotificationCount = notifications.filter(
+    (item) => !item.isRead,
+  ).length;
+  const notificationPreview = notifications.slice(0, 5);
+  const filteredHorses = useMemo(() => {
+    return (homeData.horses ?? []).map((horse, index) => ({
+      ...horse,
+      rank: index + 1,
+    }));
+  }, [homeData.horses]);
+  const topHorses = filteredHorses.slice(0, 3);
+  const topJockeys = (homeData.jockeys ?? [])
+    .map((jockey, index) => ({
+      ...jockey,
+      rank: index + 1,
+    }))
+    .slice(0, 5);
+  if (!authSession) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <main className="home-page">
@@ -331,6 +692,41 @@ function Home() {
           gap: 14px;
         }
 
+        .home-live-btn {
+          min-height: 40px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 0 13px;
+          border: 1px solid rgba(105, 248, 221, 0.55);
+          border-radius: 8px;
+          color: #06332e;
+          background: #69f8dd;
+          font-size: 12px;
+          font-weight: 950;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
+        .home-live-btn i {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #dc2626;
+          box-shadow: 0 0 8px #ef4444;
+        }
+
+        .home-mobile-action-icon {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+        }
+
+        .home-mobile-action-icon svg {
+          display: block;
+        }
+
         .home-icon-btn {
           width: 42px;
           height: 42px;
@@ -367,6 +763,39 @@ function Home() {
           position: relative;
         }
 
+        .nav-dropdown-wrap {
+          position: relative;
+        }
+
+        .notification-trigger {
+          position: relative;
+          border-radius: 50%;
+        }
+
+        .notification-trigger-open,
+        .notification-trigger:hover {
+          background: rgba(105, 248, 221, 0.12);
+        }
+
+        .notification-badge {
+          position: absolute;
+          top: 4px;
+          right: 3px;
+          min-width: 18px;
+          height: 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 5px;
+          border: 2px solid rgba(0, 45, 40, 0.96);
+          border-radius: 999px;
+          color: #062724;
+          background: #69f8dd;
+          font-size: 10px;
+          font-weight: 950;
+          line-height: 1;
+        }
+
         .account-trigger {
           min-width: 210px;
           max-width: 320px;
@@ -399,6 +828,117 @@ function Home() {
           border-radius: 8px;
           background: rgba(0, 45, 40, 0.96);
           box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .notification-dropdown {
+          width: min(360px, calc(100vw - 28px));
+          padding: 0;
+          overflow: hidden;
+        }
+
+        .notification-dropdown-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 14px 14px 12px;
+          border-bottom: 1px solid rgba(105, 248, 221, 0.16);
+        }
+
+        .notification-dropdown-head strong {
+          color: #f4fffb;
+          font-size: 14px;
+        }
+
+        .notification-dropdown-head span {
+          color: rgba(244, 255, 251, 0.68);
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .notification-list {
+          display: grid;
+          max-height: 320px;
+          overflow-y: auto;
+        }
+
+        .notification-item {
+          display: grid;
+          gap: 5px;
+          padding: 12px 14px;
+          border-bottom: 1px solid rgba(105, 248, 221, 0.1);
+          color: #f4fffb;
+        }
+
+        .notification-item:hover {
+          background: rgba(105, 248, 221, 0.1);
+        }
+
+        .notification-item-unread {
+          background: rgba(105, 248, 221, 0.07);
+        }
+
+        .notification-title-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .notification-dot {
+          width: 8px;
+          height: 8px;
+          flex: 0 0 auto;
+          border-radius: 50%;
+          background: #69f8dd;
+        }
+
+        .notification-title {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 13px;
+          font-weight: 900;
+        }
+
+        .notification-content {
+          margin: 0;
+          display: -webkit-box;
+          overflow: hidden;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          color: rgba(244, 255, 251, 0.72);
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .notification-time {
+          color: rgba(244, 255, 251, 0.5);
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .notification-empty {
+          padding: 24px 14px;
+          color: rgba(244, 255, 251, 0.68);
+          text-align: center;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .notification-footer {
+          min-height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-top: 1px solid rgba(105, 248, 221, 0.16);
+          color: #69f8dd;
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .notification-footer:hover {
+          background: rgba(105, 248, 221, 0.1);
         }
 
         .account-menu-item {
@@ -543,14 +1083,18 @@ function Home() {
           letter-spacing: 0;
         }
 
-        .home-section-title a {
+        .home-section-title a,
+        .home-section-title button {
           display: inline-flex;
           align-items: center;
           gap: 10px;
+          border: 0;
           color: #007a68;
+          background: transparent;
           font-size: 14px;
           font-weight: 900;
           white-space: nowrap;
+          cursor: pointer;
         }
 
         .home-panel-link {
@@ -563,6 +1107,265 @@ function Home() {
           color: #007a68;
           font-size: 14px;
           font-weight: 900;
+        }
+
+        .horse-filter-bar {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 16px;
+          margin: -6px 0 20px;
+          margin-bottom: 24px;
+        }
+
+        .horse-filter-bar select,
+        .horse-filter-bar input {
+          height: 38px;
+          border: 1px solid #bfece5;
+          border-radius: 7px;
+          color: #06332e;
+          background: #fafffe;
+          font-size: 13px;
+          font-weight: 850;
+          outline: 0;
+        }
+
+        .horse-filter-bar select {
+          width: 210px;
+          min-width: 150px;
+          padding: 0 10px;
+          flex:0 0 220px;
+        }
+
+        .horse-search-input {
+          width: 280px;
+          flex:1;
+        }
+
+        .horse-range-input {
+          width: 180px;
+          flex:0 0 170px;
+        }
+
+        .horse-filter-bar input {
+          padding: 0 12px;
+        }
+
+        .horse-filter-bar select:focus,
+        .horse-filter-bar input:focus {
+          border-color: #69f8dd;
+          box-shadow: 0 0 0 3px rgba(105, 248, 221, 0.18);
+        }
+
+        .horse-modal-backdrop {
+          position: fixed;
+          z-index: 40;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          padding: 28px;
+          background: rgba(0, 24, 22, 0.62);
+          backdrop-filter: blur(8px);
+        }
+
+        .horse-modal {
+          width: min(980px, 100%);
+          max-height: min(760px, calc(100dvh - 56px));
+          display: flex;
+          flex-direction: column;
+          border: 1px solid #cdeee8;
+          border-radius: 8px;
+          background: #ffffff;
+          box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+          overflow: hidden;
+        }
+
+        .horse-modal-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 18px 20px;
+          border-bottom: 1px solid #e5f3f0;
+        }
+
+        .horse-modal-head h3 {
+          margin: 0;
+          color: #06332e;
+          font-size: 22px;
+          font-weight: 950;
+        }
+
+        .horse-modal-close {
+          width: 34px;
+          height: 34px;
+          border: 1px solid #bfece5;
+          border-radius: 50%;
+          color: #006755;
+          background: #f3fffc;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1;
+          cursor: pointer;
+        }
+
+        .horse-modal-body {
+          padding: 18px;
+          overflow-y: auto;
+        }
+
+        .race-detail-hero {
+          position: relative;
+          min-height: 220px;
+          display: flex;
+          align-items: flex-end;
+          overflow: hidden;
+          padding: 24px;
+          border-radius: 8px;
+          color: #f4fffb;
+          background:
+            linear-gradient(0deg, rgba(0, 45, 40, 0.92), rgba(0, 45, 40, 0.1)),
+            var(--race-detail-image) center / cover;
+        }
+
+        .race-detail-hero h4 {
+          margin: 8px 0 0;
+          color: #fff;
+          font-size: clamp(25px, 4vw, 38px);
+          font-weight: 950;
+        }
+
+        .race-detail-status {
+          display: inline-flex;
+          padding: 6px 9px;
+          border-radius: 999px;
+          color: #06332e;
+          background: #69f8dd;
+          font-size: 11px;
+          font-weight: 950;
+          text-transform: uppercase;
+        }
+
+        .race-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          margin-top: 16px;
+        }
+
+        .race-detail-item {
+          display: grid;
+          gap: 6px;
+          min-height: 78px;
+          align-content: center;
+          padding: 13px;
+          border: 1px solid #d9f3ed;
+          border-radius: 8px;
+          background: #fafffe;
+        }
+
+        .race-detail-item span {
+          color: #6a817e;
+          font-size: 11px;
+          font-weight: 850;
+          text-transform: uppercase;
+        }
+
+        .race-detail-item strong {
+          color: #06332e;
+          font-size: 14px;
+        }
+
+        .horse-profile {
+          display: grid;
+          grid-template-columns: 280px 1fr;
+          gap: 22px;
+        }
+
+        .horse-profile-image {
+          width: 100%;
+          aspect-ratio: 1;
+          border-radius: 8px;
+          object-fit: cover;
+          background: #f3fffc;
+        }
+
+        .horse-profile-main {
+          min-width: 0;
+        }
+
+        .horse-profile-main h4 {
+          margin: 0 0 8px;
+          color: #06332e;
+          font-size: 26px;
+          font-weight: 950;
+        }
+
+        .horse-profile-meta {
+          color: #6a817e;
+          font-size: 14px;
+          font-weight: 850;
+        }
+
+        .horse-profile-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin: 18px 0;
+        }
+
+        .horse-profile-stat {
+          min-height: 74px;
+          padding: 12px;
+          border: 1px solid #d9f3ed;
+          border-radius: 8px;
+          background: #fafffe;
+        }
+
+        .horse-profile-stat span {
+          display: block;
+          color: #6a817e;
+          font-size: 12px;
+          font-weight: 850;
+        }
+
+        .horse-profile-stat strong {
+          display: block;
+          margin-top: 6px;
+          color: #06332e;
+          font-size: 20px;
+          font-weight: 950;
+        }
+
+        .horse-profile-details {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px 18px;
+          margin-top: 16px;
+        }
+
+        .horse-profile-detail {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          border-bottom: 1px solid #e5f3f0;
+          padding-bottom: 8px;
+          color: #6a817e;
+          font-size: 13px;
+          font-weight: 850;
+        }
+
+        .horse-profile-detail strong {
+          color: #06332e;
+          text-align: right;
+        }
+
+        .horse-profile-description {
+          margin: 18px 0 0;
+          color: #315a56;
+          line-height: 1.65;
+          font-size: 14px;
+          font-weight: 750;
         }
 
         .race-grid {
@@ -584,8 +1387,10 @@ function Home() {
 
         .race-card {
           min-height: 315px;
+          min-width: 0;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
           padding: 16px;
         }
 
@@ -625,38 +1430,117 @@ function Home() {
           font-weight: 950;
         }
 
+        .race-card h3 {
+          min-height: 48px;
+          max-height: 48px;
+          display: -webkit-box;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
+        }
+
         .muted {
           color: #6a817e;
           font-size: 14px;
         }
 
-        .race-facts {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          margin-top: 14px;
-          color: #41605d;
-          font-size: 13px;
-          font-weight: 800;
+        .race-card .muted {
+          min-height: 36px;
+          display: -webkit-box;
+          overflow: hidden;
+          overflow-wrap: anywhere;
+          -webkit-box-orient: vertical;
+          -webkit-line-clamp: 2;
         }
 
-        .race-facts span {
+        .race-date {
           display: inline-flex;
           align-items: center;
           gap: 7px;
+          max-width: 100%;
+          min-width: 0;
+          margin-top: 12px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          color: #214d48;
+          font-size: 13px;
+          font-weight: 850;
         }
 
-        .race-card img {
+        .race-date svg {
+          width: 16px;
+          height: 16px;
+          flex: 0 0 auto;
+          color: #0b8d78;
+        }
+
+        .race-preview {
+          position: relative;
           width: 100%;
-          height: 94px;
-          margin: 18px 0 0;
-          border-radius: 7px;
+          height: 148px;
+          margin: 18px 0 12px;
+          overflow: hidden;
+          border: 1px solid rgba(6, 103, 85, 0.12);
+          border-radius: 10px;
+          background: #dff5f0;
+          box-shadow: 0 10px 24px rgba(6, 51, 46, 0.12);
+        }
+
+        .race-preview.upcoming-preview {
+          border-color: rgba(6, 103, 85, 0.1);
+          background: #edf9f6;
+          box-shadow: 0 8px 20px rgba(6, 51, 46, 0.07);
+        }
+
+        .race-preview::after {
+          position: absolute;
+          inset: 0;
+          content: "";
+          pointer-events: none;
+          background:
+            linear-gradient(180deg, transparent 58%, rgba(1, 31, 28, 0.28)),
+            linear-gradient(90deg, rgba(9, 78, 68, 0.08), transparent 45%);
+        }
+
+        .race-preview.upcoming-preview::after {
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.34)),
+            linear-gradient(90deg, rgba(9, 78, 68, 0.06), transparent 48%);
+        }
+
+        .race-preview img {
+          width: 100%;
+          height: 100%;
+          display: block;
           object-fit: cover;
+          object-position: 50% 43%;
+          transform: scale(1.01);
+          transition: transform 280ms ease, filter 280ms ease;
+        }
+
+        .race-preview.upcoming-preview img {
+          opacity: 0.72;
+          filter: saturate(0.72) contrast(0.9) brightness(1.08);
+        }
+
+        .race-card:hover .race-preview img {
+          filter: saturate(1.06) contrast(1.03);
+          transform: scale(1.045);
+        }
+
+        .race-card:hover .race-preview.upcoming-preview img {
+          opacity: 0.82;
+          filter: saturate(0.82) contrast(0.94) brightness(1.05);
         }
 
         .card-action {
+          display: grid;
+          place-items: center;
           width: 100%;
           min-height: 42px;
+          flex: 0 0 auto;
           margin-top: auto;
           border: 1px solid #bfece5;
           border-radius: 7px;
@@ -664,6 +1548,51 @@ function Home() {
           background: #f3fffc;
           font-weight: 950;
           cursor: pointer;
+        }
+
+        .card-action.live-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          border-color: #0ba98f;
+          color: #fff;
+          background: linear-gradient(135deg, #16b99e, #078574);
+          box-shadow: 0 9px 20px rgba(10, 153, 130, 0.25);
+          text-decoration: none;
+          transition:
+            transform 180ms ease,
+            box-shadow 180ms ease,
+            filter 180ms ease;
+        }
+
+        .card-action.live-action::before {
+          width: 8px;
+          height: 8px;
+          flex: 0 0 8px;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+          content: "";
+          animation: live-action-pulse 1.2s ease-in-out infinite;
+        }
+
+        .card-action.live-action:hover {
+          color: #fff;
+          filter: brightness(1.08);
+          transform: translateY(-2px);
+          box-shadow: 0 13px 26px rgba(10, 153, 130, 0.34);
+        }
+
+        @keyframes live-action-pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.55;
+            transform: scale(0.72);
+          }
         }
 
         .dashboard-grid {
@@ -683,7 +1612,13 @@ function Home() {
           gap: 16px;
         }
 
+        .top-horse-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
         .horse-card {
+          display: flex;
+          flex-direction: column;
           overflow: hidden;
         }
 
@@ -714,30 +1649,49 @@ function Home() {
         }
 
         .horse-body {
+          min-height: 230px;
+          display: flex;
+          flex-direction: column;
           padding: 14px;
         }
 
         .horse-body h3 {
-          margin-top: 0;
+          min-height: 44px;
+          display: -webkit-box;
+          margin: 0 0 8px;
+          overflow: hidden;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
           font-size: 18px;
+          line-height: 1.2;
         }
 
         .horse-stat-row {
-          display: flex;
-          justify-content: space-between;
+          min-height: 34px;
+          display: grid;
+          grid-template-columns: 62px minmax(0, 1fr);
+          align-items: start;
           gap: 10px;
-          margin-top: 12px;
+          margin-top: 8px;
           color: #6a817e;
           font-size: 12px;
         }
 
         .horse-stat-row strong {
+          display: -webkit-box;
+          overflow: hidden;
           color: #0d2321;
+          text-align: right;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .horse-body .card-action {
+          margin-top: auto;
         }
 
         .jockey-list,
-        .result-list,
-        .predictor-list {
+        .result-list {
           display: grid;
           gap: 0;
         }
@@ -751,7 +1705,7 @@ function Home() {
         }
 
         .jockey-row {
-          grid-template-columns: 28px 42px 1fr auto auto;
+          grid-template-columns: 28px 42px 1fr auto;
           min-height: 76px;
           font-size: 13px;
         }
@@ -801,9 +1755,13 @@ function Home() {
           margin-bottom: 28px;
         }
 
+        .lower-grid.results-only {
+          grid-template-columns: 1fr;
+        }
+
         .tabs {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           margin-bottom: 18px;
           border: 1px solid #d9ece9;
           border-radius: 8px;
@@ -814,8 +1772,10 @@ function Home() {
           min-height: 43px;
           border: 0;
           border-right: 1px solid #d9ece9;
+          padding: 0 18px;
           color: #53706c;
           background: #fff;
+          font-size: 14px;
           font-weight: 900;
           cursor: pointer;
         }
@@ -863,7 +1823,7 @@ function Home() {
         }
 
         .result-row {
-          grid-template-columns: 140px 1fr auto auto;
+          grid-template-columns: 140px minmax(0, 1fr) 190px 220px;
           min-height: 112px;
         }
 
@@ -875,8 +1835,16 @@ function Home() {
         }
 
         .result-details {
+          min-width: 0;
           display: grid;
           gap: 5px;
+        }
+
+        .result-details strong,
+        .result-details span:not(.result-status) {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .result-status {
@@ -897,7 +1865,14 @@ function Home() {
         .winner {
           display: grid;
           gap: 3px;
-          min-width: 150px;
+          min-width: 0;
+        }
+
+        .winner strong,
+        .winner span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .winner-icon {
@@ -905,67 +1880,9 @@ function Home() {
           font-weight: 950;
         }
 
-        .prediction-band {
-          position: relative;
-          display: grid;
-          grid-template-columns: 1fr 1fr 260px;
-          gap: 34px;
-          align-items: center;
-          min-height: 230px;
-          margin-bottom: 30px;
-          padding: 42px;
-          border-radius: 8px;
-          color: #f4fffb;
-          overflow: hidden;
-          background:
-            radial-gradient(circle at 86% 55%, rgba(105, 248, 221, 0.28), transparent 28%),
-            linear-gradient(120deg, #003b35, #008272);
-        }
-
-        .prediction-band h2 {
-          margin: 0 0 12px;
-          font-size: 27px;
-          font-weight: 950;
-        }
-
-        .prediction-band p {
-          max-width: 390px;
-          margin: 0 0 22px;
-          color: rgba(244, 255, 251, 0.82);
-          line-height: 1.6;
-        }
-
-        .predictor-list {
-          gap: 10px;
-        }
-
-        .predictor-row {
-          display: grid;
-          grid-template-columns: 28px 38px 1fr auto;
-          align-items: center;
-          gap: 12px;
-          min-height: 44px;
-          padding: 0 16px;
-          border: 1px solid rgba(244, 255, 251, 0.24);
-          border-radius: 999px;
-          background: rgba(0, 35, 32, 0.2);
-          font-weight: 900;
-        }
-
-        .predictor-row span:last-child {
-          color: rgba(244, 255, 251, 0.86);
-        }
-
-        .trophy-art {
-          justify-self: center;
-          width: 210px;
-          height: 210px;
-          display: grid;
-          place-items: center;
-          color: #69f8dd;
-          border-radius: 50%;
-          background: rgba(244, 255, 251, 0.08);
-          box-shadow: inset 0 0 60px rgba(105, 248, 221, 0.18);
+        .result-row > strong:last-child {
+          justify-self: start;
+          white-space: nowrap;
         }
 
         .home-footer {
@@ -1034,20 +1951,32 @@ function Home() {
         @media (max-width: 1120px) {
           .home-menu { display: none; }
           .race-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .result-row {
+            grid-template-columns: 140px minmax(0, 1fr) 170px 190px;
+          }
           .dashboard-grid,
-          .lower-grid,
-          .prediction-band { grid-template-columns: 1fr; }
-          .horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-          .trophy-art { display: none; }
+          .lower-grid { grid-template-columns: 1fr; }
+          .horse-grid,
+          .top-horse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .footer-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 720px) {
           .home-container { width: min(100% - 28px, 1230px); }
           .home-nav { height: 74px; }
+          .home-nav-inner { gap: 10px; }
           .home-brand-logo { height: 62px; width: auto; }
-          .account-trigger { min-width: 160px; max-width: 210px; }
-          .home-actions .home-icon-btn { display: none; }
+          .home-actions { gap: 8px; min-width: 0; }
+          .account-trigger { min-width: 0; max-width: 156px; }
+          .home-icon-btn {
+            width: 38px;
+            height: 38px;
+          }
+          .home-live-btn {
+            min-height: 38px;
+            padding: 0 10px;
+            font-size: 11px;
+          }
           .home-btn { min-height: 42px; padding: 0 14px; font-size: 13px; }
           .home-hero {
             min-height: 660px;
@@ -1057,10 +1986,11 @@ function Home() {
           .home-stats,
           .race-grid,
           .horse-grid,
+          .top-horse-grid,
           .footer-grid { grid-template-columns: 1fr; }
           .panel { padding: 18px; }
           .jockey-row { grid-template-columns: 26px 38px 1fr; }
-          .jockey-row span:nth-last-child(-n + 2) { display: none; }
+          .jockey-row > span:last-child { display: none; }
           .result-row {
             grid-template-columns: 92px 1fr;
             padding: 14px 0;
@@ -1075,78 +2005,327 @@ function Home() {
           .home-table td:nth-child(4),
           .home-table th:nth-child(6),
           .home-table td:nth-child(6) { display: none; }
-          .prediction-band { padding: 26px; }
+          .horse-modal-backdrop { padding: 14px; }
+          .race-detail-grid { grid-template-columns: 1fr 1fr; }
+          .horse-profile { grid-template-columns: 1fr; }
+          .horse-profile-stats,
+          .horse-profile-details { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+          .home-container { width: min(100% - 22px, 1230px); }
+          .home-brand-logo { height: 54px; }
+          .home-nav-inner { gap: 8px; }
+          .home-actions { gap: 6px; }
+          .home-live-btn {
+            width: 42px;
+            min-height: 40px;
+            padding: 0;
+            gap: 0;
+            font-size: 0;
+            justify-content: center;
+          }
+          .home-action-label {
+            display: none;
+          }
+          .home-live-btn i {
+            display: none;
+          }
+          .home-mobile-action-icon {
+            display: inline-flex;
+          }
+          .home-icon-btn {
+            width: 40px;
+            height: 40px;
+          }
+          .notification-dropdown {
+            position: fixed;
+            top: 84px;
+            right: 11px;
+            left: 11px;
+            width: auto;
+          }
+          .notification-dropdown-head {
+            padding: 10px 12px;
+          }
+          .notification-dropdown-head strong {
+            font-size: 13px;
+          }
+          .notification-dropdown-head span {
+            font-size: 11px;
+          }
+          .notification-list {
+            max-height: 250px;
+          }
+          .notification-item {
+            gap: 4px;
+            padding: 10px 12px;
+          }
+          .notification-title {
+            font-size: 12px;
+          }
+          .notification-content {
+            font-size: 11px;
+            line-height: 1.35;
+            -webkit-line-clamp: 1;
+          }
+          .notification-time {
+            font-size: 10px;
+          }
+          .notification-footer {
+            min-height: 38px;
+            font-size: 12px;
+          }
+          .account-trigger {
+            width: 44px;
+            max-width: 44px;
+            min-width: 44px;
+            padding: 0;
+            justify-content: center;
+          }
+          .account-trigger-name,
+          .account-trigger svg:last-child { display: none; }
+          .home-hero {
+            min-height: 620px;
+          }
+          .home-hero-content {
+            padding-top: 72px;
+          }
+          .home-hero h1 { font-size: clamp(38px, 12vw, 52px); }
+          .home-hero p {
+            font-size: 16px;
+            line-height: 1.65;
+          }
+          .home-hero-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            margin-bottom: 44px;
+          }
         }
       `}</style>
 
       <header className="home-nav">
         <div className="home-container home-nav-inner">
           <a className="home-brand" href="#top" aria-label="GoldenHoof home">
-            <img className="home-brand-logo" src="/navbar-logo.png" alt="" />
+            <img
+              className="home-brand-logo"
+              src="/goldenhoof-logo.png"
+              alt=""
+            />
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {["Races", "Horses", "Jockeys", "Results", "Rankings", "Predictions", "News", "About"].map((item) => (
-              <a href={`#${item.toLowerCase()}`} key={item}>
-                {item}
-              </a>
-            ))}
+            {["Races", "Horses", "Jockeys", "Results"].map(
+              (item) => (
+                <a href={`#${item.toLowerCase()}`} key={item}>
+                  {item}
+                </a>
+              ),
+            )}
           </nav>
 
           <div className="home-actions">
-            <button className="home-icon-btn" type="button" aria-label="Search">
-              <Icon name="search" size={24} />
-            </button>
-            {authSession ? (
-              <div className="account-menu">
-                <button
-                  className={`home-btn account-trigger ${
-                    isAccountMenuOpen ? "account-trigger-open" : ""
-                  }`}
-                  type="button"
-                  aria-expanded={isAccountMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => setIsAccountMenuOpen((current) => !current)}
-                >
-                  <Icon name="user" size={20} />
-                  <span className="account-trigger-name">{accountName}</span>
-                  <Icon name="chevron" size={18} />
-                </button>
-
-                {isAccountMenuOpen && (
-                  <div className="account-dropdown" role="menu">
-                    {isAdmin && (
-                      <Link className="account-menu-item" role="menuitem" to="/admin/dashboard">
-                        <Icon name="dashboard" size={18} />
-                        <span>Dashboard</span>
-                      </Link>
-                    )}
-                    <Link className="account-menu-item" role="menuitem" to="/profile">
-                      <Icon name="user" size={18} />
-                      <span>Profile</span>
-                    </Link>
-                    <button
-                      className="account-menu-item account-menu-logout"
-                      type="button"
-                      role="menuitem"
-                      onClick={handleLogout}
-                    >
-                      <Icon name="logout" size={18} />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <Link className="home-btn" to="/login">
-                  Log in
-                </Link>
-                <Link className="home-btn home-btn-primary" to="/register">
-                  Sign up
-                </Link>
-              </>
+            {isSpectator && (
+              <Link className="home-live-btn home-bet-btn" to="/spectator/bets">
+                <span className="home-mobile-action-icon">
+                  <Icon name="trophy" size={18} />
+                </span>
+                <span className="home-action-label">Bet Points</span>
+              </Link>
             )}
+            <Link className="home-live-btn" to="/spectator/broadcast">
+              <i aria-hidden="true" />
+              <span className="home-mobile-action-icon">
+                <Icon name="horse" size={18} />
+              </span>
+              <span className="home-action-label">Live Broadcast</span>
+            </Link>
+            <div className="nav-dropdown-wrap">
+              <button
+                className={`home-icon-btn notification-trigger ${
+                  isNotificationMenuOpen ? "notification-trigger-open" : ""
+                }`}
+                type="button"
+                aria-label="Notifications"
+                aria-expanded={isNotificationMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => {
+                  setIsNotificationMenuOpen((current) => !current);
+                  setIsAccountMenuOpen(false);
+                }}
+              >
+                <BellOutlined style={{ fontSize: "20px" }} />
+                {unreadNotificationCount > 0 && (
+                  <span className="notification-badge">
+                    {unreadNotificationCount > 99
+                      ? "99+"
+                      : unreadNotificationCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotificationMenuOpen && (
+                <div
+                  className="account-dropdown notification-dropdown"
+                  role="menu"
+                  aria-label="Notifications"
+                >
+                  <div className="notification-dropdown-head">
+                    <strong>Notifications</strong>
+                    <span>{unreadNotificationCount} unread</span>
+                  </div>
+                  {notificationPreview.length > 0 ? (
+                    <div className="notification-list">
+                      {notificationPreview.map((notification) => (
+                        <Link
+                          className={`notification-item ${
+                            notification.isRead
+                              ? ""
+                              : "notification-item-unread"
+                          }`}
+                          key={
+                            notification.id ||
+                            `${notification.title}-${notification.createdAt}`
+                          }
+                          role="menuitem"
+                          to="/notification"
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <span className="notification-title-row">
+                            {!notification.isRead && (
+                              <span className="notification-dot" />
+                            )}
+                            <span className="notification-title">
+                              {notification.title}
+                            </span>
+                          </span>
+                          {notification.content && (
+                            <p className="notification-content">
+                              {notification.content}
+                            </p>
+                          )}
+                          {notification.createdAt && (
+                            <span className="notification-time">
+                              {formatDateTime(notification.createdAt)}
+                            </span>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="notification-empty">No notifications</div>
+                  )}
+                  <Link
+                    className="notification-footer"
+                    role="menuitem"
+                    to="/notification"
+                    onClick={() => setIsNotificationMenuOpen(false)}
+                  >
+                    View all notifications
+                  </Link>
+                </div>
+              )}
+            </div>
+            <div className="account-menu">
+              <button
+                className={`home-btn account-trigger ${
+                  isAccountMenuOpen ? "account-trigger-open" : ""
+                }`}
+                type="button"
+                aria-expanded={isAccountMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => {
+                  setIsAccountMenuOpen((current) => !current);
+                  setIsNotificationMenuOpen(false);
+                }}
+              >
+                <Icon name="user" size={20} />
+                <span className="account-trigger-name">{accountName}</span>
+                <Icon name="chevron" size={18} />
+              </button>
+
+              {isAccountMenuOpen && (
+                <div className="account-dropdown" role="menu">
+                  {!isSpectator && (
+                    <Link
+                      className="account-menu-item"
+                      role="menuitem"
+                      to={isAdmin ? "/admin/dashboard" : dashboardPath}
+                    >
+                      <Icon name="dashboard" size={18} />
+                      <span>Dashboard</span>
+                    </Link>
+                  )}
+                  <Link
+                    className="account-menu-item"
+                    role="menuitem"
+                    to="/profile"
+                  >
+                    <Icon name="user" size={18} />
+                    <span>Profile</span>
+                  </Link>
+                  {/* Phân quyền hiển thị Points/Transactions và Notifications */}
+                  {isSpectator && (
+                    <>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/spectator/points-transaction"
+                      >
+                        <Icon name="chart" size={18} />
+                        <span>Points</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/report"
+                      >
+                        <FileTextOutlined style={{ fontSize: "18px" }} />
+                        <span>Report</span>
+                      </Link>
+                    </>
+                  )}
+
+                  {isOwnerOrJockey && (
+                    <>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/money-transaction"
+                      >
+                        <Icon name="chart" size={18} />
+                        <span>Transactions</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/wallet"
+                      >
+                        <WalletOutlined style={{ fontSize: "18px" }} />
+                        <span>Wallet</span>
+                      </Link>
+                      <Link
+                        className="account-menu-item"
+                        role="menuitem"
+                        to="/report"
+                      >
+                        <FileTextOutlined style={{ fontSize: "18px" }} />
+                        <span>Report</span>
+                      </Link>
+                    </>
+                  )}
+                  <button
+                    className="account-menu-item account-menu-logout"
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    <Icon name="logout" size={18} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -1197,29 +2376,46 @@ function Home() {
             ) : (
               <div className="race-grid">
                 {homeData.races.map((race) => (
-                  <article className="race-card" key={race.id}>
+                  <article
+                    className={`race-card ${race.status ? "live-race-card" : "upcoming-race-card"}`}
+                    key={race.id}
+                  >
                     <div className="race-meta">
-                      <span className={`pill ${race.status ? "pill-live" : ""}`}>
-                        {race.status || race.time}
-                      </span>
-                      <span>Race {race.id}</span>
-                    </div>
-                    <h3>{race.name}</h3>
-                    <span className="muted">{race.venue}</span>
-                    <div className="race-facts">
-                      <span>
-                        <Icon name="clock" size={15} />
-                        {race.distance}
-                      </span>
-                      <span>
-                        <Icon name="map" size={15} />
-                        {race.surface}
+                      <span
+                        className={`pill ${race.status ? "pill-live" : ""}`}
+                      >
+                        {race.status ? "Live" : "Upcoming"}
                       </span>
                     </div>
-                    {race.status && <img src={race.image} alt={`${race.name} race`} />}
-                    <button className="card-action" type="button">
-                      {race.status ? "Watch Live" : "View Details"}
-                    </button>
+                    <h3 title={race.name}>{race.name}</h3>
+                    <span className="muted" title={race.venue}>
+                      {race.venue}
+                    </span>
+                    <span className="race-date">
+                      <Icon name="clock" size={16} />
+                      {formatRaceDateTime(race.date || race.sortTime)}
+                    </span>
+                    <div
+                      className={`race-preview ${race.status ? "live-preview" : "upcoming-preview"}`}
+                    >
+                        <img src={race.image} alt={`${race.name} race`} />
+                    </div>
+                    {race.status ? (
+                      <Link
+                        className="card-action live-action"
+                        to={`/spectator/broadcast/${encodeURIComponent(race.id)}`}
+                      >
+                        Watch Live
+                      </Link>
+                    ) : (
+                      <button
+                        className="card-action"
+                        type="button"
+                        onClick={() => setSelectedRace(race)}
+                      >
+                        {race.status ? "Live Race" : "View Details"}
+                      </button>
+                    )}
                   </article>
                 ))}
               </div>
@@ -1230,10 +2426,31 @@ function Home() {
             <section className="panel">
               <SectionTitle
                 title="Top Horses"
-                action={{ label: "View All Horses", href: "#horses" }}
+                action={{
+                  label: "View All Horses",
+                  href: "/horses",
+                }}
               />
-              <div className="horse-grid">
-                {homeData.horses.map((horse) => (
+              <div className="horse-filter-bar" aria-label="Horse filters">
+                <input
+                  type="text"
+                  className="horse-search-input"
+                  placeholder="Search horse name..."
+                  value={horseSearch}
+                  onChange={(e) => setHorseSearch(e.target.value)}
+                />
+
+                <select
+                  value={horseSortOrder}
+                  onChange={(e) => setHorseSortOrder(e.target.value)}
+                >
+                  <option value="desc">Win rate descending</option>
+
+                  <option value="asc">Win rate ascending</option>
+                </select>
+              </div>
+              <div className="horse-grid top-horse-grid">
+                {topHorses.map((horse) => (
                   <article className="horse-card" key={horse.id}>
                     <div className="horse-photo">
                       <img src={horse.image} alt={horse.name} />
@@ -1241,96 +2458,244 @@ function Home() {
                     </div>
                     <div className="horse-body">
                       <h3>{horse.name}</h3>
-                      <span className="muted">
-                        {horse.age} · {horse.breed}
-                      </span>
                       <div className="horse-stat-row">
                         <span>Owner</span>
                         <strong>{horse.owner}</strong>
                       </div>
                       <div className="horse-stat-row">
-                        <span>Rating</span>
-                        <strong>{horse.rating}</strong>
+                        <span>Win rate</span>
+                        <strong>{formatWinRate(horse.winRate)}%</strong>
                       </div>
                       <div className="horse-stat-row">
                         <span>Wins</span>
-                        <strong>{horse.wins}</strong>
+                        <strong>{horse.totalWin || 0}</strong>
                       </div>
-                      <button className="card-action" type="button">
+                      <button
+                        className="card-action"
+                        type="button"
+                        onClick={() => setSelectedHorse(horse)}
+                      >
                         View Profile
                       </button>
                     </div>
                   </article>
                 ))}
               </div>
+              {topHorses.length === 0 && (
+                <p className="loading-line">
+                  No horses match the current filters.
+                </p>
+              )}
             </section>
 
             <section className="panel" id="jockeys">
               <SectionTitle
                 title="Top Jockeys"
-                action={{ label: "View All Jockeys", href: "#jockeys" }}
+                action={{ label: "View All Jockeys", href: "/jockeys" }}
               />
+              <div className="horse-filter-bar" aria-label="Jockey filters">
+                <input
+                  type="text"
+                  placeholder="Search jockey..."
+                  value={jockeySearch}
+                  onChange={(e) => setJockeySearch(e.target.value)}
+                />
+              </div>
               <div className="jockey-list">
-                {homeData.jockeys.map((jockey) => (
+                {topJockeys.map((jockey) => (
                   <div className="jockey-row" key={jockey.id}>
                     <span className="rank-number">{jockey.rank}</span>
                     <Avatar name={jockey.name} rank={jockey.rank} />
                     <strong>{jockey.name}</strong>
-                    <span>{jockey.wins} Wins</span>
-                    <span>Win Rate {jockey.winRate}</span>
+                    <span>Win Rate {formatWinRate(jockey.winRate)}%</span>
                   </div>
                 ))}
               </div>
+              {topJockeys.length === 0 && (
+                <p className="loading-line">
+                  No jockeys match the current filters.
+                </p>
+              )}
             </section>
           </div>
 
-          <div className="lower-grid">
-            <section className="panel" id="rankings">
-              <SectionTitle title="Leaderboard" />
-              <div className="tabs" role="tablist" aria-label="Leaderboard views">
-                <button type="button">Horses</button>
-                <button type="button">Jockeys</button>
-                <button type="button">Owners</button>
-              </div>
-              <table className="home-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Horse</th>
-                    <th>Rating</th>
-                    <th>Wins</th>
-                    <th>Places</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {homeData.standings.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.id}</td>
-                      <td>
-                        <span className="horse-name-cell">
-                          <img className="mini-thumb" src="/goldenhoof-hero.png" alt="" />
-                          {row.horse}
-                        </span>
-                      </td>
-                      <td>{row.rating}</td>
-                      <td>{row.wins}</td>
-                      <td>{row.places}</td>
-                      <td>{row.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <a className="home-panel-link" href="#rankings">
-                View Full Rankings
-                <Icon name="arrow" size={16} />
-              </a>
-            </section>
+          {selectedRace && (
+            <div
+              className="horse-modal-backdrop"
+              role="presentation"
+              onClick={() => setSelectedRace(null)}
+            >
+              <section
+                className="horse-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${selectedRace.name} details`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="horse-modal-head">
+                  <h3>Race Details</h3>
+                  <button
+                    className="horse-modal-close"
+                    type="button"
+                    aria-label="Close race details"
+                    onClick={() => setSelectedRace(null)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="horse-modal-body">
+                  <div
+                    className="race-detail-hero"
+                    style={{
+                      "--race-detail-image": `url("${selectedRace.image}")`,
+                    }}
+                  >
+                    <div>
+                      <span className="race-detail-status">
+                        {selectedRace.status || selectedRace.rawStatus}
+                      </span>
+                      <h4>{selectedRace.name}</h4>
+                    </div>
+                  </div>
+                  <div className="race-detail-grid">
+                    <div className="race-detail-item">
+                      <span>Tournament</span>
+                      <strong>{selectedRace.tournament}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Time</span>
+                      <strong>
+                        {formatRaceDateTime(
+                          selectedRace.sortTime,
+                          selectedRace.time,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Race Course</span>
+                      <strong>{selectedRace.venue}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Distance</span>
+                      <strong>{selectedRace.distance}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Race Track</span>
+                      <strong>{selectedRace.surface}</strong>
+                    </div>
+                    <div className="race-detail-item">
+                      <span>Round</span>
+                      <strong>{selectedRace.round}</strong>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
 
+          {selectedHorse && (
+            <div
+              className="horse-modal-backdrop"
+              role="presentation"
+              onClick={() => setSelectedHorse(null)}
+            >
+              <section
+                className="horse-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${selectedHorse.name} profile`}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="horse-modal-head">
+                  <h3>Horse Profile</h3>
+                  <button
+                    className="horse-modal-close"
+                    type="button"
+                    aria-label="Close horse profile"
+                    onClick={() => setSelectedHorse(null)}
+                  >
+                    x
+                  </button>
+                </div>
+                <div className="horse-modal-body">
+                  <div className="horse-profile">
+                    <img
+                      className="horse-profile-image"
+                      src={selectedHorse.image}
+                      alt={selectedHorse.name}
+                    />
+                    <div className="horse-profile-main">
+                      <h4>{selectedHorse.name}</h4>
+                      <div className="horse-profile-meta">
+                        {selectedHorse.breed}
+                        {selectedHorse.color ? ` · ${selectedHorse.color}` : ""}
+                      </div>
+
+                      <div className="horse-profile-stats">
+                        <div className="horse-profile-stat">
+                          <span>Win rate</span>
+                          <strong>
+                            {formatWinRate(selectedHorse.winRate)}%
+                          </strong>
+                        </div>
+                        <div className="horse-profile-stat">
+                          <span>Total wins</span>
+                          <strong>{selectedHorse.totalWin || 0}</strong>
+                        </div>
+                        <div className="horse-profile-stat">
+                          <span>Rating</span>
+                          <strong>{selectedHorse.rating || 0}</strong>
+                        </div>
+                      </div>
+
+                      <div className="horse-profile-details">
+                        <div className="horse-profile-detail">
+                          <span>Owner</span>
+                          <strong>{selectedHorse.owner}</strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Status</span>
+                          <strong>{selectedHorse.status || "N/A"}</strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Height</span>
+                          <strong>
+                            {selectedHorse.height
+                              ? `${selectedHorse.height} m`
+                              : "N/A"}
+                          </strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Weight</span>
+                          <strong>
+                            {selectedHorse.weight
+                              ? `${selectedHorse.weight} kg`
+                              : "N/A"}
+                          </strong>
+                        </div>
+                        <div className="horse-profile-detail">
+                          <span>Rank</span>
+                          <strong>#{selectedHorse.rank}</strong>
+                        </div>
+                      </div>
+
+                      {selectedHorse.description && (
+                        <p className="horse-profile-description">
+                          {selectedHorse.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+
+          <div className="lower-grid results-only">
             <section className="panel" id="results">
               <SectionTitle
                 title="Latest Race Results"
-                action={{ label: "View All Results", href: "#results" }}
+                action={{ label: "View All Results", href: "/race-results" }}
               />
               <div className="result-list">
                 {homeData.results.map((result) => (
@@ -1346,7 +2711,7 @@ function Home() {
                       </span>
                       <strong>{result.race}</strong>
                       <span>
-                        {result.venue} · {result.distance} · {result.surface}
+                        {result.venue} · {result.distance} · {result.trackType}
                       </span>
                     </div>
                     <div className="winner">
@@ -1354,19 +2719,19 @@ function Home() {
                       <strong>{result.winner}</strong>
                       <span>{result.jockey}</span>
                     </div>
-                    <strong>{result.time}</strong>
+                    <strong>{formatRaceDateTime(result.date)}</strong>
                   </article>
                 ))}
               </div>
             </section>
           </div>
 
-          <section className="prediction-band" id="predictions">
+          {/* <section className="prediction-band" id="predictions">
             <div>
               <h2>Make Your Predictions</h2>
               <p>
-                Predict race winners and compete with fans around the world.
-                Win points and unlock exclusive rewards.
+                Predict race winners and compete with fans around the world. Win
+                points and unlock exclusive rewards.
               </p>
               <a className="home-btn home-btn-primary" href="#predictions">
                 Start Predicting
@@ -1389,7 +2754,7 @@ function Home() {
             <div className="trophy-art">
               <Icon name="trophy" size={132} />
             </div>
-          </section>
+          </section> */}
         </div>
       </section>
 
@@ -1397,7 +2762,11 @@ function Home() {
         <div className="home-container footer-grid">
           <div>
             <a className="home-footer-brand" href="#top">
-              <Icon name="logo" size={32} />
+              <img
+                className="home-footer-brand-logo"
+                src="/goldenhoof-logo.png"
+                alt=""
+              />
               <span>GoldenHoof</span>
             </a>
             <p>
@@ -1439,7 +2808,11 @@ function Home() {
             <h3>Stay Updated</h3>
             <p>Subscribe to our newsletter</p>
             <div className="newsletter">
-              <input type="email" placeholder="Enter your email" aria-label="Email address" />
+              <input
+                type="email"
+                placeholder="Enter your email"
+                aria-label="Email address"
+              />
               <button type="button" aria-label="Subscribe">
                 <Icon name="mail" size={18} />
               </button>
