@@ -1,5 +1,8 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { clearAuthSession, getAuthSession } from "../utils/storage";
+
+const JOCKEY_INVITATIONS_STORAGE_KEY = "goldenhoof_jockey_invitations";
 
 const roleData = {
   Spectator: {
@@ -77,19 +80,37 @@ const roleData = {
       action: "Review Invites",
       items: [
         {
+          inviteId: "greenfield-silver-bullet",
+          status: "Pending",
           title: "Greenfield Stable",
           meta: "Ride Silver Bullet in Emerald Stakes",
           tags: ["Pending", "$8.5K purse", "Today"],
+          race: "Emerald Stakes",
+          horse: "Silver Bullet",
+          venue: "Royal Turf Club",
+          time: "Today, 14:30",
         },
         {
+          inviteId: "skyline-emerald-dream",
+          status: "Accepted",
           title: "Skyline Racing",
           meta: "Ride Emerald Dream in Golden Mile Cup",
           tags: ["Accepted", "$12K purse", "Turf"],
+          race: "Golden Mile Cup",
+          horse: "Emerald Dream",
+          venue: "Sunshine Racecourse",
+          time: "Today, 15:15",
         },
         {
+          inviteId: "royal-thunder-king",
+          status: "Pending",
           title: "Royal Bloodstock",
           meta: "Ride Thunder King in Champion's Cup",
           tags: ["Pending", "$25K purse", "Sunday"],
+          race: "Champion's Cup",
+          horse: "Thunder King",
+          venue: "Royal Turf Club",
+          time: "Sunday, 16:45",
         },
       ],
     },
@@ -174,6 +195,16 @@ function DashboardCard({ children, className = "" }) {
   return <section className={`role-dashboard-card ${className}`}>{children}</section>;
 }
 
+function getStoredJockeyInvitations() {
+  try {
+    const stored = window.localStorage.getItem(JOCKEY_INVITATIONS_STORAGE_KEY);
+
+    return stored ? JSON.parse(stored) : roleData.Jockey.primaryPanel.items;
+  } catch {
+    return roleData.Jockey.primaryPanel.items;
+  }
+}
+
 export default function RoleHome({ allowedRole }) {
   const navigate = useNavigate();
   const authSession = getAuthSession();
@@ -183,6 +214,7 @@ export default function RoleHome({ allowedRole }) {
     role: allowedRole,
   };
   const data = roleData[allowedRole];
+  const [jockeyInvitations, setJockeyInvitations] = useState(getStoredJockeyInvitations);
 
   function handleLogout() {
     clearAuthSession();
@@ -190,6 +222,35 @@ export default function RoleHome({ allowedRole }) {
   }
 
   const profilePath = allowedRole === "Jockey" ? "/jockey/profile" : "/profile";
+  const primaryItems =
+    allowedRole === "Jockey" ? jockeyInvitations : data.primaryPanel.items;
+
+  function handleInvitationStatus(inviteId, status) {
+    setJockeyInvitations((currentInvitations) =>
+      {
+        const nextInvitations = currentInvitations.map((invitation) =>
+          invitation.inviteId === inviteId
+            ? {
+                ...invitation,
+                status,
+                tags: [status, ...invitation.tags.slice(1)],
+              }
+            : invitation,
+        );
+
+        window.localStorage.setItem(
+          JOCKEY_INVITATIONS_STORAGE_KEY,
+          JSON.stringify(nextInvitations),
+        );
+
+        return nextInvitations;
+      },
+    );
+  }
+
+  const acceptedAssignments = jockeyInvitations.filter(
+    (invitation) => invitation.status === "Accepted",
+  );
 
   return (
     <main
@@ -474,6 +535,39 @@ export default function RoleHome({ allowedRole }) {
           font-weight: 950;
         }
 
+        .role-invite-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        .role-invite-btn {
+          min-height: 38px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 14px;
+          border: 1px solid rgba(105, 248, 221, 0.36);
+          border-radius: 8px;
+          color: #f4fffb;
+          background: rgba(255, 255, 255, 0.04);
+          font-size: 13px;
+          font-weight: 950;
+          cursor: pointer;
+        }
+
+        .role-invite-btn-accept {
+          border-color: transparent;
+          color: #06332e;
+          background: #69f8dd;
+        }
+
+        .role-invite-btn:disabled {
+          cursor: default;
+          opacity: 0.55;
+        }
+
         .role-live-card {
           padding: 22px;
         }
@@ -525,6 +619,36 @@ export default function RoleHome({ allowedRole }) {
         .role-side-stack {
           display: grid;
           gap: 22px;
+        }
+
+        .role-assignment-list {
+          display: grid;
+          gap: 10px;
+          margin-top: 16px;
+        }
+
+        .role-assignment {
+          padding: 14px;
+          border-radius: 8px;
+          color: #06332e;
+          background: #d9fbf4;
+        }
+
+        .role-assignment strong,
+        .role-assignment span {
+          display: block;
+        }
+
+        .role-assignment strong {
+          font-size: 16px;
+          font-weight: 950;
+        }
+
+        .role-assignment span {
+          margin-top: 5px;
+          color: rgba(6, 51, 46, 0.72);
+          font-size: 13px;
+          font-weight: 850;
         }
 
         .role-mini-list {
@@ -667,7 +791,7 @@ export default function RoleHome({ allowedRole }) {
               </div>
 
               <div className="role-list">
-                {data.primaryPanel.items.map((item) => (
+                {primaryItems.map((item) => (
                   <article className="role-list-item" key={item.title}>
                     <strong>{item.title}</strong>
                     <div className="role-muted">{item.meta}</div>
@@ -678,6 +802,26 @@ export default function RoleHome({ allowedRole }) {
                         </span>
                       ))}
                     </div>
+                    {allowedRole === "Jockey" && (
+                      <div className="role-invite-actions" aria-label="Invitation actions">
+                        <button
+                          className="role-invite-btn role-invite-btn-accept"
+                          type="button"
+                          disabled={item.status !== "Pending"}
+                          onClick={() => handleInvitationStatus(item.inviteId, "Accepted")}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          className="role-invite-btn"
+                          type="button"
+                          disabled={item.status !== "Pending"}
+                          onClick={() => handleInvitationStatus(item.inviteId, "Declined")}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
@@ -710,6 +854,28 @@ export default function RoleHome({ allowedRole }) {
           </div>
 
           <div className="role-side-stack">
+            {allowedRole === "Jockey" && (
+              <DashboardCard className="role-panel">
+                <div className="role-panel-title">
+                  <span className="role-card-icon">
+                    <Icon name="calendar" />
+                  </span>
+                  <h2>Current Race Assignments</h2>
+                </div>
+                <div className="role-assignment-list">
+                  {acceptedAssignments.map((assignment) => (
+                    <article className="role-assignment" key={assignment.inviteId}>
+                      <strong>{assignment.race}</strong>
+                      <span>
+                        {assignment.horse} - {assignment.venue}
+                      </span>
+                      <span>{assignment.time}</span>
+                    </article>
+                  ))}
+                </div>
+              </DashboardCard>
+            )}
+
             <DashboardCard className="role-panel">
               <div className="role-panel-title">
                 <span className="role-card-icon">
