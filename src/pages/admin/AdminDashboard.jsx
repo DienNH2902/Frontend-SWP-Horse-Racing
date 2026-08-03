@@ -1446,7 +1446,7 @@ export default function AdminDashboard() {
                             dashboard.walletOverview?.revenueBreakdown
                               ?.penaltyCommissionRevenue || 0
                           }
-                          formatter={(value) => `${formatVnd(value)} `}
+                          formatter={(value) => `${formatVnd(value)} VND`}
                           prefix={<WarningOutlined />}
                         />
                       </Card>

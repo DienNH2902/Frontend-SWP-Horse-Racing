@@ -27,7 +27,7 @@ import { getUserById } from "../../api/services/user.service";
 
 import "./RefereeProfileModal.css";
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 function genderText(gender) {
     return gender === 1 ? "Male" : "Female";
@@ -120,7 +120,7 @@ export default function RefereeJockeyDetailModal({
                                     {jockey.fullName}
                                 </Title>
 
-                                <Text className="profile-id">
+                                <Text className="profile-id" copyable>
                                     ID: {jockey._id}
                                 </Text>
 

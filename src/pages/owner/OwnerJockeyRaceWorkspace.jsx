@@ -61,6 +61,12 @@ const statusColor = {
   Expired: "darkred",
 };
 
+const genderMap = {
+  0: "Female",
+  1: "Male",
+  2: "Other",
+};
+
 function pickFirstValue(source, keys, fallback = "") {
   for (const key of keys) {
     const value = source?.[key];
@@ -154,6 +160,11 @@ function normalizeInvitation(invitation) {
       ["sentAt", "createdAt", "createdDate"],
       "",
     ),
+    isAdminResponse: pickFirstValue(
+      invitation,
+      ["isAdminResponse", "isAdminResponse"],
+      false,
+    ),
   };
 }
 
@@ -161,6 +172,12 @@ function isAcceptedInvitation(invitation) {
   const status = String(invitation?.status || "").toLowerCase();
 
   return status === "accepted" || status === "accept";
+}
+
+function isAdminResponseInvitation(invitation) {
+  const isAdminResponse = Boolean(invitation?.isAdminResponse || false);
+
+  return isAdminResponse === false;
 }
 
 async function resolveInvitationTournamentTitles(invitations) {
@@ -406,6 +423,17 @@ export default function OwnerJockeyRaceWorkspace() {
         value: invitation.id,
         label: `${invitation.tournament} - ${invitation.horse} / ${invitation.jockey}`,
       })),
+    [workspace.invitations],
+  );
+
+  const isAdminResponseInvitationOptions = useMemo(
+    () =>
+      workspace.invitations
+        .filter(isAdminResponseInvitation)
+        .map((invitation) => ({
+          value: invitation.id,
+          label: `${invitation.tournament} - ${invitation.horse} / ${invitation.jockey}`,
+        })),
     [workspace.invitations],
   );
 
@@ -717,7 +745,7 @@ export default function OwnerJockeyRaceWorkspace() {
                 proposeJockeyShareRate: 40,
                 ownerCompensationRate: 60,
                 jockeyCompensationRate: 40,
-                message: "Mời bạn tham gia giải đua tháng 6",
+                message: "Mời bạn tham gia giải đua ",
               }}
             >
               <Form.Item
@@ -907,7 +935,7 @@ export default function OwnerJockeyRaceWorkspace() {
           >
             <Select
               loading={invitationLoading}
-              options={acceptedInvitationOptions}
+              options={isAdminResponseInvitationOptions}
               placeholder="Select accepted invitation"
               showSearch
               optionFilterProp="label"
@@ -980,6 +1008,46 @@ export default function OwnerJockeyRaceWorkspace() {
             </Space>
 
             <div style={{ display: "grid", gap: 12 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 2fr) minmax(0, 8fr)",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Gender</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
+                  >
+                    {/* {detailJockey.gender} */}
+                    {genderMap[detailJockey.gender] || "N/A"}
+                  </Typography.Text>
+                </div>
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Typography.Text type="secondary">Address</Typography.Text>
+                  <Typography.Text
+                    strong
+                    style={{ display: "block", marginTop: 4 }}
+                  >
+                    {detailJockey.address}
+                  </Typography.Text>
+                </div>
+              </div>
+
               <div
                 style={{
                   display: "grid",

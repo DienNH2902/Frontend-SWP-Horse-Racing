@@ -105,6 +105,8 @@ export default function RefereeRaceDetail() {
     const [selectedJockeyId, setSelectedJockeyId] = useState(null);
     const [selectedHorseId, setSelectedHorseId] = useState(null);
 
+
+
     const [condition, setCondition] = useState(null);
 
     const [reviewOpen, setReviewOpen] = useState(false);
@@ -116,6 +118,13 @@ export default function RefereeRaceDetail() {
     const [referee, setReferee] = useState(null);
 
     const [raceCourse, setRaceCourse] = useState(null);
+
+    const conditionLocked = [
+        "Ready",
+        "Simulated",
+        "Completed",
+        "Finished",
+    ].includes(race?.status);
 
     const [removingHorse, setRemovingHorse] =
         useState(false);
@@ -667,28 +676,34 @@ export default function RefereeRaceDetail() {
 
     const handleSaveCondition =
         async (values) => {
+            if (conditionLocked) {
+                message.warning(
+                    "Race Condition can no longer be modified."
+                );
+                return;
+            }
             try {
                 setSavingCondition(true);
 
                 const formattedValues = {
-                  ...values,
-                  windSpeed:
-                    values.windSpeed !== undefined && values.windSpeed !== null
-                      ? Number(values.windSpeed)
-                      : 0,
+                    ...values,
+                    windSpeed:
+                        values.windSpeed !== undefined && values.windSpeed !== null
+                            ? Number(values.windSpeed)
+                            : 0,
                 };
 
                 if (condition?._id) {
                     const updated = await updateRaceCondition(
-                      id,
-                      formattedValues,
+                        id,
+                        formattedValues,
                     );
 
                     setCondition(updated);
                 } else {
                     const created = await createRaceCondition({
-                      raceId: id,
-                      ...formattedValues,
+                        raceId: id,
+                        ...formattedValues,
                     });
 
                     setCondition(created);
@@ -706,6 +721,8 @@ export default function RefereeRaceDetail() {
             } finally {
                 setSavingCondition(false);
             }
+
+            await loadData();
         };
 
     const handleConfirmReady = async () => {
@@ -1317,8 +1334,15 @@ export default function RefereeRaceDetail() {
                                     Weather
                                 </span>
                             }
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please enter weather condition",
+                                },
+                            ]}
                         >
                             <Select
+                                disabled={conditionLocked}
                                 className="race-select race-condition-select"
                                 popupClassName="dark-select"
                                 classNames={{
@@ -1348,18 +1372,27 @@ export default function RefereeRaceDetail() {
                             />
                         </Form.Item>
                         <Form.Item
-                            label={
-                                <span className="race-white-text">
-                                    Wind Speed
-                                </span>
-                            }
+                            label={<span className="race-white-text">Wind Speed</span>}
                             name="windSpeed"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please enter wind speed",
+                                },
+                                // {
+                                //     type: "number",
+                                //     min: 0,
+                                //     max: 30,
+                                //     message: "Wind speed must be between 0 and 30 km/h",
+                                // },
+                            ]}
                         >
                             <Space.Compact style={{ width: "100%" }}>
                                 <InputNumber
+                                    disabled={conditionLocked}
                                     className="race-input-number"
                                     min={0}
-                                    max={100}
+                                    max={30}
                                     style={{ width: "100%" }}
                                 />
                                 <Button
@@ -1378,8 +1411,15 @@ export default function RefereeRaceDetail() {
                                 </span>
                             }
                             name="trackCondition"
+                            rules={[
+                                {
+                                    required: true,
+                                    message: "Please enter track condition",
+                                },
+                            ]}
                         >
                             <Select
+                                disabled={conditionLocked}
                                 className="race-select race-condition-select"
                                 popupClassName="dark-select"
                                 classNames={{
@@ -1415,6 +1455,7 @@ export default function RefereeRaceDetail() {
                             htmlType="submit"
                             loading={savingCondition}
                             size="large"
+                            disabled={conditionLocked}
                         >
                             Save Condition
                         </Button>

@@ -613,6 +613,17 @@ function TournamentManagement() {
         render: (value) => <Text strong>{value}</Text>,
       },
       {
+        title: "Status",
+        dataIndex: "status",
+        width: 50,
+        render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
+      },
+      {
+        title: "Available Slot",
+        dataIndex: "availableSlot",
+        width: 50,
+      },
+      {
         title: "Start Date",
         dataIndex: "startDate",
         width: 50,
@@ -628,17 +639,6 @@ function TournamentManagement() {
       //   width: 260,
       //   ellipsis: true,
       // },
-      {
-        title: "Status",
-        dataIndex: "status",
-        width: 50,
-        render: (status) => <Tag color={statusColor(status)}>{status}</Tag>,
-      },
-      {
-        title: "Available Slot",
-        dataIndex: "availableSlot",
-        width: 50,
-      },
       {
         title: "Actions",
         key: "actions",
@@ -1058,6 +1058,14 @@ function TournamentManagement() {
                     format="DD/MM/YYYY"
                     placeholder="DD/MM/YYYY"
                     style={{ width: "100%" }}
+                    disabledDate={(date) => {
+                      if (!date) return false;
+
+                      // Chặn ngày quá khứ
+                      const isPast = date.isBefore(dayjs().endOf("day"));
+
+                      return isPast;
+                    }}
                   />
                 </Form.Item>
 
@@ -1070,6 +1078,14 @@ function TournamentManagement() {
                     format="DD/MM/YYYY"
                     placeholder="DD/MM/YYYY"
                     style={{ width: "100%" }}
+                    disabledDate={(date) => {
+                      if (!date) return false;
+
+                      // Chặn ngày quá khứ
+                      const isPast = date.isBefore(dayjs().endOf("day"));
+
+                      return isPast;
+                    }}
                   />
                 </Form.Item>
 

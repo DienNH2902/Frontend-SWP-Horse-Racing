@@ -8,11 +8,6 @@ import utc from "dayjs/plugin/utc";
 
 dayjs.extend(utc);
 
-const delay = (value, ms = 180) =>
-  new Promise((resolve) => {
-    window.setTimeout(() => resolve(structuredClone(value)), ms);
-  });
-
 function unwrapData(response) {
   const data = response?.data;
 
@@ -62,6 +57,128 @@ function getReferenceId(reference) {
   if (typeof reference === "string") return reference;
 
   return pickFirstValue(reference, ["id", "_id", "raceId", "scheduleId"], "");
+}
+
+function asArray(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function pickNumber(source, keys) {
+  for (const key of keys) {
+    const value = source?.[key];
+    const number = Number(value);
+
+    if (value !== undefined && value !== null && value !== "" && Number.isFinite(number)) {
+      return number;
+    }
+  }
+
+  return null;
+}
+
+function getRank(value) {
+  const rank = Number(value?.finalRank ?? value?.rank ?? value?.rawRank);
+  return Number.isFinite(rank) ? rank : null;
+}
+
+function getPrize(value) {
+  const prize = Number(value?.prizeAmount ?? value?.prizeMoney ?? value?.reward ?? 0);
+  return Number.isFinite(prize) ? prize : 0;
+}
+
+function collectHistoryRaces(history) {
+  const races = [];
+
+  function visit(value) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const hasRaceShape =
+      value.raceId ||
+      value.raceName ||
+      value.finalRank != null ||
+      value.rank != null ||
+      value.rawRank != null;
+
+    if (hasRaceShape) {
+      races.push(value);
+    }
+
+    ["historyRaceJockey", "historyRace", "rounds", "races", "results"].forEach(
+      (key) => {
+        if (Array.isArray(value[key])) visit(value[key]);
+      },
+    );
+  }
+
+  visit(history);
+
+  return races;
+}
+
+function normalizeDashboardProfile(profile = {}, schedules = [], standings = []) {
+  const historyRaces = collectHistoryRaces(profile.historyRaceJockey);
+  const finishedScheduleResults = asArray(schedules)
+    .map((schedule) => schedule?.result)
+    .filter(Boolean);
+  const performanceResults = historyRaces.length
+    ? historyRaces
+    : finishedScheduleResults;
+  const totalRaces = performanceResults.length;
+  const calculatedWins = performanceResults.filter((race) => getRank(race) === 1).length;
+  const calculatedPrize = performanceResults.reduce(
+    (sum, race) => sum + getPrize(race?.result || race),
+    0,
+  );
+  const currentUserIds = pickExistingValues(profile, [
+    "id",
+    "_id",
+    "userId",
+    "accountId",
+    "profileId",
+  ]).map(String);
+  const currentName = String(profile.fullName || profile.name || "").trim();
+  const standing = asArray(standings).find((item) => {
+    const standingIds = pickExistingValues(item, [
+      "id",
+      "_id",
+      "userId",
+      "jockeyId",
+      "jockeyProfileId",
+      "profileId",
+    ]).map(String);
+    const hasSameId = standingIds.some((id) => currentUserIds.includes(id));
+    const standingName = String(item.jockey || item.name || item.fullName || "").trim();
+
+    return hasSameId || (currentName && standingName === currentName);
+  });
+
+  const explicitWins = pickNumber(profile, ["careerWins", "totalWin", "totalWins", "wins"]);
+  const explicitTotalRaces = pickNumber(profile, ["totalRace", "totalRaces", "starts"]);
+  const explicitWinRate = pickNumber(profile, ["winRate"]);
+  const winRate =
+    explicitWinRate ??
+    (explicitTotalRaces || totalRaces
+      ? Number((((explicitWins ?? calculatedWins) / (explicitTotalRaces || totalRaces)) * 100).toFixed(2))
+      : null);
+
+  return {
+    ...profile,
+    rank: pickNumber(profile, ["finalRank", "seasonRank", "ranking"]) ?? pickNumber(standing, ["finalRank"]),
+    winRate,
+    careerWins: explicitWins ?? calculatedWins,
+    seasonPrize:
+      pickNumber(profile, ["seasonPrize", "prize", "totalPrize", "prizeEarned"]) ??
+      pickNumber(standing, ["prize"]) ??
+      calculatedPrize,
+  };
 }
 
 function normalizeUpcomingSchedule(schedule = {}, index = 0) {
@@ -215,215 +332,20 @@ function normalizeUpcomingSchedule(schedule = {}, index = 0) {
   };
 }
 
-let jockeyData = {
-  profile: {
-    name: "Demo Jockey",
-    rank: 7,
-    rating: 96.8,
-    winRate: 24,
-    careerWins: 120,
-    seasonPrize: 420000,
-  },
-  invitations: [
-    {
-      id: 1001,
-      owner: "Golden Hoof Stable",
-      horse: "Thunder",
-      race: "Emerald Stakes",
-      tournament: "Summer Turf Championship",
-      venue: "Royal Turf Club",
-      date: "2026-06-18",
-      time: "15:00",
-      distance: "1,600m",
-      surface: "Turf",
-      fee: 3200,
-      status: "Pending",
-      horseInfo: {
-        age: 4,
-        breed: "Arabian",
-        rating: 94,
-        winRate: 65,
-      },
-    },
-    {
-      id: 1002,
-      owner: "Greenfield Stable",
-      horse: "Silver Bullet",
-      race: "Champion's Cup",
-      tournament: "National Racing League",
-      venue: "Royal Turf Club",
-      date: "2026-06-24",
-      time: "16:45",
-      distance: "2,400m",
-      surface: "Turf",
-      fee: 5200,
-      status: "Pending",
-      horseInfo: {
-        age: 6,
-        breed: "Thoroughbred",
-        rating: 98,
-        winRate: 71,
-      },
-    },
-    {
-      id: 1003,
-      owner: "Skyline Racing",
-      horse: "Emerald Dream",
-      race: "Sunshine Cup",
-      tournament: "Spring Classic",
-      venue: "Sunshine Racecourse",
-      date: "2026-05-26",
-      time: "16:00",
-      distance: "1,800m",
-      surface: "Turf",
-      fee: 2800,
-      status: "Accepted",
-      horseInfo: {
-        age: 5,
-        breed: "Thoroughbred",
-        rating: 96,
-        winRate: 62,
-      },
-    },
-  ],
-  schedules: [
-    {
-      id: 2001,
-      assignmentStatus: "Confirmed",
-      race: "Emerald Stakes",
-      tournament: "Summer Turf Championship",
-      horse: "Thunder",
-      owner: "Golden Hoof Stable",
-      venue: "Royal Turf Club",
-      date: "2026-06-18",
-      time: "15:00",
-      gate: 4,
-      distance: "1,600m",
-      surface: "Turf",
-      purse: 50000,
-      horseInfo: {
-        age: 4,
-        breed: "Arabian",
-        color: "Black",
-        rating: 94,
-        winRate: 65,
-        starts: 21,
-        podiums: 16,
-      },
-      result: null,
-    },
-    {
-      id: 2002,
-      assignmentStatus: "Confirmed",
-      race: "Golden Mile Cup",
-      tournament: "Summer Turf Championship",
-      horse: "Storm",
-      owner: "Golden Hoof Stable",
-      venue: "Sunshine Racecourse",
-      date: "2026-06-22",
-      time: "16:30",
-      gate: 2,
-      distance: "1,600m",
-      surface: "Turf",
-      purse: 42000,
-      horseInfo: {
-        age: 5,
-        breed: "Thoroughbred",
-        color: "Bay",
-        rating: 88,
-        winRate: 48,
-        starts: 18,
-        podiums: 11,
-      },
-      result: null,
-    },
-    {
-      id: 2003,
-      assignmentStatus: "Finished",
-      race: "Sunshine Cup",
-      tournament: "Spring Classic",
-      horse: "Emerald Dream",
-      owner: "Skyline Racing",
-      venue: "Sunshine Racecourse",
-      date: "2026-05-26",
-      time: "16:00",
-      gate: 6,
-      distance: "1,800m",
-      surface: "Turf",
-      purse: 42000,
-      horseInfo: {
-        age: 5,
-        breed: "Thoroughbred",
-        color: "Chestnut",
-        rating: 96,
-        winRate: 62,
-        starts: 24,
-        podiums: 18,
-      },
-      result: { rank: 2, time: "1:48.63", prize: 9000, points: 32 },
-    },
-    {
-      id: 2004,
-      assignmentStatus: "Finished",
-      race: "Morning Sprint",
-      tournament: "City Sprint Series",
-      horse: "Rapid Crown",
-      owner: "Royal Bloodstock",
-      venue: "Valley Racecourse",
-      date: "2026-05-12",
-      time: "13:30",
-      gate: 1,
-      distance: "1,000m",
-      surface: "Dirt",
-      purse: 18000,
-      horseInfo: {
-        age: 4,
-        breed: "Thoroughbred",
-        color: "Bay",
-        rating: 90,
-        winRate: 58,
-        starts: 16,
-        podiums: 10,
-      },
-      result: { rank: 1, time: "0:58.34", prize: 12000, points: 40 },
-    },
-  ],
-  standings: [
-    {
-      rank: 1,
-      jockey: "Liam O'Connor",
-      wins: 120,
-      points: 1420,
-      prize: 520000,
-    },
-    {
-      rank: 2,
-      jockey: "Sophia Martinez",
-      wins: 98,
-      points: 1280,
-      prize: 460000,
-    },
-    { rank: 7, jockey: "Demo Jockey", wins: 64, points: 860, prize: 420000 },
-    { rank: 8, jockey: "Noah Henderson", wins: 60, points: 820, prize: 360000 },
-  ],
-};
-
 export async function getJockeyDashboard() {
   const [invitations, scheduleData, profile] = await Promise.all([
     getJockeyInvitations(),
     getJockeyRaceSchedule(),
     getJockeyProfile(),
   ]);
+  const schedules = scheduleData.schedules || [];
+  const standings = scheduleData.standings || [];
 
   return {
-    ...structuredClone(jockeyData),
-    profile: {
-      ...structuredClone(jockeyData.profile),
-      ...profile,
-    },
+    profile: normalizeDashboardProfile(profile, schedules, standings),
     invitations,
-    schedules: scheduleData.schedules,
-    standings: scheduleData.standings,
+    schedules,
+    standings,
   };
 }
 

@@ -137,6 +137,43 @@ function collectFinalRanks(history) {
   return ranks;
 }
 
+function getPrizeAmount(value) {
+  const prize = Number(
+    value?.prizeAmount ??
+      0,
+  );
+
+  return Number.isFinite(prize) ? prize : 0;
+}
+
+function collectPrizeEarned(history) {
+  const prizes = [];
+
+  function visit(value) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const prize = getPrizeAmount(value);
+    if (prize) {
+      prizes.push(prize);
+    }
+
+    ["historyRaceJockey", "historyRace", "rounds", "races"].forEach((key) => {
+      if (Array.isArray(value[key])) visit(value[key]);
+    });
+  }
+
+  visit(history);
+
+  return prizes.reduce((sum, prize) => sum + prize, 0);
+}
+
 export default function JockeyRaceSchedule() {
   const [data, setData] = useState({ schedules: [], standings: [] });
   const [profile, setProfile] = useState({});
@@ -167,7 +204,16 @@ export default function JockeyRaceSchedule() {
       ),
     [data.schedules],
   );
-  const totalPrize = finishedRaces.reduce((sum, race) => sum + (race.result?.prize || 0), 0);
+  const totalPrize = useMemo(() => {
+    const historyPrize = collectPrizeEarned(profile.historyRaceJockey);
+
+    if (historyPrize) return historyPrize;
+
+    return finishedRaces.reduce(
+      (sum, race) => sum + getPrizeAmount(race.result),
+      0,
+    );
+  }, [finishedRaces, profile.historyRaceJockey]);
   const bestRank = useMemo(() => {
     const historyRanks = collectFinalRanks(profile.historyRaceJockey);
     const scheduleRanks = finishedRaces

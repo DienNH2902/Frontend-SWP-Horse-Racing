@@ -60,9 +60,21 @@ function Icon({ name, size = 24 }) {
 }
 
 const highlights = [
-  ["trophy", "Live Race Results", "Follow active races and winners in real time."],
-  ["horse", "Role Based Access", "Spectators and jockeys get the right workspace."],
-  ["chart", "Rankings & Predictions", "Track performance, standings, and prediction points."],
+  [
+    "trophy",
+    "Live Race Results",
+    "Follow active races and winners in real time.",
+  ],
+  [
+    "horse",
+    "Role Based Access",
+    "Spectators and jockeys get the right workspace.",
+  ],
+  [
+    "chart",
+    "Rankings & Predictions",
+    "Track performance, standings, and prediction points.",
+  ],
 ];
 
 export default function Landing() {
@@ -251,6 +263,11 @@ export default function Landing() {
           line-height: 1.5;
         }
 
+        .landing-footer-mail {
+          padding-top: 30px;
+          color: rgba(244, 255, 251, 0.72);
+        }
+
         @media (max-width: 900px) {
           .landing-menu { display: none; }
           .landing-highlights { grid-template-columns: 1fr; }
@@ -289,7 +306,11 @@ export default function Landing() {
       <header className="landing-nav">
         <div className="landing-container landing-nav-inner">
           <Link className="landing-brand" to="/">
-            <img className="landing-brand-logo" src="/goldenhoof-logo.png" alt="" />
+            <img
+              className="landing-brand-logo"
+              src="/goldenhoof-logo.png"
+              alt=""
+            />
             <span>GoldenHoof</span>
           </Link>
 
@@ -342,6 +363,26 @@ export default function Landing() {
                   <span>{text}</span>
                 </article>
               ))}
+            </div>
+
+            <div className="landing-footer-mail">
+              <Icon name="mail" size={18} />
+              <div>
+                <span style={{ color: "#69f8dd" }}>Contact email: </span>
+                <span>goldenhoof@gmail.com</span>
+              </div>
+
+              <div
+                style={{
+                  paddingTop: "10px",
+                  fontWeight: "bolder",
+                  fontSize: "15px",
+                }}
+              >
+                <span>
+                  © {new Date().getFullYear()} GoldenHoof. All rights reserved.
+                </span>
+              </div>
             </div>
           </div>
         </div>

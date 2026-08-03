@@ -25,11 +25,32 @@
 }
 
 .broadcast-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 2px 0 6px;
   color: #fff;
   font-size: clamp(28px, 4vw, 46px);
   line-height: 1.05;
   letter-spacing: -0.04em;
+}
+
+.broadcast-home-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: clamp(38px, 5vw, 56px);
+  height: clamp(38px, 5vw, 56px);
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.broadcast-home-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .broadcast-header p {

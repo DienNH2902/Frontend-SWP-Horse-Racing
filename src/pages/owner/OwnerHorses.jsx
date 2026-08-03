@@ -51,6 +51,12 @@ import {
   toHorsePayload,
 } from "./horseViewModel";
 
+function isHorseStatusLocked(status) {
+  return ["registered", "racing"].includes(
+    String(status || "").trim().toLowerCase(),
+  );
+}
+
 export default function OwnerHorses() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -114,6 +120,7 @@ export default function OwnerHorses() {
   }, [navigate, searchParams, setSearchParams]);
 
   const rows = useMemo(() => horses.map(normalizeHorse), [horses]);
+  const isEditingHorseStatusLocked = isHorseStatusLocked(editingHorse?.status);
 
   const horseStats = useMemo(() => {
     const total = rows.length;
@@ -288,7 +295,12 @@ export default function OwnerHorses() {
     setSaving(true);
 
     try {
-      const payload = toHorsePayload(values);
+      const payload = toHorsePayload({
+        ...values,
+        horseStatus: isEditingHorseStatusLocked
+          ? editingHorse.status
+          : values.horseStatus,
+      });
 
       if (editingHorse?.id) {
         await updateHorse(editingHorse.id, payload);
@@ -540,14 +552,14 @@ export default function OwnerHorses() {
             Manage your stable, horse profiles, and registration readiness
           </Typography.Text>
         </div>
-        <Button
+        {/* <Button
           className="owner-workspace-refresh"
           icon={<ReloadOutlined />}
           loading={loading}
           onClick={() => loadHorses(keyword, statusFilter)}
         >
           Refresh
-        </Button>
+        </Button> */}
       </header>
 
       {errorMessage && <Alert type="warning" showIcon message={errorMessage} />}
@@ -812,8 +824,16 @@ export default function OwnerHorses() {
           </Form.Item>
 
           <Form.Item label="Status" name="horseStatus">
-            <Select options={HORSE_STATUS_OPTIONS} />
+            <Select
+              disabled={isEditingHorseStatusLocked}
+              options={HORSE_STATUS_OPTIONS}
+            />
           </Form.Item>
+          {/* {isEditingHorseStatusLocked && (
+            <Typography.Text type="secondary">
+              Status cannot be edited while this horse is registered or racing.
+            </Typography.Text>
+          )} */}
         </Form>
       </Modal>
 

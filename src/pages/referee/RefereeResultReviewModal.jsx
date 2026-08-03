@@ -162,19 +162,36 @@ export default function RefereeResultReviewModal({
                                             Reason
                                         </Text>
 
-                                        <Input.TextArea
-                                            className="review-textarea"
-                                            rows={6}
-                                            style={{
-                                                marginTop: 10,
-                                            }}
-                                            disabled={reportLocked}
-                                            placeholder="Enter violation reason (optional)"
-                                            value={reportReason}
-                                            onChange={(e) =>
-                                                setReportReason(e.target.value)
-                                            }
-                                        />
+
+                                        {finalLocked ? (
+                                            <div
+                                                className="review-report-readonly"
+                                                style={{
+                                                    minHeight: 140,
+                                                    whiteSpace: "pre-wrap",
+                                                    padding: 12,
+                                                    borderRadius: 8,
+                                                    background: "#173f39",
+                                                    color: "#fff",
+                                                }}
+                                            >
+                                                {reportReason || ""}
+                                            </div>
+                                        ) : (
+                                            <Input.TextArea
+                                                className="review-textarea"
+                                                rows={6}
+                                                style={{
+                                                    marginTop: 10,
+                                                }}
+                                                disabled={reportLocked || finalLocked}
+                                                placeholder="Enter violation reason (optional)"
+                                                value={reportReason}
+                                                onChange={(e) =>
+                                                    setReportReason(e.target.value)
+                                                }
+                                            />
+                                        )}
 
                                     </Card>
 
@@ -198,7 +215,7 @@ export default function RefereeResultReviewModal({
                                                     size="large"
                                                     icon={<CheckCircleOutlined />}
                                                     loading={reportLoading}
-                                                    disabled={reportLocked}
+                                                    disabled={reportLocked || finalLocked}
                                                     onClick={handleSubmitReport}
                                                 >
                                                     Submit Report

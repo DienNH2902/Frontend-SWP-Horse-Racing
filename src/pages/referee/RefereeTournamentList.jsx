@@ -192,8 +192,16 @@ export default function RefereeTournamentList() {
       title: "Tournament",
       dataIndex: "title",
       key: "title",
+      width: 260,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (value) => (
-        <Text strong className="dashboard-table-title">
+        <Text
+          strong
+          className="dashboard-table-title"
+          title={value}
+        >
           {value || "N/A"}
         </Text>
       ),
@@ -396,7 +404,7 @@ export default function RefereeTournamentList() {
                   columns={columns}
                   dataSource={tournaments}
                   pagination={{
-                    pageSize: 10,
+                    pageSize: 5,
                     showSizeChanger: true,
                   }}
                 />

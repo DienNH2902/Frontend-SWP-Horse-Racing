@@ -2102,6 +2102,93 @@ function Home() {
             margin-bottom: 44px;
           }
         }
+
+        // New footer
+        .home-footer {
+          color: #f4fffb;
+          background: #002d28;
+          padding: 24px 0;
+          border-top: 1px solid rgba(105, 248, 221, 0.15);
+        }
+
+        .lading-footer-title {
+          margin: 0 0 6px 0;
+          font-size: 16px;
+          font-weight: 800;
+          color: #69f8dd;
+          letter-spacing: 0.3px;
+        }
+
+        .footer-layout {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+        }
+
+        .footer-left {
+          flex: 0 0 70%;
+          max-width: 70%;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .footer-right {
+          flex: 0 0 30%;
+          max-width: 30%;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .footer-desc {
+          margin: 0;
+          color: rgba(244, 255, 251, 0.74);
+          font-size: 14px;
+          line-height: 1.6;
+        }
+
+        .footer-copy {
+          color: rgba(244, 255, 251, 0.45);
+          font-size: 12px;
+        }
+
+        .footer-contact {
+          display: flex;
+          flex-direction: column;
+          align-items: start;
+          gap: 4px;
+          color: #69f8dd;
+          font-size: 14px;
+          font-weight: 600;
+          text-decoration: none;
+        }
+
+        .contact-label {
+          color: #e08229;
+          font-weight: 500;
+        }
+
+        .contact-value {
+          color: rgba(244, 255, 251, 0.6);
+          font-weight: 500;
+        }
+
+        @media (max-width: 640px) {
+          .footer-layout {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .footer-left,
+          .footer-right {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+
+          .footer-right {
+            justify-content: flex-start;
+          }
+        }
       `}</style>
 
       <header className="home-nav">
@@ -2115,13 +2202,11 @@ function Home() {
           </a>
 
           <nav className="home-menu" aria-label="Primary navigation">
-            {["Races", "Horses", "Jockeys", "Results"].map(
-              (item) => (
-                <a href={`#${item.toLowerCase()}`} key={item}>
-                  {item}
-                </a>
-              ),
-            )}
+            {["Races", "Horses", "Jockeys", "Results"].map((item) => (
+              <a href={`#${item.toLowerCase()}`} key={item}>
+                {item}
+              </a>
+            ))}
           </nav>
 
           <div className="home-actions">
@@ -2398,7 +2483,7 @@ function Home() {
                     <div
                       className={`race-preview ${race.status ? "live-preview" : "upcoming-preview"}`}
                     >
-                        <img src={race.image} alt={`${race.name} race`} />
+                      <img src={race.image} alt={`${race.name} race`} />
                     </div>
                     {race.status ? (
                       <Link
@@ -2759,63 +2844,59 @@ function Home() {
       </section>
 
       <footer className="home-footer">
-        <div className="home-container footer-grid">
-          <div>
-            <a className="home-footer-brand" href="#top">
-              <img
-                className="home-footer-brand-logo"
-                src="/goldenhoof-logo.png"
-                alt=""
-              />
-              <span>GoldenHoof</span>
-            </a>
-            <p>
+        <div className="home-container footer-layout">
+          <div className="footer-left">
+            <h3 className="lading-footer-title" style={{ fontSize: "30px" }}>
+              GoldenHoof - Live Horse Racing Platform
+            </h3>
+            <p className="footer-desc">
               The ultimate platform for horse racing enthusiasts. Stay updated,
               stay excited.
             </p>
+            <span className="footer-copy">
+              © {new Date().getFullYear()} GoldenHoof. All rights reserved.
+            </span>
           </div>
-          <div>
-            <h3>Explore</h3>
-            <div className="footer-links">
-              <a href="#races">Races</a>
-              <a href="#horses">Horses</a>
-              <a href="#jockeys">Jockeys</a>
-              <a href="#results">Results</a>
-              <a href="#rankings">Rankings</a>
-            </div>
-          </div>
-          <div>
-            <h3>Support</h3>
-            <div className="footer-links">
-              <a href="#support">Help Center</a>
-              <a href="#support">Contact Us</a>
-              <a href="#support">Terms of Use</a>
-              <a href="#support">Privacy Policy</a>
-              <a href="#support">FAQ</a>
-            </div>
-          </div>
-          <div>
-            <h3>Community</h3>
-            <div className="footer-links">
-              <a href="#news">News</a>
-              <a href="#events">Events</a>
-              <a href="#blog">Blog</a>
-              <a href="#forum">Forum</a>
-              <a href="#about">About Us</a>
-            </div>
-          </div>
-          <div>
-            <h3>Stay Updated</h3>
-            <p>Subscribe to our newsletter</p>
-            <div className="newsletter">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                aria-label="Email address"
-              />
-              <button type="button" aria-label="Subscribe">
-                <Icon name="mail" size={18} />
-              </button>
+
+          <div className="footer-right">
+            <div className="footer-contact">
+              <div>
+                {/* <a
+                  className="home-brand"
+                  href="#top"
+                  aria-label="GoldenHoof home"
+                >
+                  <img
+                    className="home-brand-logo"
+                    src="/goldenhoof-logo.png"
+                    alt=""
+                  />
+                </a> */}
+                <a
+                  className="home-brand"
+                  href="#top"
+                  aria-label="GoldenHoof home"
+                >
+                  <img
+                    className="home-brand-logo"
+                    src="/navbar-logo.png"
+                    alt=""
+                  />
+                </a>
+              </div>
+
+              <div>
+                <span className="contact-label">Mail: </span>
+                <span className="contact-value">goldenhoof@gmail.com</span>
+              </div>
+              <div>
+                <span className="contact-label">Phone: </span>
+                <span className="contact-value">0793829966</span>
+              </div>
+              <div>
+                <span className="contact-label">Address: </span>
+                <span className="contact-value">Ho Chi Minh City</span>
+              </div>
             </div>
           </div>
         </div>

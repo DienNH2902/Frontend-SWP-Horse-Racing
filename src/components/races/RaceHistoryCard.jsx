@@ -129,6 +129,7 @@ export default function RaceHistoryCard({
     {
       title: "Race",
       dataIndex: "raceName",
+      width: "58%",
       render: (value, record) => (
         <Space direction="vertical" size={0}>
           <RaceLabel name={value} />
@@ -152,12 +153,17 @@ export default function RaceHistoryCard({
     {
       title: "Date",
       dataIndex: "date",
-      width: 120,
+      width: 170,
       responsive: ["md"],
+      render: (value) => (
+        <Typography.Text style={{ whiteSpace: "nowrap" }}>
+          {value}
+        </Typography.Text>
+      ),
     },
     {
       title: "Action",
-      width: 110,
+      width: 140,
       render: (_, record) => (
         <Button size="small" onClick={() => setSelectedRace(record)}>
           View detail

@@ -85,8 +85,14 @@ export default function RefereeHorseDetailModal({
             open={open}
             onCancel={onClose}
             footer={null}
-            width={950}
+            width="min(1100px,95vw)"
             destroyOnClose
+            styles={{
+                body: {
+                    maxHeight: "75vh",
+                    overflowY: "auto"
+                }
+            }}
         >
             {loading ? (
                 <div className="horse-loading">
@@ -112,11 +118,10 @@ export default function RefereeHorseDetailModal({
                                 style={{ textAlign: "center" }}
                             >
                                 <Avatar
-                                    icon={<UserOutlined />}
-                                    size={170}
-                                    shape="square"
+                                    size={220}
                                     src={horse.imageUrl}
-                                    className="horse-avatar"
+                                    icon={<UserOutlined />}
+                                    className="horse-avatar-referee"
                                 />
                             </Col>
 
@@ -130,6 +135,25 @@ export default function RefereeHorseDetailModal({
                                 >
                                     {horse.name}
                                 </Title>
+
+                                <Text className="horse-subtitle">
+                                    Professional Racing Horse
+                                </Text>
+
+                                <Text
+                                    copyable={{
+                                        text: horse._id,
+                                    }}
+                                    className="horse-id"
+                                >
+                                    {horse._id.slice(0, 10)}...
+                                </Text>
+
+                                <Space
+                                    wrap
+                                    size={12}
+                                    style={{ marginTop: 14 }}
+                                ></Space>
 
                                 <Space
                                     wrap
@@ -151,8 +175,30 @@ export default function RefereeHorseDetailModal({
 
                                 <Divider className="horse-divider" />
 
-                                <Row gutter={16}>
-                                    <Col span={8}>
+                                <Space
+                                    wrap
+                                    size={12}
+                                    style={{ marginBottom: 24 }}
+                                >
+                                    <Tag color="gold">
+                                        {horse.totalWin} Wins
+                                    </Tag>
+
+                                    <Tag color="green">
+                                        {horse.winRate}% Win Rate
+                                    </Tag>
+
+                                    <Tag color="blue">
+                                        {horse.weight} kg
+                                    </Tag>
+
+                                    <Tag color="cyan">
+                                        {horse.height} cm
+                                    </Tag>
+                                </Space>
+
+                                <Row gutter={[16, 16]}>
+                                    <Col xs={24} sm={8}>
                                         <Statistic
                                             className="horse-stat"
                                             title="Weight"
@@ -186,7 +232,7 @@ export default function RefereeHorseDetailModal({
                     <Row gutter={[24, 24]}>
                         <Col
                             xs={24}
-                            md={12}
+                            lg={12}
                         >
                             <Card
                                 title="Horse Information"
@@ -196,18 +242,21 @@ export default function RefereeHorseDetailModal({
                                 <Descriptions
                                     className="horse-description"
                                     bordered
+                                    column={1}
                                     size="middle"
                                 >
                                     <Descriptions.Item label="Horse ID">
                                         <Text
-                                            copyable
+                                            copyable={{
+                                                text: horse._id,
+                                            }}
                                             className="horse-id"
                                         >
-                                            {horse._id}
+                                            {horse._id.slice(0, 10)}...
                                         </Text>
                                     </Descriptions.Item>
 
-                                    <Descriptions.Item label="Horse Name" ellipsis>
+                                    <Descriptions.Item label="Horse Name" >
                                         {horse.name}
                                     </Descriptions.Item>
 
@@ -239,7 +288,7 @@ export default function RefereeHorseDetailModal({
 
                         <Col
                             xs={24}
-                            md={12}
+                            lg={12}
                         >
                             <Card
                                 title="Performance"
@@ -249,6 +298,7 @@ export default function RefereeHorseDetailModal({
                                 <Descriptions
                                     className="horse-description"
                                     bordered
+                                    column={1}
                                     size="middle"
                                 >
                                     <Descriptions.Item

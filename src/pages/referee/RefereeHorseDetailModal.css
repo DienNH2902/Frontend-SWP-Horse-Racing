@@ -48,6 +48,12 @@
     transition: .3s;
 }
 
+.horse-hero-card .ant-card-body {
+
+    padding: 34px;
+
+}
+
 .horse-hero-card:hover {
     transform: translateY(-3px);
     box-shadow:
@@ -57,13 +63,34 @@
 /* ===========================
    AVATAR
 =========================== */
-.horse-avatar {
-    border-radius: 20px !important;
+.horse-avatar-referee {
+
+    width: 220px !important;
+    height: 220px !important;
+
+    border-radius: 50% !important;
+
+    overflow: hidden;
+
     border: 4px solid #2ec4b6;
-    box-shadow:
-        0 0 0 6px rgba(46, 196, 182, .12),
-        0 14px 28px rgba(0, 0, 0, .28);
+    transition: .25s;
+
+}
+
+.horse-avatar-referee:hover {
+
+    transform: scale(1.04);
+
+}
+
+.horse-avatar-referee img {
+
+    width: 100%;
+
+    height: 100%;
+
     object-fit: cover;
+
 }
 
 /* ===========================
@@ -73,6 +100,19 @@
     color: white !important;
     font-weight: 800 !important;
     margin-bottom: 12px !important;
+}
+
+.horse-subtitle {
+    display: block;
+    color: #9be8dc;
+    font-size: 15px;
+    margin-top: -6px;
+}
+
+.horse-id {
+    display: block;
+    margin-top: 8px;
+    color: #8df5e5 !important;
 }
 
 /* ===========================
@@ -112,10 +152,15 @@
     padding: 18px;
     text-align: center;
     transition: .25s;
+    border: 1px solid rgba(46, 196, 182, .15);
 }
 
 .horse-stat:hover {
+
     background: #17675c;
+
+    transform: translateY(-4px);
+
 }
 
 .horse-stat .ant-statistic-title {
@@ -139,6 +184,29 @@
     border: 1px solid rgba(46, 196, 182, .12);
     height: 100%;
     transition: .3s;
+    overflow: hidden;
+
+    position: relative;
+}
+
+.horse-info-card::before {
+
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+
+        radial-gradient(circle at top right,
+
+            rgba(46, 196, 182, .10),
+
+            transparent 60%);
+
+    pointer-events: none;
+
 }
 
 .horse-info-card:hover {
@@ -169,11 +237,22 @@
     background: #0b4c44 !important;
     color: #76f3e3 !important;
     font-weight: 700;
+    white-space: nowrap;
 }
 
 .horse-description .ant-descriptions-item-content {
     background: #14554b !important;
     color: white !important;
+    font-size: 15px;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.horse-description .ant-descriptions-item {
+
+    border-color: rgba(46, 196, 182, .08) !important;
+
 }
 
 .horse-description .ant-descriptions-view {
@@ -193,8 +272,15 @@
 =========================== */
 
 .horse-loading {
-    text-align: center;
-    padding: 90px;
+
+    min-height: 350px;
+
+    display: flex;
+
+    justify-content: center;
+
+    align-items: center;
+
 }
 
 /* ===========================
@@ -212,29 +298,58 @@
 /* ===========================
    RESPONSIVE
 =========================== */
-@media(max-width:768px) {
-    .horse-modal .ant-modal {
-        max-width: 95vw;
-    }
+@media (max-width:768px) {
 
     .horse-modal .ant-modal-body {
-        padding: 20px;
+
+        padding: 18px;
+
+    }
+
+    .horse-hero-card .ant-card-body {
+
+        padding: 22px;
+
     }
 
     .horse-avatar {
+
         width: 140px !important;
+
         height: 140px !important;
+
     }
 
     .horse-name {
+
         text-align: center;
+
+        font-size: 28px !important;
+
+    }
+
+    .horse-subtitle {
+
+        text-align: center;
+
+    }
+
+    .horse-id {
+
+        text-align: center;
+
     }
 
     .horse-info-card {
-        margin-bottom: 20px;
+
+        margin-bottom: 18px;
+
     }
 
     .horse-stat {
-        margin-bottom: 16px;
+
+        margin-bottom: 0;
+
     }
+
 }

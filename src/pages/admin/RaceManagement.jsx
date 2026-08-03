@@ -188,7 +188,11 @@ function normalizeRace(item, index) {
     refereeId: item?.refereeId || "",
     raceCourseId: item?.raceCourseId || "",
     refereeName: item?.refereeName || getPersonName(item?.referee) || "",
-    raceCourseName: getRaceCourseName(item),
+    raceCourseName:
+      item?.raceCourseName ||
+      item?.raceCourse?.name ||
+      item?.raceCourse?.title ||
+      "",
     name: item?.name || `Race ${index + 1}`,
     roundNumber: item?.roundNumber ?? "N/A",
     raceOrder: item?.raceOrder ?? "N/A",
@@ -322,7 +326,7 @@ function RaceManagement() {
         const location = course?.location ? ` - ${course.location}` : "";
 
         return {
-          label: `${name}${location}`,
+          label: `${name}`,
           value: id,
         };
       });
@@ -704,28 +708,6 @@ function RaceManagement() {
         ellipsis: true,
       },
       {
-        title: "Round",
-        dataIndex: "roundNumber",
-        width: 90,
-      },
-      {
-        title: "Order",
-        dataIndex: "raceOrder",
-        width: 90,
-      },
-      {
-        title: "Date",
-        dataIndex: "date",
-        width: 130,
-        render: formatDate,
-      },
-      {
-        title: "Start Time",
-        dataIndex: "startTime",
-        width: 180,
-        render: formatDateTime,
-      },
-      {
         title: "Status",
         dataIndex: "status",
         width: 130,
@@ -751,6 +733,28 @@ function RaceManagement() {
         width: 150,
         render: (_, record) =>
           `${record.filledSlots ?? "N/A"} / ${record.totalSlots ?? "N/A"}`,
+      },
+      {
+        title: "Round",
+        dataIndex: "roundNumber",
+        width: 90,
+      },
+      {
+        title: "Order",
+        dataIndex: "raceOrder",
+        width: 90,
+      },
+      {
+        title: "Date",
+        dataIndex: "date",
+        width: 130,
+        render: formatDate,
+      },
+      {
+        title: "Start Time",
+        dataIndex: "startTime",
+        width: 180,
+        render: formatDateTime,
       },
       {
         title: "Actions",
@@ -1065,10 +1069,7 @@ function RaceManagement() {
             <div className="race-round-title">Qualifying Races</div>
           </div>
 
-          <Button
-            className="race-management-primary"
-            onClick={openBatchModal}
-          >
+          <Button className="race-management-primary" onClick={openBatchModal}>
             Create Round 1 Races
           </Button>
         </section>
