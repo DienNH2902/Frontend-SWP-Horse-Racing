@@ -208,21 +208,17 @@ function getStoredJockeyInvitations() {
 export default function RoleHome({ allowedRole }) {
   const navigate = useNavigate();
   const authSession = getAuthSession();
-  const user = authSession?.user;
+  const user = authSession?.user || {
+    fullName: allowedRole,
+    email: `${allowedRole.toLowerCase().replace(/\s+/g, "-")}@goldenhoof.local`,
+    role: allowedRole,
+  };
   const data = roleData[allowedRole];
   const [jockeyInvitations, setJockeyInvitations] = useState(getStoredJockeyInvitations);
 
-  if (!authSession) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user?.role !== allowedRole) {
-    return <Navigate to="/" replace />;
-  }
-
   function handleLogout() {
     clearAuthSession();
-    navigate("/", { replace: true });
+    navigate("/home", { replace: true });
   }
 
   const profilePath = allowedRole === "Jockey" ? "/jockey/profile" : "/profile";
@@ -722,12 +718,15 @@ export default function RoleHome({ allowedRole }) {
 
       <div className="role-shell">
         <header className="role-topbar">
-          <Link className="role-brand" to="/">
-            <Icon name="logo" size={32} />
+          <Link className="role-brand" to="/home">
+            <img className="role-brand-logo" src="/goldenhoof-logo.png" alt="" />
             <span>GoldenHoof</span>
           </Link>
           <nav className="role-user-nav" aria-label="Role navigation">
             <Link to="/home">Races</Link>
+            {allowedRole === "Spectator" && (
+              <Link to="/spectator/broadcast">Live Broadcast</Link>
+            )}
             <Link to={profilePath}>Profile</Link>
             <button className="role-btn" type="button" onClick={handleLogout}>
               Logout
